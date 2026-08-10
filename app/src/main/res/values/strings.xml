@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ollin Finanzas</string>
+    <string name="app_tagline">El libro de tus movimientos</string>
+    <string name="canal_recordatorios">Recordatorios</string>
+    <string name="canal_recordatorios_desc">Avisos de mensualidades, suscripciones y gastos anuales</string>
+</resources>

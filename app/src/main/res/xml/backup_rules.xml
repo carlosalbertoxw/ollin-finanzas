@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Los movimientos financieros no salen del dispositivo por respaldo automatico.
+         El respaldo del usuario es la exportacion a .xlsx, que el decide donde guardar.
+         Ademas la base va cifrada con una llave del Keystore, que no se puede
+         restaurar en otro telefono: respaldarla solo produciria un archivo ilegible. -->
+    <exclude domain="database" path="ollin.db" />
+    <exclude domain="database" path="ollin.db-wal" />
+    <exclude domain="database" path="ollin.db-shm" />
+    <exclude domain="sharedpref" path="ollin_llave.xml" />
+    <exclude domain="file" path="datastore/ollin_ajustes.preferences_pb" />
+</full-backup-content>

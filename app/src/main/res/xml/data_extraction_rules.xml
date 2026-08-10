@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="database" path="ollin.db" />
+        <exclude domain="database" path="ollin.db-wal" />
+        <exclude domain="database" path="ollin.db-shm" />
+        <!-- Envoltura de la llave y huella del PIN: nada de esto sale del telefono. -->
+        <exclude domain="sharedpref" path="ollin_llave.xml" />
+        <exclude domain="file" path="datastore/ollin_ajustes.preferences_pb" />
+    </cloud-backup>
+
+    <!-- Tampoco en el traspaso a un telefono nuevo. La base va cifrada con una
+         llave que vive en el Keystore, y el Keystore no se puede transferir:
+         el archivo llegaria ilegible. El respaldo real es la exportacion .xlsx. -->
+    <device-transfer>
+        <exclude domain="database" path="ollin.db" />
+        <exclude domain="database" path="ollin.db-wal" />
+        <exclude domain="database" path="ollin.db-shm" />
+        <exclude domain="sharedpref" path="ollin_llave.xml" />
+        <exclude domain="file" path="datastore/ollin_ajustes.preferences_pb" />
+    </device-transfer>
+</data-extraction-rules>

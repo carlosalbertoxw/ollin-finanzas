@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Glifo de Ollin ("movimiento" en nahuatl).
+  Dos listones cruzados: la diagonal ascendente en jade es lo que entra,
+  la descendente en grana es lo que sale. El nucleo cempasuchil es el saldo.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Liston ascendente (entradas) -->
+    <path
+        android:fillColor="#2F9E6E"
+        android:pathData="M54,54 C58,38 72,24 90,18 C84,36 70,50 54,54 Z" />
+    <path
+        android:fillColor="#2F9E6E"
+        android:pathData="M54,54 C50,70 36,84 18,90 C24,72 38,58 54,54 Z" />
+
+    <!-- Liston descendente (salidas) -->
+    <path
+        android:fillColor="#C4453F"
+        android:pathData="M54,54 C50,38 36,24 18,18 C24,36 38,50 54,54 Z" />
+    <path
+        android:fillColor="#C4453F"
+        android:pathData="M54,54 C58,70 72,84 90,90 C84,72 70,58 54,54 Z" />
+
+    <!-- Nucleo -->
+    <path
+        android:fillColor="#E9A13B"
+        android:pathData="M54,44 A10,10 0 1,1 53.99,44 Z" />
+</vector>
