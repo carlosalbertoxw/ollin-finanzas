@@ -1,0 +1,132 @@
+# Exportación e importación en Excel
+
+La pestaña **Archivo** genera un `.xlsx` con todo el libro y lo vuelve a leer. Es el respaldo real de la app: la base cifrada no se puede restaurar en otro teléfono.
+
+Todo el paquete `data/excel/` es propio, **sin dependencias externas**. Apache POI pesa del orden de 15 MB en Android, mete decenas de miles de métodos y obliga a desugaring; aquí el formato producido está bajo control, así que un escritor de ~400 líneas es más pequeño, arranca más rápido y no sorprende.
+
+## El libro que sale
+
+### Hojas
+
+Se eligen desde la pantalla de Archivo ([`HojaExportable`](../app/src/main/java/mx/ollin/finanzas/data/excel/CatalogoHojas.kt)):
+
+| Hoja | Contenido |
+|---|---|
+| **Balance** | Saldo vivo de cada cuenta agrupado por naturaleza, patrimonio neto, gasto mensual promedio y meses de fondo de emergencia |
+| **Ingresos - Egresos** | Categorías contra meses. La compra de patrimonio va en su propio bloque, aparte del gasto |
+| **Presupuesto** | Meta contra realidad por categoría, con desviación y avance |
+| **Transferencias** | Entradas y salidas internas por cuenta, con el neto que debe cuadrar en cero |
+| **Compromisos** | Mensualidades, suscripciones y gastos anuales por venir, con saldo pendiente |
+| **Registros** | Todos los movimientos, uno por renglón. Obligatoria: es la fuente de las demás |
+| **Diccionarios** | Cuentas, categorías, medios, contrapartes y tipos; alimentan los desplegables de Registros |
+
+Las pestañas salen en orden de lectura natural: primero el análisis, luego el detalle y los catálogos al final. El preajuste "solo datos" (`HojaExportable.MINIMA`) deja Registros y Diccionarios: lo que se puede volver a importar.
+
+### Esquemas de columna
+
+[`EsquemaExportacion`](../app/src/main/java/mx/ollin/finanzas/data/excel/CatalogoHojas.kt) decide el ancho de la hoja Registros:
+
+- **Extendido** — `Fecha, Cantidad, Cuenta, Categoria, Descripcion, Medio, Contraparte, Tipo, Mes, Anio, Nota, Compromiso`. Conserva todo.
+- **Compacto** — `Fecha, Cantidad, Cuenta, Descripcion, Medio, Contraparte, Tipo, Mes`, las ocho indispensables.
+
+Las fórmulas de las hojas de análisis resuelven sus referencias de columna a partir del esquema elegido. Cuando no hay columna Categoría —modo compacto— **la agrupación cae a Descripción**, y las hojas lo dicen en su subtítulo en vez de salir vacías.
+
+En modo compacto la contraparte sale como su código numérico (1 o 2) en vez de su etiqueta.
+
+### Fórmulas vivas, no tablas dinámicas
+
+Las hojas de análisis llevan fórmulas reales (`SUMIFS`, `COUNTIFS`, `SUM`) apuntando a Registros, más el valor ya calculado como caché. La hoja se ve bien al abrirla en cualquier visor y sigue viva si editas un renglón: cambias un importe y los totales se mueven solos.
+
+Por qué no dinámicas: exigen refresco manual y hasta entonces muestran números viejos; las fórmulas se comportan igual en Excel, WPS, LibreOffice y Sheets, y permiten exportar solo algunas pestañas sin dejar cachés huérfanos. El libro se marca con `fullCalcOnLoad`.
+
+Dos detalles de las fórmulas:
+
+- **Los criterios de fecha usan `DATE(año,mes,día)`** y no `TEXT(...,"yyyy-mm")`, que depende del idioma de la suite.
+- **El criterio de categoría apunta a la celda A de su propio renglón** (`$A12`), no al texto literal. Así el usuario puede renombrar la categoría dentro de la hoja y el cálculo la sigue. Por lo mismo los renglones hijos **no llevan sangría**: `"   Gasolina"` no coincidiría con `"Gasolina"` en la columna Categoría.
+- Los totales de bloque suman **solo las filas hoja** (`B5+B6+B9…`), nunca los renglones padre, que duplicarían.
+
+El libro incluye además anchos de columna, panel congelado en el encabezado, validaciones de lista contra Diccionarios y un `ListObject` (tabla de Excel) sobre Registros, para que el filtro y el formato crezcan solos al agregar renglones a mano.
+
+## Cómo está hecho
+
+| Archivo | Papel |
+|---|---|
+| [`ModeloHoja.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/ModeloHoja.kt) | `Celda` (texto, número, fecha, booleano, fórmula), `Hoja`, anchos, validaciones, tablas y los índices de estilo |
+| [`Ooxml.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/Ooxml.kt) | Seriales de fecha, letras de columna, escape de XML, saneo de nombres de hoja |
+| [`XlsxEscritor.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/XlsxEscritor.kt) | Serializa el paquete OOXML completo dentro de un ZIP |
+| [`XlsxLector.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/XlsxLector.kt) | Lee un `.xlsx` con el SAX del JDK |
+| [`DatosExportacion.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/DatosExportacion.kt) | Fotografía de los datos en el momento de exportar |
+| [`ExportadorExcel.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/ExportadorExcel.kt) | Arma las hojas |
+| [`ImportadorExcel.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/ImportadorExcel.kt) | Vuelca un libro en la base |
+
+Los índices de estilo de `Estilo` deben coincidir en orden exacto con `cellXfs` en `XlsxEscritor.estilosXml()`.
+
+Excel cuenta los días desde el 30/12/1899 (desplazamiento 25 569): `2026-01-01` es el serial 46023. Si eso cambia, todas las fechas exportadas se corren, y por eso tiene prueba propia.
+
+El lector carga el paquete completo en memoria porque `sharedStrings.xml` puede venir después de las hojas dentro del ZIP; para un libro de finanzas personales el costo es irrelevante y evita necesitar acceso aleatorio. Hay un tope de 64 MB por archivo.
+
+## Importación
+
+`Archivo → Importar` abre el selector del sistema. La app también acepta "Abrir con Ollin Finanzas" desde un gestor de archivos o desde la nube, gracias al `intent-filter` de tipo `spreadsheetml.sheet`.
+
+### Qué hoja se lee
+
+La primera que traiga, al menos, columnas de **fecha**, **cantidad** y **cuenta**. Se prefiere la llamada `Registros`. Admite libros que no salieron de aquí.
+
+### Reconocimiento de columnas
+
+Los encabezados se comparan sin acentos ni mayúsculas y con sinónimos:
+
+| Campo | Alias reconocidos |
+|---|---|
+| fecha | fecha, date, dia |
+| cantidad | cantidad, importe, monto, amount |
+| cuenta | cuenta, account |
+| categoría | categoria, category, rubro |
+| descripción | descripcion, concepto, detalle, description |
+| medio | medio, forma de pago, metodo |
+| contraparte | contraparte, persona |
+| tipo | tipo, type, movimiento |
+| nota | nota, notas, comentario |
+| compromiso | compromiso |
+
+Las fechas se aceptan como serial de Excel o como texto en ISO, `dd/MM/yyyy`, `d/M/yyyy`, `MM/dd/yyyy`, `yyyy/MM/dd` y `dd-MM-yyyy`. Los importes, como número o como texto (`$1,234.56`, `(455.33)`).
+
+### No copia: corrige al entrar
+
+Una hoja de cálculo se degrada sola, así que el importador arregla lo que puede mientras lee:
+
+1. **Alinea el tipo con el signo** del importe cuando se contradicen, y lo reporta renglón por renglón. El importe nunca se toca.
+2. **Empareja transferencias**: busca pares de salida y entrada con misma fecha e importe absoluto. Primero exige que la descripción coincida y luego afloja esa condición. Cada par recibe un uuid de grupo; lo que queda suelto se reporta como huérfano.
+3. **Crea las cuentas que falten**, infiriendo su tipo del nombre: "MSI" → crédito MSI; "préstamo a…" o "por cobrar" → activo (es dinero tuyo que va a volver, no una deuda); "tarjeta", "crédito", "hipoteca" → crédito; "cartera", "efectivo", "caja" → efectivo; "terreno", "cripto", "inmueble" → activo; lo demás, cuenta de banco. Solo lo que parece tarjeta queda atado al medio electrónico.
+4. **Clasifica** en tres pasos: la columna Categoría manda si viene; si no, el mapeo por descripción (primero la variante específica por tipo, `intereses|SALIDA`); si no, coincidencia directa con una categoría existente. Lo que no se resuelve queda sin categoría y se reporta.
+5. **Recalcula la contraparte** a partir del tipo en vez de confiar en la columna.
+
+Sin columna Tipo, el tipo se infiere de la descripción y del signo: "balance inicial" o "saldo inicial" → saldo inicial; "revaluación", "depreciación", "plusvalía" → ajuste de valor; "transferencia", "traspaso", "pago tarjeta" → transferencia; lo demás, entrada o salida según el signo.
+
+Un renglón sin fecha, sin cantidad o sin cuenta se omite y se reporta con su número de fila.
+
+### Opciones
+
+- **Reemplazar** (por omisión) vacía los movimientos antes de importar; si se apaga, agrega.
+- **Corregir al importar** (por omisión) enciende la alineación de tipo con signo y el recálculo de contraparte.
+- El emparejado de transferencias y la creación de cuentas faltantes van siempre.
+
+### Resultado
+
+`ResultadoImportacion` devuelve filas leídas, importadas, omitidas, cuentas y categorías creadas, cuántas quedaron sin categoría, tipos corregidos, contrapartes recalculadas, transferencias emparejadas y huérfanas, más una lista de diagnósticos con severidad `INFO`, `AVISO` o `ERROR` y su número de fila.
+
+Los fallos se traducen a mensajes accionables —archivo que no es un `.xlsx`, permiso perdido sobre el archivo, sin espacio, libro demasiado grande para la memoria—; la excepción cruda se manda a logcat sin datos del usuario.
+
+## Escribir el archivo
+
+El destino se abre con modo `"wt"` (escribir truncando): al sobrescribir un archivo más grande, sin truncar quedaría la cola del viejo pegada al final y el `.xlsx` saldría corrupto. Pero varios proveedores de documentos —gestores de archivos y servicios de nube— no soportan ese modo, así que se cae a `"w"`; un archivo recién creado por el selector nace vacío, y eso es preferible a no poder exportar.
+
+El selector propone la carpeta Descargas como punto de partida. Es solo una sugerencia: si el destino elegido no admite crear el archivo, quien avisa es el propio selector — la app no recibe ningún uri y no puede distinguir ese caso de una cancelación.
+
+## Pruebas
+
+- [`ExcelRoundTripTest`](../app/src/test/java/mx/ollin/finanzas/ExcelRoundTripTest.kt) — el escritor y el lector reales: seriales de fecha, letras de columna, centavos sin error acumulado, encabezados exactos de cada esquema, escapado de comillas y acentos, exportar solo algunas pestañas y un libro vacío.
+- [`ExportadorBordesTest`](../app/src/test/java/mx/ollin/finanzas/ExportadorBordesTest.kt) — lo que el round trip no toca: compromisos con datos, catálogos incompletos (categoría cuyo padre no existe, cuenta con apóstrofo, movimientos que apuntan a ids inexistentes) y tres años de movimientos diarios.
+
+Los libros quedan en `app/build/pruebas/` para poder abrirlos a mano y comprobar el resultado.

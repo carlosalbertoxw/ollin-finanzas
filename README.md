@@ -1,4 +1,4 @@
-# Ollin
+# Ollin Finanzas
 
 **El libro de tus movimientos.**
 
@@ -61,20 +61,19 @@ depende del idioma de la suite.
 Un solo módulo, Kotlin + Jetpack Compose (Material 3).
 
 ```
-mx.ollin.finanzas
-├── data
-│   ├── db/       Room: entidades, DAOs, semilla del catálogo
-│   ├── excel/    Lector y escritor .xlsx propios
-│   ├── prefs/    DataStore
-│   ├── notify/   Recordatorios de compromisos
-│   └── repo/     Repositorio único
-├── domain
-│   ├── model/    Enums, Dinero (centavos)
-│   └── usecase/  RevisaCalidad, ReparaDatos
-└── ui
-    ├── theme/    Paleta Ollin
-    ├── components/
-    └── screens/
+app/src/main/java/mx/ollin/finanzas/
+├── data/
+│   ├── db/          Room: entidades, DAOs, proyecciones, migraciones, catálogo semilla
+│   ├── excel/       Lector y escritor de .xlsx propios, exportador e importador
+│   ├── notify/      Recordatorios de compromisos por vencer
+│   ├── prefs/       Preferencias en DataStore
+│   ├── repo/        FinanzasRepositorio: toda la escritura pasa por aquí
+│   └── seguridad/   Llave de la base, PIN, control de bloqueo
+├── di/              Contenedor de dependencias, a mano
+├── domain/
+│   ├── model/       Enums, Dinero (centavos)
+│   └── usecase/     RevisaCalidad, ReparaDatos
+└── ui/              Compose: pantallas, navegación, tema, componentes
 ```
 
 Decisiones que no son las de default, y por qué:
@@ -93,6 +92,18 @@ Decisiones que no son las de default, y por qué:
   anterior a la API de ActivityResult: su `FragmentActivity` rechaza los request codes de
   más de 16 bits que genera `activity:1.10.1`, y **cualquier** selector de archivos revienta
   al abrirse. Quitar esa línea de `libs.versions.toml` vuelve a romper importar y exportar.
+
+---
+
+## Documentación
+
+- [Arquitectura](docs/arquitectura.md) — capas, navegación, arranque y bloqueo, y por qué no hay framework de inyección.
+- [Modelo de datos](docs/modelo-de-datos.md) — las seis tablas, invariantes del repositorio, proyecciones y migraciones.
+- [El libro](docs/movimientos.md) — tipos, signos, transferencias, gasto contra patrimonio, presupuesto y compromisos.
+- [Salud de los datos](docs/calidad.md) — qué revisa la auditoría, qué se repara solo y qué no.
+- [Excel](docs/excel.md) — formato del libro exportado, fórmulas, reglas de importación.
+- [Seguridad y privacidad](docs/seguridad.md) — cifrado de la base, Keystore, PIN, bloqueo y respaldos.
+- [Desarrollo](docs/desarrollo.md) — entorno, comandos, pruebas y convenciones del código.
 
 ---
 
@@ -130,3 +141,5 @@ Las pruebas de `ExcelRoundTripTest` generan libros reales en `app/build/pruebas/
 para abrirlos a mano y comprobar el resultado.
 
 - `minSdk` 26 · `targetSdk` 36 · Kotlin 2.1.20 · AGP 8.10.0 · Gradle 8.14.5
+
+Entorno, comandos y convenciones con más detalle en [Desarrollo](docs/desarrollo.md).
