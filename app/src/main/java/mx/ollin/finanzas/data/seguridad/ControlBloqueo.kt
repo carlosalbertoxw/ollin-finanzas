@@ -12,7 +12,7 @@ import mx.ollin.finanzas.data.prefs.AjustesRepositorio
 import mx.ollin.finanzas.data.prefs.ModoBloqueo
 
 /**
- * Decide cuando Ollin esta cerrada con llave.
+ * Decide cuando Ollin Finanzas esta cerrada con llave.
  *
  * Vive en el contenedor y no en un ViewModel porque debe sobrevivir a que la
  * actividad se recree: si el estado se perdiera al girar el telefono, girarlo
@@ -65,7 +65,7 @@ class ControlBloqueo(ajustes: AjustesRepositorio) {
     companion object {
         /**
          * Un minuto de gracia. Importar y exportar abren el selector de archivos
-         * del sistema, que manda Ollin al fondo; sin este margen, elegir un
+         * del sistema, que manda la app al fondo; sin este margen, elegir un
          * .xlsx te expulsaria de la app a medio camino.
          */
         const val GRACIA_MILLIS = 60_000L

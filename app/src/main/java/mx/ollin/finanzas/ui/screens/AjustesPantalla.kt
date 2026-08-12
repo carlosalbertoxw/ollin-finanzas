@@ -82,6 +82,10 @@ class AjustesVm(contenedor: Contenedor) : ViewModel() {
         viewModelScope.launch { prefs.guardaMuestraSaldoInicial(valor) }
     }
 
+    fun cambiaMuestraTutoriales(valor: Boolean) {
+        viewModelScope.launch { prefs.guardaMuestraTutoriales(valor) }
+    }
+
     fun quitaBloqueo() {
         viewModelScope.launch { prefs.quitaBloqueo() }
     }
@@ -105,6 +109,8 @@ fun AjustesPantalla(
     alAbrirCuentas: () -> Unit,
     alAbrirCategorias: () -> Unit,
     alAbrirCompromisos: () -> Unit,
+    alAbrirTutoriales: () -> Unit,
+    alAbrirAcercaDe: () -> Unit,
     alCerrar: () -> Unit
 ) {
     val vm = recuerdaVm("ajustes") { AjustesVm(contenedor) }
@@ -151,7 +157,7 @@ fun AjustesPantalla(
                     Column(Modifier.weight(1f)) {
                         Text("Color del sistema", style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            "Usa la paleta de tu fondo de pantalla en vez de la de Ollin.",
+                            "Usa la paleta de tu fondo de pantalla en vez de la de Ollin Finanzas.",
                             style = MaterialTheme.typography.bodySmall,
                             color = colores.textoTenue
                         )
@@ -198,7 +204,7 @@ fun AjustesPantalla(
             Text("Catalogo", style = MaterialTheme.typography.titleMedium)
             Text(
                 "Las cuentas y las categorias con las que capturas. Renombralas a lo tuyo: " +
-                    "las que trae Ollin de fabrica son solo un punto de partida.",
+                    "las que trae Ollin Finanzas de fabrica son solo un punto de partida.",
                 style = MaterialTheme.typography.bodySmall,
                 color = colores.textoTenue
             )
@@ -219,7 +225,7 @@ fun AjustesPantalla(
 
             Text("Tus datos", style = MaterialTheme.typography.titleMedium)
             Text(
-                "$movimientos movimientos guardados en este telefono. Ollin no manda nada a " +
+                "$movimientos movimientos guardados en este telefono. Ollin Finanzas no manda nada a " +
                     "ningun servidor y el respaldo automatico del sistema esta desactivado " +
                     "para la base: tu respaldo es la exportacion a .xlsx, que decides tu donde guardar.",
                 style = MaterialTheme.typography.bodyMedium,
@@ -228,20 +234,31 @@ fun AjustesPantalla(
 
             HorizontalDivider()
 
-            Text("Sobre Ollin", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Ollin es \"movimiento\" en nahuatl, y es el nombre del glifo del calendario " +
-                    "mexica que representa el cambio. Un libro de finanzas no es mas que el " +
-                    "registro de tus movimientos.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = colores.textoTenue
-            )
-            Text(
-                "Los importes se guardan en centavos enteros, nunca en decimales flotantes: " +
-                    "por eso un saldo en cero es exactamente cero.",
-                style = MaterialTheme.typography.bodySmall,
-                color = colores.textoTenue
-            )
+            Text("Ayuda", style = MaterialTheme.typography.titleMedium)
+
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Mostrar tutoriales", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "Apagalo cuando ya te sepas la app y desaparecen sus atajos del " +
+                            "tablero y de las pantallas. Los tutoriales se siguen abriendo " +
+                            "desde aqui.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colores.textoTenue
+                    )
+                }
+                Switch(
+                    checked = ajustes.muestraTutoriales,
+                    onCheckedChange = vm::cambiaMuestraTutoriales
+                )
+            }
+
+            TextButton(onClick = alAbrirTutoriales, modifier = Modifier.fillMaxWidth()) {
+                Text("Tutoriales de la app")
+            }
+            TextButton(onClick = alAbrirAcercaDe, modifier = Modifier.fillMaxWidth()) {
+                Text("Acerca de Ollin Finanzas")
+            }
 
             Spacer(Modifier.height(24.dp))
             TextButton(onClick = alCerrar, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
@@ -292,7 +309,7 @@ private fun SeccionBloqueo(
 
     Text("Bloqueo", style = MaterialTheme.typography.titleMedium)
     Text(
-        "Ollin pide la llave al abrirse y al volver despues de un minuto fuera. " +
+        "Ollin Finanzas pide la llave al abrirse y al volver despues de un minuto fuera. " +
             "Ese minuto es lo que evita que elegir un archivo de Excel te expulse.",
         style = MaterialTheme.typography.bodySmall,
         color = colores.textoTenue
@@ -332,10 +349,11 @@ private fun SeccionBloqueo(
 
     Text(
         when (modoActual) {
-            ModoBloqueo.NINGUNO -> "Cualquiera que tome tu telefono desbloqueado puede abrir Ollin."
+            ModoBloqueo.NINGUNO ->
+                "Cualquiera que tome tu telefono desbloqueado puede abrir Ollin Finanzas."
             ModoBloqueo.SISTEMA -> "Se usa el patron, PIN o huella con que desbloqueas el telefono. " +
-                "Ollin no guarda ningun secreto."
-            ModoBloqueo.PIN -> "Se usa un PIN solo de Ollin. Si lo olvidas no hay forma de " +
+                "Ollin Finanzas no guarda ningun secreto."
+            ModoBloqueo.PIN -> "Se usa un PIN solo de Ollin Finanzas. Si lo olvidas no hay forma de " +
                 "recuperarlo: tendrias que reinstalar la app y perderias los datos."
         },
         style = MaterialTheme.typography.bodySmall,
@@ -442,7 +460,7 @@ private fun DialogoNuevoPin(alGuardar: (String) -> Unit, alCancelar: () -> Unit)
 
     AlertDialog(
         onDismissRequest = alCancelar,
-        title = { Text("PIN de Ollin") },
+        title = { Text("PIN de Ollin Finanzas") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(

@@ -3,7 +3,7 @@ package mx.ollin.finanzas.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Paleta de Ollin.
+ * Paleta de Ollin Finanzas.
  *
  * Los pigmentos vienen de la tradicion mexicana y cada uno tiene un trabajo:
  * jade para lo que entra, grana para lo que sale, cempasuchil para lo que pide

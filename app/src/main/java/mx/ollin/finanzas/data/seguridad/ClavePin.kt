@@ -9,7 +9,7 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 
 /**
- * Deriva la huella del PIN propio de Ollin.
+ * Deriva la huella del PIN propio de Ollin Finanzas.
  *
  * El PIN nunca se guarda: se guarda PBKDF2 sobre el, con una sal distinta por
  * telefono. Un PIN de cuatro digitos tiene diez mil combinaciones, asi que sin

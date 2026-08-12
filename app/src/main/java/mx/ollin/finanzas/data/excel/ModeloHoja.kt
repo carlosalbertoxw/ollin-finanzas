@@ -39,7 +39,7 @@ sealed interface Celda {
     data class Booleano(val valor: Boolean, override val estilo: Int = Estilo.NORMAL) : Celda
 
     /**
-     * Formula viva. [cache] es el resultado que Ollin ya conoce; se escribe como
+     * Formula viva. [cache] es el resultado que Ollin Finanzas ya conoce; se escribe como
      * valor almacenado para que la hoja se vea bien incluso en visores que no
      * recalculan, sin dejar de ser una formula real que se actualiza al editar.
      */

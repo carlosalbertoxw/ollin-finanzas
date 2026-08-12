@@ -59,7 +59,7 @@ data class ResultadoImportacion(
 }
 
 /**
- * Lee un libro de Excel y lo vuelca en la base de Ollin.
+ * Lee un libro de Excel y lo vuelca en la base de Ollin Finanzas.
  *
  * No se limita a copiar: al entrar corrige lo que en una hoja de calculo se
  * degrada solo — tipos que contradicen al signo del importe, transferencias a
@@ -278,7 +278,7 @@ class ImportadorExcel(
             val clave = nombre.normalizaClave()
             if (indiceCuentas.containsKey(clave)) return@forEach
             if (!opciones.crearCuentasFaltantes) {
-                diagnosticos += Diagnostico(Severidad.ERROR, "La cuenta \"$nombre\" no existe en Ollin.")
+                diagnosticos += Diagnostico(Severidad.ERROR, "La cuenta \"$nombre\" no existe en Ollin Finanzas.")
                 return@forEach
             }
             val tipo = infiereTipoCuenta(nombre)

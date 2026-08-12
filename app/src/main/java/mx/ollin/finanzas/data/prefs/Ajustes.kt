@@ -14,12 +14,12 @@ import mx.ollin.finanzas.data.excel.HojaExportable
 
 private val Context.almacen by preferencesDataStore(name = "ollin_ajustes")
 
-/** Con que se desbloquea Ollin al abrirla. */
+/** Con que se desbloquea Ollin Finanzas al abrirla. */
 enum class ModoBloqueo(val etiqueta: String) {
     NINGUNO("Sin bloqueo"),
     /** El patron, PIN, contrasena o huella del propio telefono. */
     SISTEMA("Del telefono"),
-    /** Un PIN exclusivo de Ollin, distinto al del telefono. */
+    /** Un PIN exclusivo de Ollin Finanzas, distinto al del telefono. */
     PIN("PIN propio")
 }
 
@@ -34,6 +34,12 @@ data class Ajustes(
     val ultimoArchivo: String? = null,
     /** El saldo inicial solo se ocupa al dar de alta una cuenta; despues estorba. */
     val muestraSaldoInicial: Boolean = true,
+    /**
+     * Los tutoriales sirven mientras aprendes la app y estorban despues. Apagarlos
+     * quita sus atajos del tablero y de las barras; la pantalla completa se sigue
+     * pudiendo abrir desde Ajustes, para que apagarlos no sea un camino sin regreso.
+     */
+    val muestraTutoriales: Boolean = true,
     val modoBloqueo: ModoBloqueo = ModoBloqueo.NINGUNO,
     /** Del PIN solo se guarda su huella derivada; el PIN en claro no se escribe nunca. */
     val pinHash: String? = null,
@@ -51,6 +57,7 @@ class AjustesRepositorio(private val contexto: Context) {
         val DINAMICO = booleanPreferencesKey("color_dinamico")
         val ULTIMO_ARCHIVO = stringPreferencesKey("ultimo_archivo")
         val SALDO_INICIAL = booleanPreferencesKey("muestra_saldo_inicial")
+        val TUTORIALES = booleanPreferencesKey("muestra_tutoriales")
         val BLOQUEO = stringPreferencesKey("modo_bloqueo")
         val PIN_HASH = stringPreferencesKey("pin_hash")
         val PIN_SAL = stringPreferencesKey("pin_sal")
@@ -77,6 +84,7 @@ class AjustesRepositorio(private val contexto: Context) {
         colorDinamico = p[Claves.DINAMICO] ?: false,
         ultimoArchivo = p[Claves.ULTIMO_ARCHIVO],
         muestraSaldoInicial = p[Claves.SALDO_INICIAL] ?: true,
+        muestraTutoriales = p[Claves.TUTORIALES] ?: true,
         modoBloqueo = p[Claves.BLOQUEO]
             ?.let { runCatching { ModoBloqueo.valueOf(it) }.getOrNull() }
             ?: ModoBloqueo.NINGUNO,
@@ -147,6 +155,10 @@ class AjustesRepositorio(private val contexto: Context) {
 
     suspend fun guardaMuestraSaldoInicial(valor: Boolean) {
         contexto.almacen.edit { it[Claves.SALDO_INICIAL] = valor }
+    }
+
+    suspend fun guardaMuestraTutoriales(valor: Boolean) {
+        contexto.almacen.edit { it[Claves.TUTORIALES] = valor }
     }
 
     suspend fun guardaUltimoArchivo(uri: String?) {

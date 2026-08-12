@@ -74,7 +74,7 @@ private const val MIME_XLSX =
  *
  * Es solo una sugerencia: si esa carpeta no existe, el selector la ignora y
  * abre donde pueda. Cuando el destino elegido no admite crear el archivo, quien
- * avisa es el propio selector con su "Error al guardar el documento"; Ollin no
+ * avisa es el propio selector con su "Error al guardar el documento"; la app no
  * recibe ningun uri y no puede distinguir ese caso de una cancelacion.
  */
 private class CreaLibro : ActivityResultContracts.CreateDocument(MIME_XLSX) {
@@ -182,7 +182,7 @@ class ArchivoVm(private val contenedor: Contenedor) : ViewModel() {
         // El mensaje que ve el usuario oculta los internos a proposito, asi que
         // el fallo real se manda a logcat: sin esto, un error de exportacion no
         // deja rastro de que lo causo. No lleva ningun dato del usuario.
-        android.util.Log.w("Ollin", "Fallo al $accion", fallo)
+        android.util.Log.w("OllinFinanzas", "Fallo al $accion", fallo)
         return mensajeDe(fallo, accion)
     }
 
@@ -230,7 +230,7 @@ fun ArchivoPantalla(contenedor: Contenedor, alAbrirCalidad: () -> Unit) {
     ) {
         Text("Archivo", style = MaterialTheme.typography.headlineSmall)
         Text(
-            "Ollin guarda tus datos en el telefono y usa el .xlsx como formato de " +
+            "Ollin Finanzas guarda tus datos en el telefono y usa el .xlsx como formato de " +
                 "intercambio: lo lees, lo escribes, y sigue siendo tuyo.",
             style = MaterialTheme.typography.bodyMedium,
             color = colores.textoTenue

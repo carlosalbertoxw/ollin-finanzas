@@ -13,7 +13,7 @@ import java.time.YearMonth
 import kotlin.math.abs
 
 /**
- * Convierte los datos de Ollin en un libro de Excel.
+ * Convierte los datos de Ollin Finanzas en un libro de Excel.
  *
  * Las hojas de analisis llevan formulas reales (SUMIFS) apuntando a Registros,
  * ademas del valor ya calculado como cache. Asi la hoja se ve correcta al
@@ -487,7 +487,7 @@ class ExportadorExcel(
 
         if (datos.presupuestos.isEmpty()) {
             filas += fila(Celda.Texto("Todavia no hay metas capturadas.", Estilo.TENUE))
-            filas += fila(Celda.Texto("Definelas en Ollin, pestaña Presupuesto, y vuelve a exportar.", Estilo.TENUE))
+            filas += fila(Celda.Texto("Definelas en Ollin Finanzas, pestaña Presupuesto, y vuelve a exportar.", Estilo.TENUE))
             return Hoja("Presupuesto", filas, listOf(AnchoColumna(1, 40.0)))
         }
 

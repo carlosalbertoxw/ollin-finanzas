@@ -32,6 +32,8 @@ object Rutas {
     const val CALIDAD = "calidad"
     const val REVISION = "revision/{clave}"
     const val AJUSTES = "ajustes"
+    const val TUTORIALES = "tutoriales"
+    const val ACERCA_DE = "acerca"
 
     fun captura(id: Long? = null): String = if (id == null) "captura" else "captura?id=$id"
 

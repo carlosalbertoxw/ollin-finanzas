@@ -14,7 +14,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.HealthAndSafety
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -38,6 +40,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import mx.ollin.finanzas.data.db.Compromiso
@@ -130,6 +133,11 @@ class TableroVm(private val contenedor: Contenedor) : ViewModel() {
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EstadoTablero())
 
+    /** Manda si el tablero enseña o no sus atajos de ayuda. */
+    val muestraTutoriales: StateFlow<Boolean> = contenedor.ajustes.ajustes
+        .map { it.muestraTutoriales }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
     init {
         revisaCalidad()
     }
@@ -147,10 +155,12 @@ fun TableroPantalla(
     alAbrirCuentas: () -> Unit,
     alAbrirCalidad: () -> Unit,
     alAbrirCompromisos: () -> Unit,
-    alAbrirAjustes: () -> Unit
+    alAbrirAjustes: () -> Unit,
+    alAbrirTutoriales: () -> Unit
 ) {
     val vm = recuerdaVm("tablero") { TableroVm(contenedor) }
     val estado by vm.estado.collectAsStateWithLifecycle()
+    val muestraTutoriales by vm.muestraTutoriales.collectAsStateWithLifecycle()
     val colores = LocalColoresOllin.current
 
     LazyColumn(
@@ -171,8 +181,51 @@ fun TableroPantalla(
                         style = MaterialTheme.typography.displaySmall
                     )
                 }
-                IconButton(onClick = alAbrirAjustes) {
-                    Icon(Icons.Filled.Settings, contentDescription = "Ajustes")
+                Row {
+                    if (muestraTutoriales) {
+                        IconButton(onClick = alAbrirTutoriales) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.HelpOutline,
+                                contentDescription = "Tutoriales"
+                            )
+                        }
+                    }
+                    IconButton(onClick = alAbrirAjustes) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Ajustes")
+                    }
+                }
+            }
+        }
+
+        // La tarjeta grande solo mientras el libro esta en blanco: quien ya captura
+        // a diario no necesita que le expliquen cada vez que abre la app.
+        if (muestraTutoriales && estado.saldos.none { it.movimientos > 0 }) {
+            item {
+                Card(
+                    Modifier.fillMaxWidth().clickable(onClick = alAbrirTutoriales),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Row(
+                        Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(Icons.Filled.School, contentDescription = null)
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "Empieza por aqui",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Text(
+                                "Da de alta tus cuentas y captura tu primer movimiento, " +
+                                    "paso a paso.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                    }
                 }
             }
         }

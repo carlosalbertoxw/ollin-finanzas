@@ -39,7 +39,7 @@ import mx.ollin.finanzas.ui.seguridad.pedirCredencialDelSistema
 import mx.ollin.finanzas.ui.theme.LocalColoresOllin
 
 /**
- * Lo unico que se ve mientras Ollin esta cerrada con llave.
+ * Lo unico que se ve mientras Ollin Finanzas esta cerrada con llave.
  *
  * Sustituye al arbol entero de la app, no lo tapa: si fuera una capa encima,
  * el contenido seguiria compuesto debajo y asomaria en la vista de apps
@@ -64,7 +64,7 @@ fun BloqueoPantalla(
                 tint = LocalColoresOllin.current.textoTenue
             )
             Spacer(Modifier.height(16.dp))
-            Text("Ollin esta bloqueada", style = MaterialTheme.typography.titleMedium)
+            Text("Ollin Finanzas esta bloqueada", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(24.dp))
 
             when (ajustes.modoBloqueo) {
@@ -84,7 +84,7 @@ private fun DesbloqueoSistema(actividad: FragmentActivity, alDesbloquear: () -> 
 
     val pedir = pedirCredencialDelSistema(
         actividad = actividad,
-        titulo = "Desbloquea Ollin",
+        titulo = "Desbloquea Ollin Finanzas",
         alLograr = alDesbloquear,
         alFallar = { mensaje = it }
     )
@@ -134,7 +134,7 @@ private fun DesbloqueoPin(ajustes: Ajustes, alDesbloquear: () -> Unit) {
     OutlinedTextField(
         value = pin,
         onValueChange = { nuevo -> pin = nuevo.filter(Char::isDigit).take(12) },
-        label = { Text("PIN de Ollin") },
+        label = { Text("PIN de Ollin Finanzas") },
         singleLine = true,
         visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),

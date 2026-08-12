@@ -31,6 +31,7 @@ import androidx.navigation.navArgument
 import mx.ollin.finanzas.di.Contenedor
 import mx.ollin.finanzas.ui.nav.Destino
 import mx.ollin.finanzas.ui.nav.Rutas
+import mx.ollin.finanzas.ui.screens.AcercaDePantalla
 import mx.ollin.finanzas.ui.screens.AjustesPantalla
 import mx.ollin.finanzas.ui.screens.AnaliticaPantalla
 import mx.ollin.finanzas.ui.screens.ArchivoPantalla
@@ -44,6 +45,7 @@ import mx.ollin.finanzas.ui.screens.PresupuestoPantalla
 import mx.ollin.finanzas.ui.screens.RevisionPantalla
 import mx.ollin.finanzas.ui.screens.TableroPantalla
 import mx.ollin.finanzas.ui.screens.TransferenciaPantalla
+import mx.ollin.finanzas.ui.screens.TutorialesPantalla
 
 @Composable
 fun OllinRaiz(contenedor: Contenedor) {
@@ -105,7 +107,8 @@ fun OllinRaiz(contenedor: Contenedor) {
                         alAbrirCuentas = { nav.navigate(Rutas.CUENTAS) },
                         alAbrirCalidad = { nav.navigate(Rutas.CALIDAD) },
                         alAbrirCompromisos = { nav.navigate(Rutas.COMPROMISOS) },
-                        alAbrirAjustes = { nav.navigate(Rutas.AJUSTES) }
+                        alAbrirAjustes = { nav.navigate(Rutas.AJUSTES) },
+                        alAbrirTutoriales = { nav.navigate(Rutas.TUTORIALES) }
                     )
                 }
 
@@ -215,6 +218,28 @@ fun OllinRaiz(contenedor: Contenedor) {
                         alAbrirCuentas = { nav.navigate(Rutas.CUENTAS) },
                         alAbrirCategorias = { nav.navigate(Rutas.CATEGORIAS) },
                         alAbrirCompromisos = { nav.navigate(Rutas.COMPROMISOS) },
+                        alAbrirTutoriales = { nav.navigate(Rutas.TUTORIALES) },
+                        alAbrirAcercaDe = { nav.navigate(Rutas.ACERCA_DE) },
+                        alCerrar = { nav.popBackStack() }
+                    )
+                }
+
+                composable(Rutas.TUTORIALES) {
+                    TutorialesPantalla(
+                        alCerrar = { nav.popBackStack() },
+                        alAbrirAcercaDe = {
+                            nav.navigate(Rutas.ACERCA_DE) { launchSingleTop = true }
+                        }
+                    )
+                }
+
+                composable(Rutas.ACERCA_DE) {
+                    AcercaDePantalla(
+                        // Sin launchSingleTop se apilarian Acerca de y Tutoriales una y
+                        // otra vez al ir y venir entre las dos.
+                        alAbrirTutoriales = {
+                            nav.navigate(Rutas.TUTORIALES) { launchSingleTop = true }
+                        },
                         alCerrar = { nav.popBackStack() }
                     )
                 }

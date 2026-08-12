@@ -26,7 +26,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Permite "Abrir con Ollin" desde un gestor de archivos o desde OneDrive. -->
+            <!-- Permite "Abrir con Ollin Finanzas" desde un gestor de archivos o desde OneDrive. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

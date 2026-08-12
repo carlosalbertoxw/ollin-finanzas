@@ -78,7 +78,7 @@ enum class Medio(val etiqueta: String) {
  * Contra quien va el movimiento: 1 = ocurre entre cuentas tuyas, 2 = interviene
  * un tercero.
  *
- * Ollin lo deriva del tipo en vez de pedirlo. Un campo que se captura a mano
+ * Ollin Finanzas lo deriva del tipo en vez de pedirlo. Un campo que se captura a mano
  * es un campo que se deja de mantener, y entonces todo reporte que dependa de
  * el miente. Ver [Movimiento.contraparteDerivada].
  */
@@ -111,7 +111,7 @@ enum class TipoCategoria(val etiqueta: String) {
     }
 }
 
-/** Tipo de compromiso futuro que Ollin vigila. */
+/** Tipo de compromiso futuro que Ollin Finanzas vigila. */
 
 /** Periodicidad de un compromiso recurrente. */
 enum class Periodicidad(val etiqueta: String, val meses: Int) {

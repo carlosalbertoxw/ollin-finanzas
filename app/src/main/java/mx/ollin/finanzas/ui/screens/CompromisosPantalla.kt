@@ -236,7 +236,7 @@ fun CompromisosPantalla(
             item {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Ollin revisa una vez al dia y te avisa cuando un compromiso esta por vencer.",
+                    "Ollin Finanzas revisa una vez al dia y te avisa cuando un compromiso esta por vencer.",
                     style = MaterialTheme.typography.bodySmall,
                     color = colores.textoTenue
                 )

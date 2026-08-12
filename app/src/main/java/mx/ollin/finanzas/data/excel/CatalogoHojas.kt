@@ -10,7 +10,7 @@ package mx.ollin.finanzas.data.excel
 enum class EsquemaExportacion(val etiqueta: String, val descripcion: String) {
     EXTENDIDO(
         "Extendido",
-        "Agrega Categoria, Año, Nota y Compromiso. Recomendado para trabajar dentro de Ollin."
+        "Agrega Categoria, Año, Nota y Compromiso. Recomendado para trabajar dentro de Ollin Finanzas."
     ),
     COMPACTO(
         "Compacto",
@@ -47,7 +47,7 @@ enum class EsquemaExportacion(val etiqueta: String, val descripcion: String) {
 }
 
 /**
- * Pestañas que Ollin sabe generar. El usuario elige cuales exportar; Registros
+ * Pestañas que Ollin Finanzas sabe generar. El usuario elige cuales exportar; Registros
  * es obligatoria porque es la unica que contiene datos y de la que dependen las
  * formulas de todas las demas.
  */

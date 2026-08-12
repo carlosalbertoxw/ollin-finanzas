@@ -111,8 +111,8 @@ class XlsxEscritor(private val hojas: List<Hoja>) {
             """<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" """ +
             """xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" """ +
             """xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">""" +
-            "<dc:title>Finanzas</dc:title><dc:creator>Ollin</dc:creator>" +
-            "<cp:lastModifiedBy>Ollin</cp:lastModifiedBy>" +
+            "<dc:title>Finanzas</dc:title><dc:creator>Ollin Finanzas</dc:creator>" +
+            "<cp:lastModifiedBy>Ollin Finanzas</cp:lastModifiedBy>" +
             """<dcterms:created xsi:type="dcterms:W3CDTF">$ahora</dcterms:created>""" +
             """<dcterms:modified xsi:type="dcterms:W3CDTF">$ahora</dcterms:modified>""" +
             "</cp:coreProperties>"
@@ -122,7 +122,7 @@ class XlsxEscritor(private val hojas: List<Hoja>) {
         """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""" +
             """<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" """ +
             """xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">""" +
-            "<Application>Ollin</Application><Company></Company>" +
+            "<Application>Ollin Finanzas</Application><Company></Company>" +
             "</Properties>"
 
     private fun workbookXml(): String = buildString {
