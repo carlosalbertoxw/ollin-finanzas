@@ -36,37 +36,12 @@ data class UsoCategoria(
     val movimientos: Int
 )
 
-data class TotalPorCategoria(
-    val categoriaId: Long?,
-    val nombre: String?,
-    val totalCentavos: Long,
-    val movimientos: Int
-)
-
-data class TotalPorDescripcion(
-    val descripcion: String,
-    val totalCentavos: Long,
-    val movimientos: Int
-)
-
-data class TotalPorPeriodoCategoria(
-    val periodo: String,
-    val categoriaId: Long?,
-    val totalCentavos: Long
-)
-
 /** Movimiento acompañado de los nombres que la lista necesita mostrar. */
 data class MovimientoDetallado(
     @Embedded val movimiento: Movimiento,
     val nombreCuenta: String,
     val nombreCategoria: String?,
     val tipoCuenta: TipoCuenta
-)
-
-data class SaldoPorPeriodo(
-    val periodo: String,
-    val cuentaId: Long,
-    val deltaCentavos: Long
 )
 
 /** Fila del comparativo presupuesto contra realidad. */

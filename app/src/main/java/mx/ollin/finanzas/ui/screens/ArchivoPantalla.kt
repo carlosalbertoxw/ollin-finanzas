@@ -280,7 +280,8 @@ fun ArchivoPantalla(contenedor: Contenedor, alAbrirCalidad: () -> Unit) {
         SeccionTitulo("Importar")
         Text(
             "Lee un .xlsx y reconoce sus encabezados sin importar acentos ni mayusculas. " +
-                "Al entrar corrige lo que encuentre mal.",
+                "Al entrar corrige lo que encuentre mal. Ademas de los movimientos, entran " +
+                "Diccionarios, Presupuesto y Compromisos si el libro trae esas pestañas.",
             style = MaterialTheme.typography.bodySmall,
             color = colores.textoTenue
         )
@@ -297,8 +298,9 @@ fun ArchivoPantalla(contenedor: Contenedor, alAbrirCalidad: () -> Unit) {
                 InterruptorConNota(
                     titulo = "Reemplazar todo",
                     detalle = if (ajustes.reemplazarAlImportar)
-                        "Se borran los $total movimientos actuales y se cargan los del archivo."
-                    else "Los movimientos del archivo se agregan a los que ya tienes.",
+                        "Se borran los $total movimientos actuales —y las metas y compromisos— " +
+                            "y se cargan los del archivo."
+                    else "Lo del archivo se agrega a lo que ya tienes.",
                     valor = ajustes.reemplazarAlImportar,
                     alCambiar = vm::cambiaReemplazar
                 )
@@ -471,6 +473,15 @@ private fun ResumenImportacion(
             }
             if (resultado.cuentasCreadas.isNotEmpty()) {
                 Text("· Cuentas nuevas: ${resultado.cuentasCreadas.joinToString()}")
+            }
+            if (resultado.categoriasCreadas.isNotEmpty()) {
+                Text("· ${resultado.categoriasCreadas.size} categorias nuevas")
+            }
+            if (resultado.presupuestosImportados > 0) {
+                Text("· ${resultado.presupuestosImportados} metas de presupuesto")
+            }
+            if (resultado.compromisosImportados > 0) {
+                Text("· ${resultado.compromisosImportados} compromisos")
             }
             if (resultado.sinCategoria > 0) {
                 Text("· ${resultado.sinCategoria} movimientos sin categoria")

@@ -13,4 +13,8 @@ local.properties
 *.apk
 *.aab
 *.keystore
+*.jks
 !debug.keystore
+
+# Rutas y contrasenas de la llave de firma. La plantilla .example si se versiona.
+/keystore.properties

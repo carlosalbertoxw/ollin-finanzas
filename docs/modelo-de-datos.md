@@ -125,8 +125,6 @@ Toda escritura pasa por [`FinanzasRepositorio`](../app/src/main/java/mx/ollin/fi
 | `SaldoCuenta` | Saldo vivo = suma de todos los movimientos de la cuenta |
 | `FlujoMes` | Ingresos, gasto de consumo y compra de patrimonio del mes; de ahí salen el neto y la tasa de ahorro |
 | `MovimientoDetallado` | Movimiento + nombre de cuenta, nombre de categoría y tipo de cuenta |
-| `TotalPorCategoria`, `TotalPorDescripcion`, `TotalPorPeriodoCategoria` | Analítica |
-| `SaldoPorPeriodo` | Delta por cuenta y mes |
 | `RenglonPresupuesto` | Meta contra realidad, con desviación y avance |
 | `UsoCategoria` | Cuántos movimientos cuelgan de cada categoría; decide si se puede borrar o solo archivar |
 
@@ -135,8 +133,9 @@ Toda escritura pasa por [`FinanzasRepositorio`](../app/src/main/java/mx/ollin/fi
 | Versión | Cambio |
 |---|---|
 | 1 | Esquema inicial |
-| 2 | Se va la columna `tipo` de `compromiso` |
 
-La etiqueta de tipo del compromiso (MSI, suscripción, anual…) no decidía nada: quien lo clasifica es su categoría, que además sirve para generar el gasto. SQLite no sabe borrar columnas en versiones viejas, así que la migración recrea la tabla, copia los datos y **rehace los índices exactamente como los declara la entidad**: si no coinciden con los que Room espera, la validación de esquema truena al abrir.
+**No hay ninguna migración, y es a propósito.** La app todavía no se ha publicado, así que no existe ni un teléfono con datos que preservar. Durante el desarrollo llegó a haber una versión 2 que retiraba la columna `tipo` de `compromiso`; al no haber usuarios, se plegó sobre la 1 en vez de arrastrar una migración que nadie iba a ejecutar. El esquema de `app/schemas/1.json` es el resultado, ya sin esa columna.
 
-Al agregar una versión: modifica las entidades, sube `version` en [`OllinDatabase`](../app/src/main/java/mx/ollin/finanzas/data/db/OllinDatabase.kt), escribe la `Migration`, regístrala en `addMigrations(...)` y versiona el nuevo `app/schemas/N.json` que genera KSP.
+Esto deja de valer con la primera versión que instale alguien más. A partir de ahí, cada cambio de esquema necesita su migración: cambia las entidades, sube `version` en [`OllinDatabase`](../app/src/main/java/mx/ollin/finanzas/data/db/OllinDatabase.kt), escribe la `Migration`, regístrala con `addMigrations(...)` y versiona el nuevo `app/schemas/N.json` que genera KSP.
+
+Y una advertencia mientras tanto: si tienes la app instalada de antes, su archivo quedó marcado como versión 2 y Room **no sabe bajar de versión**. Al abrir con la versión 1 truena. Desinstala o borra los datos de la app; la base está cifrada, así que tampoco hay forma de rescatarla a mano.

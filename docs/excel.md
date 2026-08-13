@@ -20,7 +20,7 @@ Se eligen desde la pantalla de Archivo ([`HojaExportable`](../app/src/main/java/
 | **Registros** | Todos los movimientos, uno por renglón. Obligatoria: es la fuente de las demás |
 | **Diccionarios** | Cuentas, categorías, medios, contrapartes y tipos; alimentan los desplegables de Registros |
 
-Las pestañas salen en orden de lectura natural: primero el análisis, luego el detalle y los catálogos al final. El preajuste "solo datos" (`HojaExportable.MINIMA`) deja Registros y Diccionarios: lo que se puede volver a importar.
+Las pestañas salen en orden de lectura natural: primero el análisis, luego el detalle y los catálogos al final. El preajuste "solo datos" (`HojaExportable.MINIMA`) deja Registros y Diccionarios: los movimientos y el catálogo del que cuelgan. Para un respaldo que también devuelva metas y compromisos hay que exportar el libro completo.
 
 ### Esquemas de columna
 
@@ -58,6 +58,7 @@ El libro incluye además anchos de columna, panel congelado en el encabezado, va
 | [`DatosExportacion.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/DatosExportacion.kt) | Fotografía de los datos en el momento de exportar |
 | [`ExportadorExcel.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/ExportadorExcel.kt) | Arma las hojas |
 | [`ImportadorExcel.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/ImportadorExcel.kt) | Vuelca un libro en la base |
+| [`LectorCatalogos.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/LectorCatalogos.kt) | Interpreta Diccionarios, Presupuesto y Compromisos; no toca la base |
 
 Los índices de estilo de `Estilo` deben coincidir en orden exacto con `cellXfs` en `XlsxEscritor.estilosXml()`.
 
@@ -69,9 +70,28 @@ El lector carga el paquete completo en memoria porque `sharedStrings.xml` puede 
 
 `Archivo → Importar` abre el selector del sistema. La app también acepta "Abrir con Ollin Finanzas" desde un gestor de archivos o desde la nube, gracias al `intent-filter` de tipo `spreadsheetml.sheet`.
 
-### Qué hoja se lee
+### Qué hojas se leen
 
-La primera que traiga, al menos, columnas de **fecha**, **cantidad** y **cuenta**. Se prefiere la llamada `Registros`. Admite libros que no salieron de aquí.
+Los movimientos salen de la primera hoja que traiga, al menos, columnas de **fecha**, **cantidad** y **cuenta**; se prefiere la llamada `Registros`. Admite libros que no salieron de aquí.
+
+Además entran, **si el libro las trae**, las otras tres pestañas que la app sabe generar:
+
+| Hoja | Qué vuelve |
+|---|---|
+| **Diccionarios** | Cuentas con su naturaleza y categorías con su grupo. Entran incluso las cuentas sin un solo movimiento |
+| **Presupuesto** | Las metas por categoría y mes |
+| **Compromisos** | Mensualidades, suscripciones y gastos anuales por venir |
+
+Se leen en ese orden y antes que los movimientos, porque el catálogo manda: una cuenta creada desde Diccionarios nace con la naturaleza **declarada** en la hoja, mientras que una creada desde el nombre de un movimiento solo la adivina.
+
+Un libro de puros catálogos —sin hoja de movimientos— también sirve: entra lo que traiga y **los movimientos actuales no se tocan**, ni siquiera con "reemplazar todo" encendido. Vaciarlos ahí borraría todo a cambio de nada. Lo mismo al revés: un libro sin pestaña Presupuesto no borra las metas que ya tienes, porque no podría restituirlas.
+
+Lo que no vuelve, y hay que arreglar a mano:
+
+- **El tipo de categoría no viaja en Diccionarios.** Al importar se deduce del uso en Registros —lo que solo aparece en entradas es ingreso, el resto gasto—, así que una categoría de **patrimonio regresa como gasto**. Se avisa cuando se crea alguna. Las categorías que ya existen no se tocan.
+- **Compromisos guarda el próximo pago y los pagos que faltan**, no la fecha original ni los ya cubiertos: son los dos datos que sirven para vigilar lo que viene. Al volver a entrar, el compromiso se reconstruye desde ahí —arranca en el próximo pago con los pagos que quedan—, salvo que el libro traiga columnas de `fecha primer pago`, `total pagos` o `pagos realizados`.
+
+También se aceptan estas tres hojas capturadas a mano: el encabezado se busca por sinónimos en cualquier renglón, no solo en el primero. Presupuesto admite tanto el formato de la app —un bloque por mes, con el periodo como subtítulo— como una tabla con columnas propias de `Anio` y `Mes`. Una meta cuya categoría no existe **se avisa en vez de inventar la categoría**: crearla sería adivinar su naturaleza sin un solo movimiento que la respalde.
 
 ### Reconocimiento de columnas
 
@@ -108,13 +128,13 @@ Un renglón sin fecha, sin cantidad o sin cuenta se omite y se reporta con su n�
 
 ### Opciones
 
-- **Reemplazar** (por omisión) vacía los movimientos antes de importar; si se apaga, agrega.
+- **Reemplazar** (por omisión) vacía los movimientos antes de importar —y también las metas y los compromisos, pero solo si el libro trae esas pestañas—; si se apaga, agrega. Al agregar, el nombre hace de identidad del compromiso: importar dos veces el mismo libro no deja la lista duplicada.
 - **Corregir al importar** (por omisión) enciende la alineación de tipo con signo y el recálculo de contraparte.
-- El emparejado de transferencias y la creación de cuentas faltantes van siempre.
+- El emparejado de transferencias, la creación de cuentas faltantes y la lectura de las otras pestañas van siempre.
 
 ### Resultado
 
-`ResultadoImportacion` devuelve filas leídas, importadas, omitidas, cuentas y categorías creadas, cuántas quedaron sin categoría, tipos corregidos, contrapartes recalculadas, transferencias emparejadas y huérfanas, más una lista de diagnósticos con severidad `INFO`, `AVISO` o `ERROR` y su número de fila.
+`ResultadoImportacion` devuelve filas leídas, importadas, omitidas, cuentas y categorías creadas, cuántas quedaron sin categoría, tipos corregidos, contrapartes recalculadas, transferencias emparejadas y huérfanas, metas y compromisos importados, más una lista de diagnósticos con severidad `INFO`, `AVISO` o `ERROR` y su número de fila.
 
 Los fallos se traducen a mensajes accionables —archivo que no es un `.xlsx`, permiso perdido sobre el archivo, sin espacio, libro demasiado grande para la memoria—; la excepción cruda se manda a logcat sin datos del usuario.
 
@@ -128,5 +148,7 @@ El selector propone la carpeta Descargas como punto de partida. Es solo una suge
 
 - [`ExcelRoundTripTest`](../app/src/test/java/mx/ollin/finanzas/ExcelRoundTripTest.kt) — el escritor y el lector reales: seriales de fecha, letras de columna, centavos sin error acumulado, encabezados exactos de cada esquema, escapado de comillas y acentos, exportar solo algunas pestañas y un libro vacío.
 - [`ExportadorBordesTest`](../app/src/test/java/mx/ollin/finanzas/ExportadorBordesTest.kt) — lo que el round trip no toca: compromisos con datos, catálogos incompletos (categoría cuyo padre no existe, cuenta con apóstrofo, movimientos que apuntan a ids inexistentes) y tres años de movimientos diarios.
+- [`ImportadorExcelTest`](../app/src/test/java/mx/ollin/finanzas/ImportadorExcelTest.kt) — el lado que decide cosas por ti: corrección de tipos, emparejado de transferencias, cuentas inventadas y contrapartes recalculadas.
+- [`ImportadorHojasTest`](../app/src/test/java/mx/ollin/finanzas/ImportadorHojasTest.kt) — el viaje de regreso de Diccionarios, Presupuesto y Compromisos, incluido el libro completo de ida y vuelta: si alguien mueve una columna del exportador, la prueba se entera.
 
 Los libros quedan en `app/build/pruebas/` para poder abrirlos a mano y comprobar el resultado.

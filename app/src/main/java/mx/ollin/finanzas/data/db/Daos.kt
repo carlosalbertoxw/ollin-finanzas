@@ -8,7 +8,6 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
-import mx.ollin.finanzas.domain.model.TipoCategoria
 
 /**
  * Nota sobre fechas: `fecha` se guarda como dia epoch, asi que
@@ -58,23 +57,6 @@ interface CuentaDao {
         """
     )
     fun observaSaldos(): Flow<List<SaldoCuenta>>
-
-    @Query(
-        """
-        SELECT c.id AS cuentaId,
-               c.nombre AS nombre,
-               c.tipo AS tipo,
-               c.limiteCentavos AS limiteCentavos,
-               c.incluirEnPatrimonio AS incluirEnPatrimonio,
-               COALESCE(SUM(m.importeCentavos), 0) AS saldoCentavos,
-               COUNT(m.id) AS movimientos
-        FROM cuenta c
-        LEFT JOIN movimiento m ON m.cuentaId = c.id
-        GROUP BY c.id
-        ORDER BY c.orden, c.nombre
-        """
-    )
-    suspend fun saldos(): List<SaldoCuenta>
 }
 
 @Dao
@@ -88,9 +70,6 @@ interface CategoriaDao {
 
     @Query("SELECT * FROM categoria ORDER BY archivada, orden, nombre")
     suspend fun todas(): List<Categoria>
-
-    @Query("SELECT * FROM categoria WHERE tipo = :tipo AND archivada = 0 ORDER BY orden, nombre")
-    fun observaPorTipo(tipo: TipoCategoria): Flow<List<Categoria>>
 
     @Query("SELECT * FROM categoria WHERE id = :id")
     suspend fun porId(id: Long): Categoria?
@@ -226,80 +205,6 @@ interface MovimientoDao {
 
     @Query(
         """
-        SELECT strftime('%Y-%m', m.fecha * 86400, 'unixepoch') AS periodo,
-               COALESCE(SUM(CASE WHEN m.tipo = 'ENTRADA' THEN m.importeCentavos ELSE 0 END), 0) AS ingresosCentavos,
-               COALESCE(SUM(CASE WHEN m.tipo = 'SALIDA' AND COALESCE(cat.tipo,'GASTO') <> 'PATRIMONIO'
-                                 THEN m.importeCentavos ELSE 0 END), 0) AS gastoConsumoCentavos,
-               COALESCE(SUM(CASE WHEN m.tipo = 'SALIDA' AND cat.tipo = 'PATRIMONIO'
-                                 THEN m.importeCentavos ELSE 0 END), 0) AS compraPatrimonioCentavos
-        FROM movimiento m
-        LEFT JOIN categoria cat ON cat.id = m.categoriaId
-        WHERE m.tipo IN ('ENTRADA','SALIDA')
-        GROUP BY periodo
-        ORDER BY periodo
-        """
-    )
-    suspend fun flujoMensual(): List<FlujoMes>
-
-    @Query(
-        """
-        SELECT m.categoriaId AS categoriaId,
-               cat.nombre AS nombre,
-               COALESCE(SUM(m.importeCentavos), 0) AS totalCentavos,
-               COUNT(m.id) AS movimientos
-        FROM movimiento m
-        LEFT JOIN categoria cat ON cat.id = m.categoriaId
-        WHERE m.tipo = :tipo
-          AND (:desde IS NULL OR m.fecha >= :desde)
-          AND (:hasta IS NULL OR m.fecha <= :hasta)
-        GROUP BY m.categoriaId
-        ORDER BY ABS(totalCentavos) DESC
-        """
-    )
-    fun observaTotalesPorCategoria(tipo: String, desde: Long?, hasta: Long?): Flow<List<TotalPorCategoria>>
-
-    @Query(
-        """
-        SELECT m.descripcion AS descripcion,
-               COALESCE(SUM(m.importeCentavos), 0) AS totalCentavos,
-               COUNT(m.id) AS movimientos
-        FROM movimiento m
-        WHERE m.tipo = :tipo
-          AND (:desde IS NULL OR m.fecha >= :desde)
-          AND (:hasta IS NULL OR m.fecha <= :hasta)
-        GROUP BY m.descripcion
-        ORDER BY ABS(totalCentavos) DESC
-        """
-    )
-    suspend fun totalesPorDescripcion(tipo: String, desde: Long?, hasta: Long?): List<TotalPorDescripcion>
-
-    @Query(
-        """
-        SELECT strftime('%Y-%m', m.fecha * 86400, 'unixepoch') AS periodo,
-               m.categoriaId AS categoriaId,
-               COALESCE(SUM(m.importeCentavos), 0) AS totalCentavos
-        FROM movimiento m
-        WHERE m.tipo IN ('ENTRADA','SALIDA')
-        GROUP BY periodo, m.categoriaId
-        ORDER BY periodo
-        """
-    )
-    suspend fun totalesPorPeriodoYCategoria(): List<TotalPorPeriodoCategoria>
-
-    @Query(
-        """
-        SELECT strftime('%Y-%m', m.fecha * 86400, 'unixepoch') AS periodo,
-               m.cuentaId AS cuentaId,
-               COALESCE(SUM(m.importeCentavos), 0) AS deltaCentavos
-        FROM movimiento m
-        GROUP BY periodo, m.cuentaId
-        ORDER BY periodo
-        """
-    )
-    suspend fun deltasPorPeriodoYCuenta(): List<SaldoPorPeriodo>
-
-    @Query(
-        """
         SELECT COALESCE(SUM(m.importeCentavos), 0)
         FROM movimiento m
         LEFT JOIN categoria cat ON cat.id = m.categoriaId
@@ -309,12 +214,6 @@ interface MovimientoDao {
         """
     )
     suspend fun totalCategoriaEnPeriodo(categoriaId: Long, periodo: String): Long
-
-    @Query("SELECT MIN(fecha) FROM movimiento")
-    suspend fun fechaMinima(): Long?
-
-    @Query("SELECT MAX(fecha) FROM movimiento")
-    suspend fun fechaMaxima(): Long?
 }
 
 @Dao
@@ -337,6 +236,9 @@ interface PresupuestoDao {
 
     @Query("DELETE FROM presupuesto WHERE categoriaId = :categoriaId AND anio = :anio AND mes = :mes")
     suspend fun elimina(categoriaId: Long, anio: Int, mes: Int)
+
+    @Query("DELETE FROM presupuesto")
+    suspend fun eliminaTodos()
 }
 
 @Dao
@@ -344,9 +246,6 @@ interface CompromisoDao {
 
     @Query("SELECT * FROM compromiso ORDER BY activo DESC, fechaPrimerPago")
     fun observaTodos(): Flow<List<Compromiso>>
-
-    @Query("SELECT * FROM compromiso WHERE activo = 1 ORDER BY fechaPrimerPago")
-    suspend fun activos(): List<Compromiso>
 
     @Query("SELECT * FROM compromiso ORDER BY activo DESC, fechaPrimerPago")
     suspend fun todos(): List<Compromiso>
@@ -357,11 +256,17 @@ interface CompromisoDao {
     @Insert
     suspend fun inserta(compromiso: Compromiso): Long
 
+    @Insert
+    suspend fun insertaTodos(compromisos: List<Compromiso>): List<Long>
+
     @Update
     suspend fun actualiza(compromiso: Compromiso)
 
     @Delete
     suspend fun elimina(compromiso: Compromiso)
+
+    @Query("DELETE FROM compromiso")
+    suspend fun eliminaTodos()
 }
 
 @Dao

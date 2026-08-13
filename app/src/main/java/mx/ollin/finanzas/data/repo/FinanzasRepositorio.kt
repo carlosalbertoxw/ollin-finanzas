@@ -257,7 +257,9 @@ class FinanzasRepositorio(
 
     suspend fun importa(uri: Uri, opciones: OpcionesImportacion): ResultadoImportacion =
         withContext(Dispatchers.IO) {
-            val importador = ImportadorExcel(cuentas, categorias, movimientos, mapeos)
+            val importador = ImportadorExcel(
+                cuentas, categorias, movimientos, mapeos, presupuestos, compromisos
+            )
             resolver.openInputStream(uri)?.use { importador.importa(it, opciones) }
                 ?: error("No se pudo abrir el archivo seleccionado")
         }

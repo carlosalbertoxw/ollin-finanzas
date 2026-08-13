@@ -1,8 +1,24 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+}
+
+// Los datos de la firma viven en keystore.properties, fuera del repositorio.
+// Se lee con providers.fileContents y no con File(...).readText() porque la
+// cache de configuracion esta activa: el API de providers registra el archivo
+// como entrada del build, asi que editarlo invalida la cache. Un File() suelto
+// se leeria una vez y las ediciones posteriores se ignorarian en silencio.
+val archivoFirma = rootProject.layout.projectDirectory.file("keystore.properties")
+val propiedadesFirma = providers.fileContents(archivoFirma).asText.orNull?.let { texto ->
+    Properties().apply { load(texto.reader()) }
+}
+
+if (propiedadesFirma == null) {
+    logger.warn("Ollin: sin keystore.properties, el APK de release saldra SIN FIRMAR y no se podra instalar. Ver docs/desarrollo.md.")
 }
 
 android {
@@ -20,6 +36,31 @@ android {
         resourceConfigurations += listOf("es")
     }
 
+    signingConfigs {
+        // Solo se crea si hay keystore.properties. Sin el, la configuracion
+        // queda nula y el release sale sin firmar en vez de romper el build:
+        // asi el proyecto sigue compilando en una maquina recien clonada.
+        propiedadesFirma?.let { props ->
+            val faltantes = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+                .filter { props.getProperty(it).isNullOrBlank() }
+            require(faltantes.isEmpty()) {
+                "keystore.properties existe pero le faltan claves: ${faltantes.joinToString()}"
+            }
+
+            val almacen = rootProject.file(props.getProperty("storeFile"))
+            require(almacen.exists()) {
+                "keystore.properties apunta a ${almacen.absolutePath}, que no existe."
+            }
+
+            create("release") {
+                storeFile = almacen
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -32,6 +73,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 

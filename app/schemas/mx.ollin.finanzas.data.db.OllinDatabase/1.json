@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "85b7bbc8b27aa49329960d0f6b9225bd",
+    "identityHash": "00174d5cbe9dbd880b3b00b28b75d8cc",
     "entities": [
       {
         "tableName": "cuenta",
@@ -415,7 +415,7 @@
       },
       {
         "tableName": "compromiso",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `nombre` TEXT NOT NULL, `tipo` TEXT NOT NULL, `cuentaId` INTEGER, `categoriaId` INTEGER, `montoCentavos` INTEGER NOT NULL, `periodicidad` TEXT NOT NULL, `fechaPrimerPago` INTEGER NOT NULL, `totalPagos` INTEGER, `pagosRealizados` INTEGER NOT NULL, `activo` INTEGER NOT NULL, `avisarDiasAntes` INTEGER NOT NULL, `notas` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `nombre` TEXT NOT NULL, `cuentaId` INTEGER, `categoriaId` INTEGER, `montoCentavos` INTEGER NOT NULL, `periodicidad` TEXT NOT NULL, `fechaPrimerPago` INTEGER NOT NULL, `totalPagos` INTEGER, `pagosRealizados` INTEGER NOT NULL, `activo` INTEGER NOT NULL, `avisarDiasAntes` INTEGER NOT NULL, `notas` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -426,12 +426,6 @@
           {
             "fieldPath": "nombre",
             "columnName": "nombre",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "tipo",
-            "columnName": "tipo",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -578,7 +572,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '85b7bbc8b27aa49329960d0f6b9225bd')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '00174d5cbe9dbd880b3b00b28b75d8cc')"
     ]
   }
 }
