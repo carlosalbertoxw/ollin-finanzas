@@ -41,6 +41,9 @@ interface CuentaDao {
     @Delete
     suspend fun elimina(cuenta: Cuenta)
 
+    @Query("DELETE FROM cuenta WHERE id IN (:ids)")
+    suspend fun eliminaPorIds(ids: List<Long>)
+
     @Query(
         """
         SELECT c.id AS cuentaId,
@@ -85,6 +88,9 @@ interface CategoriaDao {
 
     @Delete
     suspend fun elimina(categoria: Categoria)
+
+    @Query("DELETE FROM categoria WHERE id IN (:ids)")
+    suspend fun eliminaPorIds(ids: List<Long>)
 
     @Query("SELECT COUNT(*) FROM categoria")
     suspend fun cuenta(): Int
@@ -152,6 +158,13 @@ interface MovimientoDao {
 
     @Query("SELECT COUNT(*) FROM movimiento")
     fun observaConteo(): Flow<Int>
+
+    /** Cuentas y categorias que hoy sostienen un movimiento. Dice que del catalogo esta en uso. */
+    @Query("SELECT DISTINCT cuentaId FROM movimiento")
+    suspend fun cuentasConMovimientos(): List<Long>
+
+    @Query("SELECT DISTINCT categoriaId FROM movimiento WHERE categoriaId IS NOT NULL")
+    suspend fun categoriasConMovimientos(): List<Long>
 
     @Query(
         """
@@ -228,6 +241,9 @@ interface PresupuestoDao {
     @Query("SELECT * FROM presupuesto ORDER BY anio, mes")
     suspend fun todos(): List<Presupuesto>
 
+    @Query("SELECT DISTINCT categoriaId FROM presupuesto")
+    suspend fun categoriasConMeta(): List<Long>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guarda(presupuesto: Presupuesto): Long
 
@@ -252,6 +268,12 @@ interface CompromisoDao {
 
     @Query("SELECT * FROM compromiso WHERE id = :id")
     suspend fun porId(id: Long): Compromiso?
+
+    @Query("SELECT DISTINCT cuentaId FROM compromiso WHERE cuentaId IS NOT NULL")
+    suspend fun cuentasReferenciadas(): List<Long>
+
+    @Query("SELECT DISTINCT categoriaId FROM compromiso WHERE categoriaId IS NOT NULL")
+    suspend fun categoriasReferenciadas(): List<Long>
 
     @Insert
     suspend fun inserta(compromiso: Compromiso): Long
@@ -286,4 +308,14 @@ interface MapeoDescripcionDao {
 
     @Query("SELECT COUNT(*) FROM mapeo_descripcion")
     suspend fun cuenta(): Int
+
+    /**
+     * Esta tabla no tiene clave foranea contra categoria: se llena por nombre y
+     * sobrevive a que la categoria se renombre. El precio es que al borrar una
+     * categoria el mapeo queda apuntando al vacio, y el siguiente movimiento que
+     * caiga en esa clave se guardaria con una categoria que ya no existe. Se
+     * limpia despues de cualquier borrado de catalogo.
+     */
+    @Query("DELETE FROM mapeo_descripcion WHERE categoriaId NOT IN (SELECT id FROM categoria)")
+    suspend fun eliminaHuerfanos(): Int
 }

@@ -98,6 +98,7 @@ class ImportadorHojasTest : BaseEnMemoria() {
             categorias = listOf(
                 Categoria(id = 10, nombre = "Casa", tipo = TipoCategoria.GASTO),
                 Categoria(id = 11, nombre = "Luz", padreId = 10, tipo = TipoCategoria.GASTO),
+                Categoria(id = 12, nombre = "Muebles", padreId = 10, tipo = TipoCategoria.GASTO),
                 Categoria(id = 20, nombre = "Trabajo", tipo = TipoCategoria.INGRESO),
                 Categoria(id = 21, nombre = "Salario", padreId = 20, tipo = TipoCategoria.INGRESO)
             ),
@@ -114,7 +115,7 @@ class ImportadorHojasTest : BaseEnMemoria() {
                     id = 1,
                     nombre = "Refrigerador MSI",
                     cuentaId = 1,
-                    categoriaId = null,
+                    categoriaId = 12,
                     montoCentavos = 125000,
                     periodicidad = Periodicidad.MENSUAL,
                     fechaPrimerPago = LocalDate.of(2026, 1, 5),
@@ -170,9 +171,13 @@ class ImportadorHojasTest : BaseEnMemoria() {
         assertEquals(LocalDate.of(2026, 3, 5), msi.fechaPrimerPago)  // 1er pago + 2 pagados
         assertEquals(10, msi.totalPagos)
         assertEquals(cuentas.getValue("Banorte").id, msi.cuentaId)
+        // La hoja lleva la categoria del compromiso, asi que vuelve clasificado.
+        assertEquals(categorias.getValue("Muebles").id, msi.categoriaId)
         assertTrue(msi.activo)
         // Una suscripcion no tiene numero de pagos y asi debe volver.
         assertNull(compromisos.getValue("Streaming").totalPagos)
+        // El que no traia categoria sigue sin ella, no se le inventa una.
+        assertNull(compromisos.getValue("Streaming").categoriaId)
     }
 
     private fun mov(
@@ -370,6 +375,33 @@ class ImportadorHojasTest : BaseEnMemoria() {
         assertNull(porNombre.getValue("Gimnasio").cuentaId)
     }
 
+    /** La categoria del compromiso se resuelve contra el catalogo; no se inventa. */
+    @Test
+    fun `un compromiso que nombra una categoria inexistente entra sin ella y se avisa`() = runTest {
+        val resultado = importador().importa(
+            libro(
+                hoja(
+                    "Compromisos",
+                    texto("Compromiso", "Cuenta", "Categoria", "Monto", "Proximo pago", "Pagos restantes"),
+                    listOf(
+                        Celda.Texto("Seguro auto"), Celda.Vacia, Celda.Texto("Seguros"),
+                        Celda.Numero(3200.0), Celda.Fecha(LocalDate.of(2026, 6, 1)), Celda.Numero(3.0)
+                    )
+                ),
+                hojaRegistros(registro(cantidad = -500.0, descripcion = "Pago"))
+            )
+        )
+
+        assertEquals(1, resultado.compromisosImportados)
+        assertNull(compromisoDao.todos().single().categoriaId)
+        assertEquals(0, categoriaDao.todas().count { it.nombre == "Seguros" })
+        assertTrue(
+            resultado.diagnosticos.any {
+                it.severidad == Severidad.AVISO && it.mensaje.contains("categoria que no existe")
+            }
+        )
+    }
+
     @Test
     fun `importar dos veces sin reemplazar no duplica los compromisos`() = runTest {
         val compromisos = {
@@ -466,6 +498,156 @@ class ImportadorHojasTest : BaseEnMemoria() {
         assertEquals(listOf("Cartera"), resultado.cuentasCreadas)
         assertEquals(1, resultado.compromisosImportados)
         assertTrue(resultado.diagnosticos.any { it.severidad == Severidad.AVISO })
+    }
+
+    // --------------------------------------------- limpieza al reemplazar
+
+    /**
+     * El catalogo de ejemplo que siembra la app en el primer arranque no
+     * sobrevive a un "reemplazar todo": sin movimientos detras no describe nada
+     * y solo estorba en los desplegables.
+     */
+    @Test
+    fun `reemplazar se lleva el catalogo que queda sin uso`() = runTest {
+        val cartera = nuevaCuenta("Cartera", TipoCuenta.EFECTIVO)
+        nuevaCuenta("Tarjeta de ejemplo", TipoCuenta.CREDITO)
+        val despensa = nuevaCategoria("Despensa")
+        nuevaCategoria("Mascotas")
+        nuevoMovimiento(cartera, -1200, TipoMovimiento.SALIDA, "Super", despensa)
+        nuevoMapeo("super", despensa)
+
+        val resultado = importador().importa(
+            libro(
+                hojaRegistros(
+                    registro(cantidad = -800.0, cuenta = "Banorte", categoria = "Gasolina", descripcion = "Carga")
+                )
+            )
+        )
+
+        // Queda exactamente lo que el archivo describe.
+        assertEquals(listOf("Banorte"), cuentaDao.todas().map { it.nombre })
+        assertEquals(listOf("Gasolina"), categoriaDao.todas().map { it.nombre })
+        assertEquals(listOf("Cartera", "Tarjeta de ejemplo"), resultado.cuentasEliminadas.sorted())
+        assertEquals(2, resultado.categoriasEliminadas)
+        // El mapeo a una categoria borrada se va con ella: si no, la proxima
+        // captura de "Super" apuntaria a una categoria que ya no existe.
+        assertEquals(0, mapeoDao.cuenta())
+    }
+
+    @Test
+    fun `no borra el catalogo que todavia sostiene algo ni el que el libro nombra`() = runTest {
+        val diccionarios = hoja(
+            "Diccionarios",
+            texto("Cuentas", "Naturaleza", "Categorias", "Grupo"),
+            texto("Guardadito", "Efectivo", null, null)
+        )
+        val gasolina = nuevaCategoria("Gasolina")
+        presupuestoDao.guarda(
+            Presupuesto(categoriaId = gasolina, anio = 2026, mes = 1, montoCentavos = 150000)
+        )
+
+        val resultado = importador().importa(
+            libro(
+                diccionarios,
+                hojaRegistros(
+                    registro(cantidad = -800.0, cuenta = "Banorte", categoria = "Despensa", descripcion = "Super")
+                )
+            )
+        )
+
+        // "Guardadito" no tiene un solo movimiento, pero viene en Diccionarios:
+        // el catalogo es el catalogo.
+        assertEquals(setOf("Banorte", "Guardadito"), cuentaDao.todas().map { it.nombre }.toSet())
+        // "Gasolina" no aparece en el libro, pero tiene una meta colgando.
+        assertEquals(setOf("Despensa", "Gasolina"), categoriaDao.todas().map { it.nombre }.toSet())
+        assertEquals(emptyList<String>(), resultado.cuentasEliminadas)
+        assertEquals(0, resultado.categoriasEliminadas)
+    }
+
+    /** Un padre que todavia agrupa a una categoria viva se queda, aunque el no se use. */
+    @Test
+    fun `conserva el grupo de una categoria que sobrevive`() = runTest {
+        val resultado = importador().importa(
+            libro(
+                hoja(
+                    "Diccionarios",
+                    texto("Cuentas", "Naturaleza", "Categorias", "Grupo"),
+                    texto(null, null, "Gasolina", "Transporte")
+                ),
+                hojaRegistros(
+                    registro(cantidad = -800.0, cuenta = "Banorte", categoria = "Gasolina", descripcion = "Carga")
+                )
+            )
+        )
+
+        val categorias = categoriaDao.todas().associateBy { it.nombre }
+        assertEquals(setOf("Gasolina", "Transporte"), categorias.keys)
+        assertEquals(categorias.getValue("Transporte").id, categorias.getValue("Gasolina").padreId)
+        assertEquals(0, resultado.categoriasEliminadas)
+    }
+
+    /**
+     * El modo compacto no exporta categorias. Vaciar el catalogo entero por eso
+     * dejaria la captura sin donde clasificar, y la siembra del arranque las
+     * repondria igual.
+     */
+    @Test
+    fun `un libro sin categorias no desmantela el catalogo`() = runTest {
+        nuevaCategoria("Despensa")
+        nuevaCategoria("Mascotas")
+
+        val resultado = importador().importa(
+            libro(hojaRegistros(registro(cantidad = -800.0, cuenta = "Banorte", descripcion = "Compra")))
+        )
+
+        assertEquals(2, categoriaDao.todas().size)
+        assertEquals(0, resultado.categoriasEliminadas)
+        assertTrue(resultado.diagnosticos.any { it.severidad == Severidad.INFO })
+    }
+
+    @Test
+    fun `sin reemplazar el catalogo se queda completo`() = runTest {
+        nuevaCuenta("Cartera", TipoCuenta.EFECTIVO)
+        nuevaCategoria("Mascotas")
+
+        val resultado = importador().importa(
+            libro(
+                hojaRegistros(
+                    registro(cantidad = -800.0, cuenta = "Banorte", categoria = "Gasolina", descripcion = "Carga")
+                )
+            ),
+            OpcionesImportacion(reemplazarTodo = false)
+        )
+
+        assertEquals(setOf("Banorte", "Cartera"), cuentaDao.todas().map { it.nombre }.toSet())
+        assertEquals(setOf("Gasolina", "Mascotas"), categoriaDao.todas().map { it.nombre }.toSet())
+        assertEquals(emptyList<String>(), resultado.cuentasEliminadas)
+    }
+
+    // ------------------------------------------------- avisos de la importacion
+
+    /**
+     * Los avisos se cuentan una vez por mensaje, con los renglones que los
+     * provocaron: un libro con veinte filas rotas devolvia veinte lineas
+     * identicas y ninguna se alcanzaba a leer.
+     */
+    @Test
+    fun `los avisos repetidos se agrupan con sus renglones`() = runTest {
+        val resultado = importador().importa(
+            libro(
+                hojaRegistros(
+                    registro(cantidad = -800.0, cuenta = "Banorte", descripcion = "Carga"),
+                    texto(null, null, null, null, "Sin fecha ni importe"),
+                    texto(null, null, null, null, "Otra rota")
+                )
+            )
+        )
+
+        val incompletos = resultado.diagnosticosAgrupados()
+            .single { it.mensaje.startsWith("Renglon incompleto") }
+        assertEquals(Severidad.AVISO, incompletos.severidad)
+        assertEquals(2, incompletos.veces)
+        assertEquals(listOf(3, 4), incompletos.filas)
     }
 
     @Test

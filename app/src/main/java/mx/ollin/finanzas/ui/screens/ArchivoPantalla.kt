@@ -9,6 +9,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,6 +41,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +55,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import mx.ollin.finanzas.data.excel.DiagnosticoAgrupado
 import mx.ollin.finanzas.data.excel.EsquemaExportacion
 import mx.ollin.finanzas.data.excel.HojaExportable
 import mx.ollin.finanzas.data.excel.OpcionesImportacion
@@ -93,7 +98,19 @@ private class CreaLibro : ActivityResultContracts.CreateDocument(MIME_XLSX) {
 sealed interface EstadoArchivo {
     data object Reposo : EstadoArchivo
     data class Trabajando(val mensaje: String) : EstadoArchivo
-    data class Importado(val resultado: ResultadoImportacion) : EstadoArchivo
+
+    /**
+     * [hallazgosEnSalud] es lo que la auditoria encontro en los datos ya
+     * importados. Se cuenta aqui porque los avisos de la importacion hablan del
+     * archivo —renglones incompletos, metas sin categoria— y casi ninguno deja
+     * rastro en la base: mandar a Salud por ellos llevaba a una pantalla que
+     * decia "todo cuadra".
+     */
+    data class Importado(
+        val resultado: ResultadoImportacion,
+        val hallazgosEnSalud: Int = 0
+    ) : EstadoArchivo
+
     data class Exportado(val hojas: Int, val movimientos: Int) : EstadoArchivo
     data class Fallo(val mensaje: String) : EstadoArchivo
 }
@@ -151,7 +168,13 @@ class ArchivoVm(private val contenedor: Contenedor) : ViewModel() {
                     )
                 )
             }.fold(
-                onSuccess = { _estado.value = EstadoArchivo.Importado(it) },
+                onSuccess = { resultado ->
+                    // La auditoria corre aqui, sobre los datos ya importados,
+                    // para saber si mandar a Salud tiene algo que ofrecer.
+                    val hallazgos = runCatching { contenedor.revisaCalidad.ejecuta().size }
+                        .getOrDefault(0)
+                    _estado.value = EstadoArchivo.Importado(resultado, hallazgos)
+                },
                 onFailure = { _estado.value = EstadoArchivo.Fallo(explica(it, "importar")) }
             )
         }
@@ -271,7 +294,8 @@ fun ArchivoPantalla(contenedor: Contenedor, alAbrirCalidad: () -> Unit) {
                 }
             }
 
-            is EstadoArchivo.Importado -> ResumenImportacion(e.resultado, vm::limpia, alAbrirCalidad)
+            is EstadoArchivo.Importado ->
+                ResumenImportacion(e.resultado, e.hallazgosEnSalud, vm::limpia, alAbrirCalidad)
 
             EstadoArchivo.Reposo -> Unit
         }
@@ -299,7 +323,8 @@ fun ArchivoPantalla(contenedor: Contenedor, alAbrirCalidad: () -> Unit) {
                     titulo = "Reemplazar todo",
                     detalle = if (ajustes.reemplazarAlImportar)
                         "Se borran los $total movimientos actuales —y las metas y compromisos— " +
-                            "y se cargan los del archivo."
+                            "y se cargan los del archivo. Las cuentas y categorias que queden " +
+                            "sin un solo movimiento, incluidas las de ejemplo, tambien se van."
                     else "Lo del archivo se agrega a lo que ya tienes.",
                     valor = ajustes.reemplazarAlImportar,
                     alCambiar = vm::cambiaReemplazar
@@ -420,6 +445,18 @@ private inline fun lanza(vm: ArchivoVm, accion: String, bloque: () -> Unit) {
     }
 }
 
+/**
+ * "(renglones 4, 9 y 12)" o, si son muchos, los primeros con un "y N mas".
+ * El numero de renglon es lo unico que permite ir al archivo a arreglarlo.
+ */
+private fun sufijoDeFilas(diagnostico: DiagnosticoAgrupado): String {
+    if (diagnostico.filas.isEmpty()) return ""
+    val muestra = diagnostico.filas.take(5).joinToString(", ")
+    val resto = diagnostico.filas.size - 5
+    val palabra = if (diagnostico.filas.size == 1) "renglon" else "renglones"
+    return if (resto > 0) " ($palabra $muestra y $resto mas)" else " ($palabra $muestra)"
+}
+
 @Composable
 private fun InterruptorConNota(
     titulo: String,
@@ -440,13 +477,27 @@ private fun InterruptorConNota(
     }
 }
 
+/**
+ * El parte de la importacion.
+ *
+ * Los avisos se muestran aqui mismo, agrupados: hablan del archivo —renglones
+ * incompletos, metas que apuntan a una categoria inexistente— y ninguno de esos
+ * deja rastro en la base, asi que la pantalla de Salud no los conoce. Ella se
+ * ofrece aparte y solo cuando de verdad encontro algo en los datos importados.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ResumenImportacion(
     resultado: ResultadoImportacion,
+    hallazgosEnSalud: Int,
     alCerrar: () -> Unit,
     alAbrirCalidad: () -> Unit
 ) {
     val colores = LocalColoresOllin.current
+    var detalleAbierto by rememberSaveable { mutableStateOf(false) }
+    val diagnosticos = remember(resultado) { resultado.diagnosticosAgrupados() }
+    val problemas = diagnosticos.count { it.severidad != Severidad.INFO }
+
     Card(
         colors = CardDefaults.cardColors(
             containerColor = if (resultado.huboProblemas) MaterialTheme.colorScheme.tertiaryContainer
@@ -489,18 +540,50 @@ private fun ResumenImportacion(
             if (resultado.omitidos > 0) {
                 Text("· ${resultado.omitidos} renglones omitidos por venir incompletos")
             }
-
-            val errores = resultado.diagnosticos.filter { it.severidad == Severidad.ERROR }
-            errores.take(3).forEach {
-                Text("· ${it.mensaje}", color = colores.salida, style = MaterialTheme.typography.bodySmall)
+            if (resultado.cuentasEliminadas.isNotEmpty() || resultado.categoriasEliminadas > 0) {
+                Text(
+                    "· Al reemplazar se fueron ${resultado.cuentasEliminadas.size} cuentas y " +
+                        "${resultado.categoriasEliminadas} categorias que quedaron sin uso"
+                )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (detalleAbierto) {
+                Spacer(Modifier.height(2.dp))
+                diagnosticos.forEach { d ->
+                    Text(
+                        "· ${d.mensaje}${sufijoDeFilas(d)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = when (d.severidad) {
+                            Severidad.ERROR -> colores.salida
+                            Severidad.AVISO -> MaterialTheme.colorScheme.onSurface
+                            Severidad.INFO -> colores.textoTenue
+                        }
+                    )
+                }
+            }
+
+            // Tres botones con etiquetas largas no caben en un renglon de
+            // telefono angosto, y el ultimo es justo el que hay que alcanzar.
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = alCerrar) { Text("Listo") }
-                if (resultado.huboProblemas) {
+                if (diagnosticos.isNotEmpty()) {
+                    TextButton(onClick = { detalleAbierto = !detalleAbierto }) {
+                        Text(
+                            when {
+                                detalleAbierto -> "Ocultar detalle"
+                                problemas == 1 -> "Ver 1 aviso"
+                                problemas > 1 -> "Ver $problemas avisos"
+                                else -> "Ver detalle"
+                            }
+                        )
+                    }
+                }
+                // Solo si la auditoria encontro algo: mandar a Salud cuando no
+                // hay nada que ver es el paseo que hacia esta pantalla antes.
+                if (hallazgosEnSalud > 0) {
                     TextButton(onClick = alAbrirCalidad) {
                         Icon(Icons.Filled.HealthAndSafety, contentDescription = null)
-                        Text("  Revisar")
+                        Text("  Salud ($hallazgosEnSalud)")
                     }
                 }
             }

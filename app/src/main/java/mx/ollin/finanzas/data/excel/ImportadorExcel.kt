@@ -40,7 +40,11 @@ data class OpcionesImportacion(
     val emparejarTransferencias: Boolean = true,
     val crearCuentasFaltantes: Boolean = true,
     val autoCategorizar: Boolean = true,
-    /** Vacia los movimientos antes de importar. Si es falso, agrega. */
+    /**
+     * Vacia los movimientos antes de importar y, ya sin ellos, se lleva tambien
+     * las cuentas y categorias que quedaron sin uso y que el libro no nombra.
+     * Si es falso, agrega y no borra nada.
+     */
     val reemplazarTodo: Boolean = true,
     /** Lee tambien Diccionarios, Presupuesto y Compromisos cuando el libro las trae. */
     val importarOtrasHojas: Boolean = true
@@ -61,9 +65,44 @@ data class ResultadoImportacion(
     val presupuestosImportados: Int = 0,
     /** Compromisos leidos de la pestaña Compromisos. */
     val compromisosImportados: Int = 0,
+    /** Cuentas que al reemplazar quedaron sin uso y sin respaldo en el libro. */
+    val cuentasEliminadas: List<String> = emptyList(),
+    val categoriasEliminadas: Int = 0,
     val diagnosticos: List<Diagnostico> = emptyList()
 ) {
     val huboProblemas: Boolean get() = diagnosticos.any { it.severidad != Severidad.INFO }
+
+    /**
+     * Los diagnosticos como se muestran: un mensaje que se repite renglon por
+     * renglon se cuenta una sola vez, con la lista de renglones a los que le
+     * paso. Sin esto, un libro con doscientas filas incompletas devuelve
+     * doscientas lineas identicas y ninguna se lee.
+     */
+    fun diagnosticosAgrupados(): List<DiagnosticoAgrupado> = diagnosticos
+        .groupBy { it.severidad to it.mensaje }
+        .map { (clave, iguales) ->
+            DiagnosticoAgrupado(
+                severidad = clave.first,
+                mensaje = clave.second,
+                filas = iguales.mapNotNull { it.fila }
+            )
+        }
+        .sortedWith(compareBy({ ordenSeveridad(it.severidad) }, { -it.veces }))
+
+    private fun ordenSeveridad(severidad: Severidad): Int = when (severidad) {
+        Severidad.ERROR -> 0
+        Severidad.AVISO -> 1
+        Severidad.INFO -> 2
+    }
+}
+
+/** Un mensaje de diagnostico con los renglones que lo provocaron. */
+data class DiagnosticoAgrupado(
+    val severidad: Severidad,
+    val mensaje: String,
+    val filas: List<Int>
+) {
+    val veces: Int get() = maxOf(filas.size, 1)
 }
 
 /**
@@ -128,21 +167,43 @@ class ImportadorExcel(
             LectorCatalogos.Diccionarios()
         }
 
+        val delLibro = ClavesDelLibro()
         val hoja = eligeHojaDeDatos(libro)
         var resultado = if (hoja != null) {
-            procesa(hoja, opciones, diccionarios)
+            procesa(hoja, opciones, diccionarios, delLibro)
         } else {
             // Un libro de puros catalogos tambien sirve: entra lo que traiga y
             // los movimientos se quedan como estaban. Vaciarlos aqui borraria
             // todo a cambio de nada.
-            sinRegistros(diccionarios, opciones)
+            sinRegistros(diccionarios, opciones, delLibro)
         }
 
         if (opciones.importarOtrasHojas) {
             resultado = conPresupuestos(libro, resultado, opciones)
             resultado = conCompromisos(libro, resultado, opciones)
         }
+
+        // Al final de todo: las metas y los compromisos tambien sostienen
+        // catalogo, y barrer antes de leerlos se llevaria lo que ellos usan.
+        if (hoja != null && opciones.reemplazarTodo) {
+            resultado = purgaCatalogoSinUso(resultado, delLibro)
+        }
         return if (hoja == null) resultado.conAvisoDeHojaFaltante() else resultado
+    }
+
+    /**
+     * Nombres de cuenta y categoria que el libro menciona, ya normalizados.
+     *
+     * Al reemplazar, lo que no aparece aqui ni sostiene ningun dato es catalogo
+     * que sobro de antes —tipicamente las cuentas de ejemplo que sembro la app
+     * en el primer arranque— y estorba en cada desplegable.
+     */
+    private class ClavesDelLibro {
+        val cuentas = HashSet<String>()
+        val categorias = HashSet<String>()
+
+        fun anotaCuenta(nombre: String) { cuentas += nombre.normalizaClave() }
+        fun anotaCategoria(nombre: String) { categorias += nombre.normalizaClave() }
     }
 
     /**
@@ -193,7 +254,8 @@ class ImportadorExcel(
     private suspend fun procesa(
         hoja: HojaLeida,
         opciones: OpcionesImportacion,
-        diccionarios: LectorCatalogos.Diccionarios
+        diccionarios: LectorCatalogos.Diccionarios,
+        delLibro: ClavesDelLibro
     ): ResultadoImportacion {
         val columnas = mapaColumnas(hoja)
         val diagnosticos = mutableListOf<Diagnostico>()
@@ -320,6 +382,7 @@ class ImportadorExcel(
         // declarada, y crearla desde el nombre del movimiento solo la adivina.
         // Ademas entran las cuentas que aun no tienen ningun movimiento.
         diccionarios.cuentas.forEach { declarada ->
+            delLibro.anotaCuenta(declarada.nombre)
             aseguraCuenta(
                 nombre = declarada.nombre,
                 tipoDeclarado = declarada.tipo,
@@ -332,6 +395,7 @@ class ImportadorExcel(
         }
 
         corregidas.map { it.cuenta }.distinct().forEach { nombre ->
+            delLibro.anotaCuenta(nombre)
             aseguraCuenta(nombre, null, indiceCuentas, cuentasCreadas, diagnosticos, opciones)
         }
 
@@ -340,8 +404,9 @@ class ImportadorExcel(
         val indiceCategorias = categoriaDao.todas()
             .associateBy { it.nombre.normalizaClave() }
             .toMutableMap()
+        corregidas.mapNotNull { it.categoria }.forEach(delLibro::anotaCategoria)
         aplicaCategoriasDeDiccionario(
-            diccionarios.categorias, corregidas, indiceCategorias, categoriasCreadas, diagnosticos
+            diccionarios.categorias, corregidas, indiceCategorias, categoriasCreadas, diagnosticos, delLibro
         )
         val mapeo = mapeoDao.todos().associate { it.clave to it.categoriaId }
         var sinCategoria = 0
@@ -491,7 +556,8 @@ class ImportadorExcel(
         crudas: List<FilaCruda>,
         indice: MutableMap<String, Categoria>,
         creadas: MutableList<String>,
-        diagnosticos: MutableList<Diagnostico>
+        diagnosticos: MutableList<Diagnostico>,
+        delLibro: ClavesDelLibro
     ) {
         if (declaradas.isEmpty()) return
         val usos = crudas.filter { it.categoria != null }
@@ -499,6 +565,8 @@ class ImportadorExcel(
 
         val antes = creadas.size
         declaradas.forEach { declarada ->
+            delLibro.anotaCategoria(declarada.nombre)
+            declarada.grupo?.let(delLibro::anotaCategoria)
             val tipo = tipoSegunUso(usos[declarada.nombre.normalizaClave()])
             val padre = declarada.grupo?.let { aseguraCategoria(it, null, tipo, indice, creadas) }
             aseguraCategoria(declarada.nombre, padre?.id, tipo, indice, creadas)
@@ -546,7 +614,8 @@ class ImportadorExcel(
      */
     private suspend fun sinRegistros(
         diccionarios: LectorCatalogos.Diccionarios,
-        opciones: OpcionesImportacion
+        opciones: OpcionesImportacion,
+        delLibro: ClavesDelLibro
     ): ResultadoImportacion {
         if (diccionarios.vacio) return ResultadoImportacion()
 
@@ -558,6 +627,7 @@ class ImportadorExcel(
             .associateBy { it.nombre.normalizaClave() }
             .toMutableMap()
         diccionarios.cuentas.forEach { declarada ->
+            delLibro.anotaCuenta(declarada.nombre)
             aseguraCuenta(
                 nombre = declarada.nombre,
                 tipoDeclarado = declarada.tipo,
@@ -573,12 +643,85 @@ class ImportadorExcel(
             .associateBy { it.nombre.normalizaClave() }
             .toMutableMap()
         aplicaCategoriasDeDiccionario(
-            diccionarios.categorias, emptyList(), indiceCategorias, categoriasCreadas, diagnosticos
+            diccionarios.categorias, emptyList(), indiceCategorias, categoriasCreadas, diagnosticos, delLibro
         )
 
         return ResultadoImportacion(
             cuentasCreadas = cuentasCreadas,
             categoriasCreadas = categoriasCreadas,
+            diagnosticos = diagnosticos
+        )
+    }
+
+    // ------------------------------------------------- limpieza al reemplazar
+
+    /**
+     * Quita del catalogo lo que quedo huerfano al reemplazar.
+     *
+     * "Reemplazar todo" vaciaba los movimientos pero dejaba en pie las cuentas y
+     * categorias que ya no sostenian nada —entre ellas las de ejemplo que siembra
+     * la app la primera vez—, asi que el telefono terminaba con un catalogo que
+     * no correspondia a ningun archivo y ensuciaba cada desplegable.
+     *
+     * Se borra poco y con pruebas: nada que tenga un movimiento, una meta o un
+     * compromiso detras, nada que el libro nombre —una cuenta puede venir en
+     * Diccionarios sin un solo movimiento y sigue siendo parte del catalogo— y
+     * ningun padre que todavia agrupe a una categoria viva.
+     */
+    private suspend fun purgaCatalogoSinUso(
+        base: ResultadoImportacion,
+        delLibro: ClavesDelLibro
+    ): ResultadoImportacion {
+        val diagnosticos = base.diagnosticos.toMutableList()
+
+        val cuentasUsadas = movimientoDao.cuentasConMovimientos().toSet() +
+            compromisoDao.cuentasReferenciadas().toSet()
+        val cuentasSobran = cuentaDao.todas().filter {
+            it.id !in cuentasUsadas && it.nombre.normalizaClave() !in delLibro.cuentas
+        }
+        if (cuentasSobran.isNotEmpty()) cuentaDao.eliminaPorIds(cuentasSobran.map { it.id })
+
+        val categoriasUsadas = movimientoDao.categoriasConMovimientos().toSet() +
+            presupuestoDao.categoriasConMeta().toSet() +
+            compromisoDao.categoriasReferenciadas().toSet()
+        val todas = categoriaDao.todas()
+        val candidatas = todas.filter {
+            it.id !in categoriasUsadas && it.nombre.normalizaClave() !in delLibro.categorias
+        }
+        val idsCandidatas = candidatas.mapTo(HashSet()) { it.id }
+        val padresDeVivas = todas.filterNot { it.id in idsCandidatas }.mapNotNullTo(HashSet()) { it.padreId }
+        val categoriasSobran = candidatas.filterNot { it.id in padresDeVivas }
+
+        // Vaciar el catalogo entero no seria reemplazarlo sino desmantelarlo: sin
+        // una sola categoria la proxima captura no tiene donde clasificar, y la
+        // siembra del arranque las repondria igual. Un libro compacto, que no
+        // trae categorias, cae justo en este caso.
+        val loBorraTodo = categoriasSobran.size == todas.size && todas.isNotEmpty()
+        if (categoriasSobran.isNotEmpty() && !loBorraTodo) {
+            categoriaDao.eliminaPorIds(categoriasSobran.map { it.id })
+            mapeoDao.eliminaHuerfanos()
+        }
+        val categoriasEliminadas = if (loBorraTodo) 0 else categoriasSobran.size
+
+        if (cuentasSobran.isNotEmpty() || categoriasEliminadas > 0) {
+            diagnosticos += Diagnostico(
+                Severidad.INFO,
+                "Al reemplazar quite ${cuentasSobran.size} cuentas y $categoriasEliminadas categorias " +
+                    "que quedaron sin un solo movimiento y que el libro no nombra" +
+                    if (cuentasSobran.isEmpty()) "." else ": ${cuentasSobran.joinToString { it.nombre }}."
+            )
+        }
+        if (loBorraTodo) {
+            diagnosticos += Diagnostico(
+                Severidad.INFO,
+                "El libro no trae categorias, asi que las tuyas se quedaron como estaban: " +
+                    "borrarlas dejaria la captura sin donde clasificar."
+            )
+        }
+
+        return base.copy(
+            cuentasEliminadas = cuentasSobran.map { it.nombre },
+            categoriasEliminadas = categoriasEliminadas,
             diagnosticos = diagnosticos
         )
     }
@@ -674,6 +817,7 @@ class ImportadorExcel(
         }
         var repetidos = 0
         var sinCuenta = 0
+        var sinCategoria = 0
         val aInsertar = mutableListOf<Compromiso>()
 
         leidos.forEach { leido ->
@@ -681,11 +825,14 @@ class ImportadorExcel(
             val cuentaId = leido.cuenta?.let { nombre ->
                 cuentas[nombre.normalizaClave()]?.id.also { if (it == null) sinCuenta++ }
             }
+            val categoriaId = leido.categoria?.let { nombre ->
+                categorias[nombre.normalizaClave()]?.id.also { if (it == null) sinCategoria++ }
+            }
             val restantes = leido.totalPagos?.let { it - leido.pagosRealizados }
             aInsertar += Compromiso(
                 nombre = leido.nombre,
                 cuentaId = cuentaId,
-                categoriaId = leido.categoria?.let { categorias[it.normalizaClave()]?.id },
+                categoriaId = categoriaId,
                 montoCentavos = leido.montoCentavos,
                 periodicidad = leido.periodicidad,
                 fechaPrimerPago = leido.fechaPrimerPago,
@@ -716,6 +863,13 @@ class ImportadorExcel(
             diagnosticos += Diagnostico(
                 Severidad.AVISO,
                 "$sinCuenta compromisos nombran una cuenta que no existe; quedaron sin cuenta asignada."
+            )
+        }
+        if (sinCategoria > 0) {
+            diagnosticos += Diagnostico(
+                Severidad.AVISO,
+                "$sinCategoria compromisos nombran una categoria que no existe; quedaron sin " +
+                    "categoria. Crea la categoria y vuelve a importar, o asignala a mano."
             )
         }
 

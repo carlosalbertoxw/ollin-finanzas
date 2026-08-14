@@ -16,7 +16,7 @@ Se eligen desde la pantalla de Archivo ([`HojaExportable`](../app/src/main/java/
 | **Ingresos - Egresos** | Categorías contra meses. La compra de patrimonio va en su propio bloque, aparte del gasto |
 | **Presupuesto** | Meta contra realidad por categoría, con desviación y avance |
 | **Transferencias** | Entradas y salidas internas por cuenta, con el neto que debe cuadrar en cero |
-| **Compromisos** | Mensualidades, suscripciones y gastos anuales por venir, con saldo pendiente |
+| **Compromisos** | Mensualidades, suscripciones y gastos anuales por venir, con cuenta, categoría y saldo pendiente |
 | **Registros** | Todos los movimientos, uno por renglón. Obligatoria: es la fuente de las demás |
 | **Diccionarios** | Cuentas, categorías, medios, contrapartes y tipos; alimentan los desplegables de Registros |
 
@@ -91,6 +91,8 @@ Lo que no vuelve, y hay que arreglar a mano:
 - **El tipo de categoría no viaja en Diccionarios.** Al importar se deduce del uso en Registros —lo que solo aparece en entradas es ingreso, el resto gasto—, así que una categoría de **patrimonio regresa como gasto**. Se avisa cuando se crea alguna. Las categorías que ya existen no se tocan.
 - **Compromisos guarda el próximo pago y los pagos que faltan**, no la fecha original ni los ya cubiertos: son los dos datos que sirven para vigilar lo que viene. Al volver a entrar, el compromiso se reconstruye desde ahí —arranca en el próximo pago con los pagos que quedan—, salvo que el libro traiga columnas de `fecha primer pago`, `total pagos` o `pagos realizados`.
 
+La hoja Compromisos lleva columna `Categoria` —`Compromiso, Cuenta, Categoria, Monto, Periodicidad, Proximo pago, Pagos restantes, Saldo pendiente`— justamente para que el rubro del pago sobreviva al viaje. Se resuelve contra el catálogo, igual que la cuenta: si nombra una categoría que no existe, el compromiso entra sin ella y se avisa, en vez de inventarla.
+
 También se aceptan estas tres hojas capturadas a mano: el encabezado se busca por sinónimos en cualquier renglón, no solo en el primero. Presupuesto admite tanto el formato de la app —un bloque por mes, con el periodo como subtítulo— como una tabla con columnas propias de `Anio` y `Mes`. Una meta cuya categoría no existe **se avisa en vez de inventar la categoría**: crearla sería adivinar su naturaleza sin un solo movimiento que la respalde.
 
 ### Reconocimiento de columnas
@@ -129,12 +131,15 @@ Un renglón sin fecha, sin cantidad o sin cuenta se omite y se reporta con su n�
 ### Opciones
 
 - **Reemplazar** (por omisión) vacía los movimientos antes de importar —y también las metas y los compromisos, pero solo si el libro trae esas pestañas—; si se apaga, agrega. Al agregar, el nombre hace de identidad del compromiso: importar dos veces el mismo libro no deja la lista duplicada.
+- Reemplazar alcanza también al **catálogo que queda sin uso**: una vez cargado el archivo, se van las cuentas y categorías que no sostienen ningún movimiento, meta ni compromiso y que el libro no nombra. Ahí caen las cuentas de ejemplo que siembra la app en el primer arranque, que si no se quedaban para siempre ensuciando cada desplegable. No se toca nada con datos detrás, ni una cuenta que venga en Diccionarios aunque no tenga movimientos, ni un grupo que todavía agrupe a una categoría viva; los mapeos de descripción que apuntaban a una categoría borrada se limpian con ella. Si el libro no trae ninguna categoría —el esquema compacto no las exporta— el catálogo se queda como estaba: vaciarlo dejaría la captura sin dónde clasificar y la siembra las repondría igual.
 - **Corregir al importar** (por omisión) enciende la alineación de tipo con signo y el recálculo de contraparte.
 - El emparejado de transferencias, la creación de cuentas faltantes y la lectura de las otras pestañas van siempre.
 
 ### Resultado
 
-`ResultadoImportacion` devuelve filas leídas, importadas, omitidas, cuentas y categorías creadas, cuántas quedaron sin categoría, tipos corregidos, contrapartes recalculadas, transferencias emparejadas y huérfanas, metas y compromisos importados, más una lista de diagnósticos con severidad `INFO`, `AVISO` o `ERROR` y su número de fila.
+`ResultadoImportacion` devuelve filas leídas, importadas, omitidas, cuentas y categorías creadas y eliminadas, cuántas quedaron sin categoría, tipos corregidos, contrapartes recalculadas, transferencias emparejadas y huérfanas, metas y compromisos importados, más una lista de diagnósticos con severidad `INFO`, `AVISO` o `ERROR` y su número de fila.
+
+Los diagnósticos se muestran en la propia tarjeta del resumen, agrupados por mensaje y con los renglones que lo provocaron (`diagnosticosAgrupados()`): veinte filas rotas son una línea con veinte renglones, no veinte líneas idénticas. Hablan del **archivo**, y casi ninguno deja rastro en la base, así que la pantalla de Salud no los conoce: esa se ofrece aparte y solo cuando la auditoría —que corre sobre los datos ya importados— encontró algo de verdad.
 
 Los fallos se traducen a mensajes accionables —archivo que no es un `.xlsx`, permiso perdido sobre el archivo, sin espacio, libro demasiado grande para la memoria—; la excepción cruda se manda a logcat sin datos del usuario.
 

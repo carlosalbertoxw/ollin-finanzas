@@ -602,9 +602,13 @@ class ExportadorExcel(
             return Hoja("Compromisos", filas, listOf(AnchoColumna(1, 40.0)))
         }
 
+        // La categoria viaja aunque no se vea en la vigilancia del mes: es lo
+        // unico que dice a que rubro pertenece el pago, y sin ella el
+        // compromiso vuelve de la importacion sin clasificar.
         filas += listOf(
             Celda.Texto("Compromiso", Estilo.ENCABEZADO),
             Celda.Texto("Cuenta", Estilo.ENCABEZADO),
+            Celda.Texto("Categoria", Estilo.ENCABEZADO),
             Celda.Texto("Monto", Estilo.ENCABEZADO),
             Celda.Texto("Periodicidad", Estilo.ENCABEZADO),
             Celda.Texto("Proximo pago", Estilo.ENCABEZADO),
@@ -621,6 +625,7 @@ class ExportadorExcel(
             filas += listOf(
                 Celda.Texto(c.nombre),
                 Celda.Texto(c.cuentaId?.let { datos.nombreCuenta(it) }.orEmpty()),
+                Celda.Texto(datos.nombreCategoria(c.categoriaId)),
                 Celda.Numero(centavosADouble(c.montoCentavos), Estilo.DINERO),
                 Celda.Texto(c.periodicidad.etiqueta),
                 Celda.Fecha(proximo),
@@ -634,9 +639,9 @@ class ExportadorExcel(
         val ultima = filas.size
         filas += listOf(
             Celda.Texto("Total comprometido", Estilo.NEGRITA),
-            Celda.Vacia, Celda.Vacia, Celda.Vacia, Celda.Vacia, Celda.Vacia,
+            Celda.Vacia, Celda.Vacia, Celda.Vacia, Celda.Vacia, Celda.Vacia, Celda.Vacia,
             Celda.Formula(
-                "SUM(G$primera:G$ultima)",
+                "SUM(H$primera:H$ultima)",
                 cache = centavosADouble(
                     datos.compromisos.sumOf { c ->
                         val r = c.totalPagos?.let { (it - c.pagosRealizados).coerceAtLeast(0) } ?: 0
@@ -651,9 +656,9 @@ class ExportadorExcel(
             nombre = "Compromisos",
             filas = filas,
             anchos = listOf(
-                AnchoColumna(1, 28.0), AnchoColumna(2, 22.0), AnchoColumna(3, 14.0),
+                AnchoColumna(1, 28.0), AnchoColumna(2, 22.0), AnchoColumna(3, 22.0),
                 AnchoColumna(4, 14.0), AnchoColumna(5, 14.0), AnchoColumna(6, 14.0),
-                AnchoColumna(7, 16.0)
+                AnchoColumna(7, 14.0), AnchoColumna(8, 16.0)
             )
         )
     }
