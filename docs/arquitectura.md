@@ -30,7 +30,7 @@ El botón flotante **Capturar** solo aparece sobre las pestañas principales; en
 
 Dos rutas se reescriben al vuelo en vez de apilarse:
 
-- `captura?compromiso={id}` abre la captura precargada con los datos del compromiso que se paga.
+- `captura?compromiso={id}` abre la captura precargada con los datos del compromiso que se paga. Guardar escribe el movimiento ligado al compromiso, pero no mueve el plan: eso se decide a mano en la lista de compromisos ([el libro](movimientos.md#compromisos)).
 - Al pasar de captura a transferencia se hace `popBackStack()` primero: al guardar, los dos renglones de la transferencia se reescriben y el id que traía la captura deja de existir.
 
 `ui/components/Comunes.kt` concentra lo visual repetido: `TextoDinero` (color por signo y ancho tabular), tarjetas de cifra, `BarrasFlujo`, `LineaEvolucion`, `BarraAvance` y estados vacíos.

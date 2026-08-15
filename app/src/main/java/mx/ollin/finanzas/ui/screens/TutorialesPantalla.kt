@@ -151,11 +151,15 @@ val TUTORIALES: List<Tutorial> = listOf(
             "Da de alta cada uno con su cuenta, categoria, periodicidad y fecha del " +
                 "siguiente pago.",
             "La app revisa una vez al dia y te avisa antes de que venza.",
-            "Cuando toque, usa Pagar: se abre la captura ya llena para que corrijas el " +
-                "monto si cambio."
+            "Cuando toque, usa Registrar: se abre la captura ya llena para que corrijas el " +
+                "monto si cambio.",
+            "Desliza la tarjeta a la derecha y elige Cumplir, si el pago ya se hizo, o " +
+                "Descartar, si este periodo no se cobro."
         ),
-        truco = "Pagar no escribe nada por su cuenta. El plan solo avanza a la siguiente " +
-            "fecha cuando el movimiento queda guardado."
+        truco = "Nada avanza solo: mientras no cumplas ni descartes, el pago sigue " +
+            "pendiente aunque se pase de fecha. Descartar recorre la fecha sin contar el " +
+            "pago, asi que no acorta unos meses sin intereses, y las dos decisiones se " +
+            "deshacen desde el aviso que sale abajo."
     ),
     Tutorial(
         clave = "calidad",
