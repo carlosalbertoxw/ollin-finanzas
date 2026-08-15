@@ -127,7 +127,7 @@ Las metas de un mes se pueden copiar al siguiente, que es como se arma un presup
 
 Lo que ya está comprometido y aún no se paga: mensualidades MSI, suscripciones, gastos anuales. Cada uno lleva cuenta, categoría, periodicidad, monto y fecha del primer pago.
 
-- El **próximo pago** se calcula: `fechaPrimerPago + pagosRealizados × meses`.
+- El **próximo pago** se calcula: `fechaPrimerPago + pagosRealizados × meses`. Es también lo que ordena la lista —activos primero, lo más atrasado hasta arriba—, y por eso el orden se arma en el ViewModel y no en SQL: cumplir un pago no toca `fechaPrimerPago`, así que ordenar por columna dejaría la tarjeta recién cumplida en su lugar viejo con la fecha nueva.
 - Un compromiso con `totalPagos` termina solo: al llegar al último, se apaga.
 - **Registrar no da el pago por hecho.** Abre la captura ya llena —cuenta, categoría, monto, medio y naturaleza deducida del tipo de la categoría— para que corrijas lo que haya cambiado. Guardar escribe el movimiento y lo deja ligado al compromiso, pero no mueve el plan.
 - **El plan avanza a mano.** Se desliza la tarjeta a la derecha y aparecen dos decisiones:

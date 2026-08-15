@@ -96,7 +96,19 @@ class CompromisosVm(contenedor: Contenedor) : ViewModel() {
 
     private val repo = contenedor.repositorio
 
+    /**
+     * Lo urgente arriba. El orden lo manda el proximo pago, que no es una
+     * columna sino la fecha del primero corrida por los pagos ya hechos, asi
+     * que se ordena aqui: en SQL, cumplir uno lo dejaria en su lugar viejo.
+     */
     val compromisos: StateFlow<List<Compromiso>> = repo.observaCompromisos()
+        .map { lista ->
+            lista.sortedWith(
+                compareByDescending<Compromiso> { it.activo }
+                    .thenBy { proximoPago(it) }
+                    .thenBy { it.nombre.lowercase() }
+            )
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val cuentas: StateFlow<List<Cuenta>> = repo.observaCuentas()
@@ -235,6 +247,9 @@ fun CompromisosPantalla(
 
                         FilaDeslizable(
                             habilitada = c.activo,
+                            // Cumplir cambia la fecha y con ella el lugar en la
+                            // lista: animado se ve a donde se fue la tarjeta.
+                            modifier = Modifier.animateItem(),
                             alCumplir = {
                                 vm.cumple(c.id)
                                 avisa("${c.nombre}: pago cumplido") { vm.deshaceCumplimiento(c.id) }
@@ -340,6 +355,7 @@ private val AnchoAccion = 88.dp
 @Composable
 private fun FilaDeslizable(
     habilitada: Boolean,
+    modifier: Modifier = Modifier,
     alCumplir: () -> Unit,
     alDescartar: () -> Unit,
     contenido: @Composable () -> Unit
@@ -359,7 +375,7 @@ private fun FilaDeslizable(
     // Un compromiso terminado ya no admite decisiones: se recoge el panel.
     LaunchedEffect(habilitada) { if (!habilitada) desplazamiento.animateTo(0f) }
 
-    Box(Modifier.fillMaxWidth()) {
+    Box(modifier.fillMaxWidth()) {
         if (abierto) {
             Row(
                 Modifier
