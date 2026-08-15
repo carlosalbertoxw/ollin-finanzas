@@ -129,7 +129,12 @@ Lo que ya está comprometido y aún no se paga: mensualidades MSI, suscripciones
 
 - El **próximo pago** se calcula: `fechaPrimerPago + pagosRealizados × meses`.
 - Un compromiso con `totalPagos` termina solo: al llegar al último, se apaga.
-- **Pagar no escribe nada por su cuenta.** Abre la captura ya llena —cuenta, categoría, monto, medio y naturaleza deducida del tipo de la categoría— para que corrijas lo que haya cambiado. El plan avanza **después** de que el movimiento queda guardado; si cancelas, nada avanzó.
-- Editar el pago de un compromiso no vuelve a avanzar el plan: solo conserva el vínculo.
+- **Registrar no da el pago por hecho.** Abre la captura ya llena —cuenta, categoría, monto, medio y naturaleza deducida del tipo de la categoría— para que corrijas lo que haya cambiado. Guardar escribe el movimiento y lo deja ligado al compromiso, pero no mueve el plan.
+- **El plan avanza a mano.** Se desliza la tarjeta a la derecha y aparecen dos decisiones:
+  - **Cumplir** — sube `pagosRealizados` y apaga el plan si con ese pago se acabó.
+  - **Descartar** — recorre `fechaPrimerPago` una periodicidad sin subir el contador: el mes que no se cobró no acorta un MSI.
+  - Las dos se deshacen desde el aviso que aparece abajo.
+- **Mientras nadie decida, el pago sigue pendiente**, aunque ya se haya pasado de fecha: sale marcado como vencido en la lista y en el tablero, y el recordatorio diario lo sigue nombrando. Es a propósito: el cargo puede llegar por fuera de la app, rebotar o no cobrarse este periodo, y solo el dueño de la cuenta sabe cuál de las tres pasó.
+- Editar el pago de un compromiso no toca el plan: solo conserva el vínculo.
 
-Una revisión diaria a las 9:00 avisa de lo que vence dentro de su ventana (`avisarDiasAntes`, 3 por omisión). El tablero usa la misma función con una ventana de 45 días para enseñar lo que viene. Ver [seguridad](seguridad.md#permisos).
+Una revisión diaria a las 9:00 avisa de lo que ya entró en su ventana (`avisarDiasAntes`, 3 por omisión) y de lo que se venció sin resolverse. El tablero usa la misma función con una ventana de 45 días para enseñar lo que viene. Ver [seguridad](seguridad.md#permisos).

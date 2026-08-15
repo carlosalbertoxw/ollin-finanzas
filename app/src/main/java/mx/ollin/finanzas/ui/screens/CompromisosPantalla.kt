@@ -1,20 +1,33 @@
 ﻿package mx.ollin.finanzas.ui.screens
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EventRepeat
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -29,18 +42,31 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,6 +90,7 @@ import mx.ollin.finanzas.ui.theme.LocalColoresOllin
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import kotlin.math.roundToInt
 
 class CompromisosVm(contenedor: Contenedor) : ViewModel() {
 
@@ -88,8 +115,25 @@ class CompromisosVm(contenedor: Contenedor) : ViewModel() {
         viewModelScope.launch { repo.eliminaCompromiso(compromiso) }
     }
 
-    // El pago no se registra aqui: "Pagar" abre una captura precargada y el
-    // contador lo avanza el repositorio cuando el movimiento queda guardado.
+    // El plan no avanza solo. Un pago sigue pendiente hasta que aqui se decide
+    // que se cumplio o que se descarta, porque el cargo puede llegar por fuera
+    // de la app, rebotar o simplemente no cobrarse este periodo.
+
+    fun cumple(id: Long) {
+        viewModelScope.launch { repo.avanzaCompromiso(id) }
+    }
+
+    fun deshaceCumplimiento(id: Long) {
+        viewModelScope.launch { repo.retrocedeCompromiso(id) }
+    }
+
+    fun descarta(id: Long) {
+        viewModelScope.launch { repo.descartaPagoCompromiso(id) }
+    }
+
+    fun deshaceDescarte(id: Long) {
+        viewModelScope.launch { repo.restauraPagoCompromiso(id) }
+    }
 }
 
 private fun proximoPago(c: Compromiso): LocalDate =
@@ -115,133 +159,162 @@ fun CompromisosPantalla(
 
     var editando by remember { mutableStateOf<Compromiso?>(null) }
 
-    Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("Compromisos") },
-            navigationIcon = {
-                IconButton(onClick = alCerrar) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
-                }
-            },
-            actions = {
-                IconButton(onClick = {
-                    editando = Compromiso(
-                        nombre = "",
-                        cuentaId = cuentas.firstOrNull()?.id,
-                        categoriaId = null,
-                        montoCentavos = 0L,
-                        fechaPrimerPago = LocalDate.now()
-                    )
-                }) { Icon(Icons.Filled.Add, contentDescription = "Nuevo compromiso") }
-            }
-        )
+    val avisos = remember { SnackbarHostState() }
+    val alcance = rememberCoroutineScope()
 
-        if (compromisos.isEmpty()) {
-            EstadoVacio(
-                icono = Icons.Filled.EventRepeat,
-                titulo = "Sin compromisos",
-                detalle = "Registra tus meses sin intereses, suscripciones y gastos anuales " +
-                    "para que dejen de llegar de sorpresa.",
-                modifier = Modifier.fillMaxSize()
+    /** Cumplir y descartar se deshacen: son decisiones de un toque sobre datos reales. */
+    fun avisa(texto: String, alDeshacer: () -> Unit) {
+        alcance.launch {
+            avisos.currentSnackbarData?.dismiss()
+            val respuesta = avisos.showSnackbar(
+                message = texto,
+                actionLabel = "Deshacer",
+                duration = SnackbarDuration.Short
             )
-            editando?.let { c ->
-                DialogoCompromiso(
-                    compromiso = c,
-                    cuentas = cuentas,
-                    categorias = categorias,
-                    alGuardar = { vm.guarda(it); editando = null },
-                    alCancelar = { editando = null },
-                    alEliminar = null
-                )
-            }
-            return
+            if (respuesta == SnackbarResult.ActionPerformed) alDeshacer()
         }
+    }
 
-        val totalPendiente = compromisos.filter { it.activo }.sumOf { pendiente(it) }
-        val mensualFijo = compromisos
-            .filter { it.activo && it.periodicidad == Periodicidad.MENSUAL }
-            .sumOf { it.montoCentavos }
-
-        LazyColumn(
-            Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TarjetaCifra(
-                        "Comprometido a futuro", -totalPendiente, Modifier.weight(1f),
-                        nota = "solo planes con fin"
-                    )
-                    TarjetaCifra(
-                        "Carga fija mensual", -mensualFijo, Modifier.weight(1f),
-                        nota = "suscripciones y MSI"
-                    )
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            TopAppBar(
+                title = { Text("Compromisos") },
+                navigationIcon = {
+                    IconButton(onClick = alCerrar) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        editando = Compromiso(
+                            nombre = "",
+                            cuentaId = cuentas.firstOrNull()?.id,
+                            categoriaId = null,
+                            montoCentavos = 0L,
+                            fechaPrimerPago = LocalDate.now()
+                        )
+                    }) { Icon(Icons.Filled.Add, contentDescription = "Nuevo compromiso") }
                 }
-            }
+            )
 
-            items(compromisos, key = { it.id }) { c ->
-                Card(
-                    Modifier.fillMaxWidth().clickable { editando = c },
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (c.activo) MaterialTheme.colorScheme.surfaceContainer
-                        else MaterialTheme.colorScheme.surfaceVariant
-                    )
+            if (compromisos.isEmpty()) {
+                EstadoVacio(
+                    icono = Icons.Filled.EventRepeat,
+                    titulo = "Sin compromisos",
+                    detalle = "Registra tus meses sin intereses, suscripciones y gastos anuales " +
+                        "para que dejen de llegar de sorpresa.",
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                val totalPendiente = compromisos.filter { it.activo }.sumOf { pendiente(it) }
+                val mensualFijo = compromisos
+                    .filter { it.activo && it.periodicidad == Periodicidad.MENSUAL }
+                    .sumOf { it.montoCentavos }
+
+                LazyColumn(
+                    Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(c.nombre, style = MaterialTheme.typography.titleSmall)
-                                Text(
-                                    buildString {
-                                        append(c.periodicidad.etiqueta)
-                                        categorias.firstOrNull { it.id == c.categoriaId }?.let {
-                                            append("  ·  ${it.nombre}")
-                                        }
-                                        c.totalPagos?.let {
-                                            append("  ·  ${c.pagosRealizados}/$it pagos")
-                                        }
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = colores.textoTenue
-                                )
-                            }
-                            TextoDinero(-c.montoCentavos)
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            TarjetaCifra(
+                                "Comprometido a futuro", -totalPendiente, Modifier.weight(1f),
+                                nota = "solo planes con fin"
+                            )
+                            TarjetaCifra(
+                                "Carga fija mensual", -mensualFijo, Modifier.weight(1f),
+                                nota = "suscripciones y MSI"
+                            )
                         }
+                    }
 
-                        if (c.activo) {
-                            Spacer(Modifier.height(8.dp))
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "Proximo: ${proximoPago(c)}" +
-                                        if (pendiente(c) > 0) "  ·  faltan ${Dinero.formateaCorto(pendiente(c))}" else "",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = colores.textoTenue
+                    items(compromisos, key = { it.id }) { c ->
+                        val fecha = proximoPago(c)
+                        val vencido = c.activo && fecha.isBefore(LocalDate.now())
+
+                        FilaDeslizable(
+                            habilitada = c.activo,
+                            alCumplir = {
+                                vm.cumple(c.id)
+                                avisa("${c.nombre}: pago cumplido") { vm.deshaceCumplimiento(c.id) }
+                            },
+                            alDescartar = {
+                                vm.descarta(c.id)
+                                avisa("${c.nombre}: pago descartado") { vm.deshaceDescarte(c.id) }
+                            }
+                        ) {
+                            Card(
+                                Modifier.fillMaxWidth().clickable { editando = c },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (c.activo) MaterialTheme.colorScheme.surfaceContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant
                                 )
-                                TextButton(onClick = { alPagar(c.id) }) { Text("Pagar") }
+                            ) {
+                                Column(Modifier.padding(16.dp)) {
+                                    Row(
+                                        Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(c.nombre, style = MaterialTheme.typography.titleSmall)
+                                            Text(
+                                                buildString {
+                                                    append(c.periodicidad.etiqueta)
+                                                    categorias.firstOrNull { it.id == c.categoriaId }?.let {
+                                                        append("  ·  ${it.nombre}")
+                                                    }
+                                                    c.totalPagos?.let {
+                                                        append("  ·  ${c.pagosRealizados}/$it pagos")
+                                                    }
+                                                },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = colores.textoTenue
+                                            )
+                                        }
+                                        TextoDinero(-c.montoCentavos)
+                                    }
+
+                                    if (c.activo) {
+                                        Spacer(Modifier.height(8.dp))
+                                        Row(
+                                            Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            // Un pago atrasado no se cae de la lista: se queda
+                                            // marcado hasta que se cumpla o se descarte.
+                                            Text(
+                                                (if (vencido) "Vencio el $fecha" else "Proximo: $fecha") +
+                                                    if (pendiente(c) > 0) "  ·  faltan ${Dinero.formateaCorto(pendiente(c))}" else "",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = if (vencido) colores.alerta else colores.textoTenue,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            TextButton(onClick = { alPagar(c.id) }) { Text("Registrar") }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
+
+                    item {
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "Desliza un compromiso a la derecha para darlo por cumplido o descartar " +
+                                "ese pago. Nada avanza solo: hasta que decidas, sigue pendiente y " +
+                                "Ollin Finanzas te lo recuerda una vez al dia.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colores.textoTenue
+                        )
+                    }
                 }
             }
-
-            item {
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    "Ollin Finanzas revisa una vez al dia y te avisa cuando un compromiso esta por vencer.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colores.textoTenue
-                )
-            }
         }
+
+        SnackbarHost(avisos, Modifier.align(Alignment.BottomCenter))
     }
 
     editando?.let { c ->
@@ -253,6 +326,113 @@ fun CompromisosPantalla(
             alCancelar = { editando = null },
             alEliminar = if (c.id != 0L) ({ vm.elimina(c); editando = null }) else null
         )
+    }
+}
+
+/** Ancho de cada una de las dos decisiones que descubre el deslizamiento. */
+private val AnchoAccion = 88.dp
+
+/**
+ * Tarjeta que al deslizarse a la derecha descubre sus dos decisiones. El pago
+ * no se da por hecho ni se olvida solo: hay que cumplirlo o descartarlo a mano,
+ * y mientras nadie decida, el compromiso sigue pendiente donde estaba.
+ */
+@Composable
+private fun FilaDeslizable(
+    habilitada: Boolean,
+    alCumplir: () -> Unit,
+    alDescartar: () -> Unit,
+    contenido: @Composable () -> Unit
+) {
+    val colores = LocalColoresOllin.current
+    val apertura = with(LocalDensity.current) { (AnchoAccion * 2).toPx() }
+    val desplazamiento = remember { Animatable(0f) }
+    val alcance = rememberCoroutineScope()
+    // Derivado para que arrastrar no recomponga la fila en cada cuadro: solo
+    // importa el momento en que el panel pasa de escondido a visible.
+    val abierto by remember { derivedStateOf { desplazamiento.value > 0f } }
+
+    fun cierra() {
+        alcance.launch { desplazamiento.animateTo(0f) }
+    }
+
+    // Un compromiso terminado ya no admite decisiones: se recoge el panel.
+    LaunchedEffect(habilitada) { if (!habilitada) desplazamiento.animateTo(0f) }
+
+    Box(Modifier.fillMaxWidth()) {
+        if (abierto) {
+            Row(
+                Modifier
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AccionDeslizada(Icons.Filled.Check, "Cumplir", colores.entrada) {
+                    cierra(); alCumplir()
+                }
+                AccionDeslizada(Icons.Filled.Close, "Descartar", colores.salida) {
+                    cierra(); alDescartar()
+                }
+            }
+        }
+
+        Box(
+            Modifier
+                .offset { IntOffset(desplazamiento.value.roundToInt(), 0) }
+                .draggable(
+                    state = rememberDraggableState { delta ->
+                        alcance.launch {
+                            desplazamiento.snapTo(
+                                (desplazamiento.value + delta).coerceIn(0f, apertura)
+                            )
+                        }
+                    },
+                    orientation = Orientation.Horizontal,
+                    enabled = habilitada,
+                    onDragStopped = { velocidad ->
+                        // Medio panel o un empujon claro bastan: pedir el recorrido
+                        // completo obliga a un gesto incomodo en pantallas angostas.
+                        val destino =
+                            if (desplazamiento.value > apertura / 2f || velocidad > 700f) apertura
+                            else 0f
+                        desplazamiento.animateTo(destino)
+                    }
+                )
+        ) {
+            contenido()
+            if (abierto) {
+                // Con el panel afuera, tocar la tarjeta lo recoge en vez de abrir
+                // la edicion: es la salida esperada de un gesto abierto sin querer.
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .pointerInput(Unit) { detectTapGestures { cierra() } }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccionDeslizada(
+    icono: ImageVector,
+    etiqueta: String,
+    color: Color,
+    alTocar: () -> Unit
+) {
+    Column(
+        Modifier
+            .width(AnchoAccion)
+            .fillMaxHeight()
+            .clickable(onClick = alTocar)
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(icono, contentDescription = etiqueta, tint = color)
+        Spacer(Modifier.height(4.dp))
+        Text(etiqueta, style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1)
     }
 }
 

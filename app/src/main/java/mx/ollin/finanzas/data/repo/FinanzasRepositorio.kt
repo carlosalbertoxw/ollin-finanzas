@@ -242,15 +242,42 @@ class FinanzasRepositorio(
     suspend fun eliminaCompromiso(compromiso: Compromiso) = compromisos.elimina(compromiso)
 
     /**
-     * Da por pagada una mensualidad y apaga el plan si con esa se acabo. Se
-     * llama despues de guardar el movimiento, no antes: el contador avanza
-     * cuando el gasto existe de verdad, no cuando alguien abrio la captura.
+     * Da por pagada una mensualidad y apaga el plan si con esa se acabo. Lo
+     * dispara el usuario desde la lista de compromisos: nada avanza solo,
+     * porque un cargo puede llegar por fuera de la app y otro puede rebotar.
      */
     suspend fun avanzaCompromiso(compromisoId: Long) {
         val c = compromisos.porId(compromisoId) ?: return
         val pagados = c.pagosRealizados + 1
         val terminado = c.totalPagos?.let { pagados >= it } ?: false
         compromisos.actualiza(c.copy(pagosRealizados = pagados, activo = !terminado))
+    }
+
+    /** Deshace un cumplimiento. Reabre el plan: si se apago al llegar al final, revive. */
+    suspend fun retrocedeCompromiso(compromisoId: Long) {
+        val c = compromisos.porId(compromisoId) ?: return
+        if (c.pagosRealizados == 0) return
+        compromisos.actualiza(c.copy(pagosRealizados = c.pagosRealizados - 1, activo = true))
+    }
+
+    /**
+     * Descarta el pago que toca sin darlo por hecho: recorre el plan al
+     * siguiente sin subir el contador. Es lo que se hace con el mes que no se
+     * cobro o con el cargo que decidiste saltarte, y por eso no acorta un MSI.
+     */
+    suspend fun descartaPagoCompromiso(compromisoId: Long) {
+        val c = compromisos.porId(compromisoId) ?: return
+        compromisos.actualiza(
+            c.copy(fechaPrimerPago = c.fechaPrimerPago.plusMonths(c.periodicidad.meses.toLong()))
+        )
+    }
+
+    /** Deshace un descarte: devuelve el plan al pago que se habia saltado. */
+    suspend fun restauraPagoCompromiso(compromisoId: Long) {
+        val c = compromisos.porId(compromisoId) ?: return
+        compromisos.actualiza(
+            c.copy(fechaPrimerPago = c.fechaPrimerPago.minusMonths(c.periodicidad.meses.toLong()))
+        )
     }
 
     // ---------------------------------------------------------- import/export

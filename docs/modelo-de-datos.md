@@ -114,7 +114,7 @@ Toda escritura pasa por [`FinanzasRepositorio`](../app/src/main/java/mx/ollin/fi
 - **Borrar una pata borra la otra.** Media transferencia no es un estado válido.
 - **El origen y el destino no pueden ser la misma cuenta**, y el importe se captura en positivo.
 - **Cada categoría elegida se aprende**: se guarda el par descripción → categoría en `mapeo_descripcion`, salvo en transferencias.
-- **El compromiso avanza después de guardar el movimiento**, no antes: el contador sube cuando el gasto existe de verdad, no cuando alguien abrió la captura.
+- **El compromiso solo avanza cuando el usuario lo decide.** Guardar un movimiento ligado a un compromiso no sube el contador: cumplir o descartar el pago es un gesto explícito en la lista de compromisos, porque el cargo puede llegar por fuera de la app o no llegar. Cumplir sube `pagosRealizados`; descartar recorre `fechaPrimerPago` una periodicidad. Ambas tienen su inversa (`retrocedeCompromiso`, `restauraPagoCompromiso`) para deshacer el toque.
 
 ## Proyecciones
 

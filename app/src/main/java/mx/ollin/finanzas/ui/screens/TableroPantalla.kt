@@ -359,12 +359,16 @@ fun TableroPantalla(
                     Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Los atrasados no se caen de la lista: siguen aqui, marcados,
+                    // hasta que en Compromisos se cumplan o se descarten.
+                    val vencido = fecha.isBefore(LocalDate.now())
                     Column(Modifier.weight(1f)) {
                         Text(compromiso.nombre, style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            "$fecha  ·  ${compromiso.periodicidad.etiqueta}",
+                            (if (vencido) "Vencido el $fecha" else "$fecha") +
+                                "  ·  ${compromiso.periodicidad.etiqueta}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = colores.textoTenue
+                            color = if (vencido) colores.alerta else colores.textoTenue
                         )
                     }
                     TextoDinero(-compromiso.montoCentavos)

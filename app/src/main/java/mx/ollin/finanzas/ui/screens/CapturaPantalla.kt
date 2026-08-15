@@ -91,7 +91,7 @@ enum class NaturalezaCaptura(val etiqueta: String) {
 class CapturaVm(
     private val contenedor: Contenedor,
     private val movimientoId: Long?,
-    /** Compromiso que se esta pagando. Precarga la captura y avanza al guardar. */
+    /** Compromiso que se esta pagando. Precarga la captura y queda ligado al movimiento. */
     private val compromisoId: Long? = null
 ) : ViewModel() {
 
@@ -126,8 +126,7 @@ class CapturaVm(
 
     /**
      * Compromiso al que ya estaba ligado el movimiento que se edita. Se conserva
-     * aparte de [compromisoId] porque editar un pago no vuelve a avanzar el plan:
-     * solo hay que no perder el vinculo al reescribir el renglon.
+     * aparte de [compromisoId] para no perder el vinculo al reescribir el renglon.
      */
     private var compromisoOriginal: Long? = null
 
@@ -366,9 +365,9 @@ class CapturaVm(
                     )
                 )
             }
-            // Hasta aqui el gasto ya existe: recien ahora se da por pagada la
-            // mensualidad. Si el usuario cancelo la captura, nada avanzo.
-            compromisoId?.let { repo.avanzaCompromiso(it) }
+            // El movimiento queda ligado al compromiso, pero el plan no avanza
+            // solo: dar por cumplido el pago es un gesto manual en la lista de
+            // compromisos, porque el cargo puede llegar por fuera de la app.
             _cerrar.value = true
         }
     }

@@ -94,15 +94,20 @@ object Recordatorios {
         runCatching { NotificationManagerCompat.from(contexto).notify(id, aviso) }
     }
 
-    /** Compromisos cuyo proximo pago cae dentro de su ventana de aviso. */
+    /**
+     * Compromisos cuyo proximo pago ya entro en su ventana de aviso, incluidos
+     * los que se pasaron de fecha: el plan solo avanza cuando alguien da el
+     * pago por cumplido o lo descarta, asi que uno atrasado sigue pendiente
+     * hasta que se decida. Se ordenan por fecha, lo mas atrasado primero.
+     */
     fun porVencer(compromisos: List<Compromiso>, hoy: LocalDate = LocalDate.now()): List<Pair<Compromiso, LocalDate>> =
         compromisos.filter { it.activo }.mapNotNull { c ->
             val restantes = c.totalPagos?.let { it - c.pagosRealizados } ?: Int.MAX_VALUE
             if (restantes <= 0) return@mapNotNull null
             val proximo = c.fechaPrimerPago.plusMonths(c.pagosRealizados.toLong() * c.periodicidad.meses)
             val dias = java.time.temporal.ChronoUnit.DAYS.between(hoy, proximo)
-            if (dias in 0..c.avisarDiasAntes.toLong()) c to proximo else null
-        }
+            if (dias <= c.avisarDiasAntes.toLong()) c to proximo else null
+        }.sortedBy { it.second }
 }
 
 class RecordatorioReceiver : BroadcastReceiver() {
@@ -114,12 +119,14 @@ class RecordatorioReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val compromisos = app.contenedor.repositorio.listaCompromisos()
+                val hoy = LocalDate.now()
                 Recordatorios.porVencer(compromisos).forEachIndexed { i, (compromiso, fecha) ->
+                    val cuando = if (fecha.isBefore(hoy)) "vencio el $fecha" else "el $fecha"
                     Recordatorios.notifica(
                         contexto,
                         id = 2000 + i,
                         titulo = compromiso.nombre,
-                        texto = "${Dinero.formatea(compromiso.montoCentavos)} el $fecha"
+                        texto = "${Dinero.formatea(compromiso.montoCentavos)} $cuando"
                     )
                 }
             } finally {
