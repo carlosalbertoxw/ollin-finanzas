@@ -21,17 +21,17 @@
             android:exported="true"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.Ollin">
+            <!--
+                Solo el lanzador. Hubo aqui un filtro ACTION_VIEW para "Abrir con
+                Ollin Finanzas" desde un gestor de archivos, pero nadie leia el
+                Intent entrante: elegir el archivo abria el tablero y lo ignoraba.
+                Se retira hasta que haya con que atenderlo. Cuando se implemente,
+                la URI llega de otra app y hay que tratarla como no confiable:
+                importar solo tras confirmacion explicita, nunca al vuelo.
+            -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
-            <!-- Permite "Abrir con Ollin Finanzas" desde un gestor de archivos o desde OneDrive. -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
             </intent-filter>
         </activity>
 

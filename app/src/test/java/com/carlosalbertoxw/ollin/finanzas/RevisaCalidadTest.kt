@@ -123,7 +123,9 @@ class RevisaCalidadTest : BaseEnMemoria() {
         assertEquals(2, hallazgo!!.afectados)
         assertEquals(GravedadHallazgo.ALTA, hallazgo.gravedad)
         assertFalse(hallazgo.reparable)
-        assertTrue("Debe citar el nombre de la cuenta", hallazgo.detalle.contains("Banorte"))
+        assertEquals("Debe citar la cuenta", listOf("Banorte"), hallazgo.datos.cuentas)
+        // Lo que sobra: el renglon mas chico de los dos.
+        assertEquals(400_000L, hallazgo.datos.montoCentavos)
     }
 
     @Test
@@ -179,7 +181,7 @@ class RevisaCalidadTest : BaseEnMemoria() {
         assertNotNull(hallazgo)
         assertEquals(1, hallazgo!!.afectados)
         assertEquals(GravedadHallazgo.MEDIA, hallazgo.gravedad)
-        assertTrue(hallazgo.detalle.contains("Crea una cuenta de tipo Activo"))
+        assertFalse("Sin cuenta de activo donde reflejarlo", hallazgo.datos.hayCuentaDeActivo)
     }
 
     @Test
@@ -191,7 +193,7 @@ class RevisaCalidadTest : BaseEnMemoria() {
 
         val hallazgo = revisa().de("patrimonio_sin_espejo")
         assertNotNull(hallazgo)
-        assertTrue(hallazgo!!.detalle.contains("Registralas como transferencia"))
+        assertTrue("Ya hay cuenta de activo donde reflejarlo", hallazgo!!.datos.hayCuentaDeActivo)
     }
 
     /** Una tarjeta en rojo es lo normal; una cuenta de banco en rojo, no. */
@@ -208,8 +210,7 @@ class RevisaCalidadTest : BaseEnMemoria() {
         assertNotNull(hallazgo)
         assertEquals(1, hallazgo!!.afectados)
         assertEquals(GravedadHallazgo.ALTA, hallazgo.gravedad)
-        assertTrue(hallazgo.detalle.contains("Banorte"))
-        assertFalse(hallazgo.detalle.contains("Tarjeta Oro"))
+        assertEquals(listOf("Banorte"), hallazgo.datos.cuentas)
     }
 
     @Test
@@ -224,8 +225,7 @@ class RevisaCalidadTest : BaseEnMemoria() {
         val hallazgo = revisa().de("meses_vacios")
         assertNotNull(hallazgo)
         assertEquals(2, hallazgo!!.afectados)
-        assertTrue(hallazgo.detalle.contains("2026-02"))
-        assertTrue(hallazgo.detalle.contains("2026-03"))
+        assertEquals(listOf("2026-02", "2026-03"), hallazgo.datos.periodos)
     }
 
     @Test

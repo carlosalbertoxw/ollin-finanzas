@@ -617,11 +617,9 @@ class ExportadorExcel(
         )
 
         val primera = filas.size + 1
-        datos.compromisos.sortedBy { it.fechaPrimerPago }.forEach { c ->
-            val restantes = c.totalPagos?.let { (it - c.pagosRealizados).coerceAtLeast(0) }
-            val proximo = c.fechaPrimerPago.plusMonths(
-                (c.pagosRealizados.toLong()) * c.periodicidad.meses
-            )
+        datos.compromisos.sortedBy { it.proximoPago }.forEach { c ->
+            val restantes = c.pagosRestantes
+            val proximo = c.proximoPago
             filas += listOf(
                 Celda.Texto(c.nombre),
                 Celda.Texto(c.cuentaId?.let { datos.nombreCuenta(it) }.orEmpty()),
@@ -643,10 +641,7 @@ class ExportadorExcel(
             Celda.Formula(
                 "SUM(H$primera:H$ultima)",
                 cache = centavosADouble(
-                    datos.compromisos.sumOf { c ->
-                        val r = c.totalPagos?.let { (it - c.pagosRealizados).coerceAtLeast(0) } ?: 0
-                        c.montoCentavos * r
-                    }
+                    datos.compromisos.sumOf { c -> c.montoCentavos * (c.pagosRestantes ?: 0) }
                 ),
                 estilo = Estilo.DINERO_TOTAL
             )

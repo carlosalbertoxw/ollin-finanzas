@@ -4,9 +4,13 @@ Un libro de finanzas se degrada con el uso: se captura de prisa, se importa un a
 
 [`RevisaCalidad`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/domain/usecase/RevisaCalidad.kt) corre cada vez que se abre el tablero o la pantalla de Salud, no una sola vez al importar.
 
+Corre en `Dispatchers.Default`. Las consultas se van a IO por su cuenta, pero el análisis posterior es CPU pura y una de las revisiones crece con el **cuadrado** de las descripciones distintas: en el hilo del llamador colgaba la interfaz justo al abrir la app, que es cuando el tablero la dispara.
+
 ## Los hallazgos
 
-Cada uno lleva clave, título, detalle en prosa, gravedad, cuántos movimientos afecta y los ids implicados para poder saltar a ellos.
+Cada uno lleva clave, gravedad, cuántos movimientos afecta, los ids implicados para poder saltar a ellos, y un `DatosHallazgo` con lo medido: las cuentas citadas, los periodos vacíos, el importe que resume el problema, los pares de descripciones sospechosas.
+
+**El título y el detalle no viven aquí.** Los redacta [`TextosHallazgo`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/TextosHallazgo.kt) en la capa de interfaz, a partir de la clave y de esos datos. El dominio detecta y mide; escribir la frase es material de producto, y separarlo permite corregir una coma sin recompilar un caso de uso ni reescribir sus pruebas —que ahora afirman sobre datos (`datos.cuentas == ["Banorte"]`) y no sobre prosa.
 
 | Clave | Gravedad | Qué detecta | Repara |
 |---|---|---|---|
@@ -37,6 +41,8 @@ Lo único que vale para cualquier cuenta es que **el dinero de una cartera se mu
 [`ReparaDatos`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/domain/usecase/ReparaDatos.kt) arregla los hallazgos con corrección inequívoca. Devuelve cuántos renglones tocó.
 
 **Regla de oro: nunca se toca el importe.** El importe es lo que realmente pasó y de él dependen todos los saldos; lo que se corrige es la etiqueta que lo describe mal.
+
+**Una reparación es todo o nada.** No escribe renglón por renglón: arma la lista completa de movimientos corregidos y la manda a `FinanzasRepositorio.actualizaMovimientos`, que la aplica dentro de una sola transacción. Antes mandaba un `UPDATE` suelto por movimiento contra los DAO, así que un tropiezo a media reparación dejaba el libro mitad corregido —y era el único punto de la app que se saltaba la puerta única de escritura.
 
 | Clave | Qué hace |
 |---|---|

@@ -111,8 +111,6 @@ enum class TipoCategoria(val etiqueta: String) {
     }
 }
 
-/** Tipo de compromiso futuro que Ollin Finanzas vigila. */
-
 /** Periodicidad de un compromiso recurrente. */
 enum class Periodicidad(val etiqueta: String, val meses: Int) {
     MENSUAL("Mensual", 1),
@@ -130,12 +128,20 @@ enum class Periodicidad(val etiqueta: String, val meses: Int) {
 }
 
 /**
+ * Compiladas una sola vez. Estaban dentro de [normalizaClave], que se llama
+ * cientos de miles de veces al importar y al buscar descripciones parecidas:
+ * construir la expresion en cada llamada costaba mas que el trabajo real.
+ */
+private val ACENTOS = Regex("\\p{InCombiningDiacriticalMarks}+")
+private val ESPACIOS = Regex("\\s+")
+
+/**
  * Normaliza para comparar texto que viene de una hoja de calculo:
  * quita acentos, colapsa espacios y pasa a minusculas. Sin esto,
  * "Descripcion" y "Descripción" son claves distintas al importar.
  */
 fun String.normalizaClave(): String {
     val sinAcentos = java.text.Normalizer.normalize(this, java.text.Normalizer.Form.NFD)
-        .replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
-    return sinAcentos.trim().lowercase().replace(Regex("\\s+"), " ")
+        .replace(ACENTOS, "")
+    return sinAcentos.trim().lowercase().replace(ESPACIOS, " ")
 }

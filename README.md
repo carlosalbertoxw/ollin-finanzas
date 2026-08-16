@@ -20,7 +20,7 @@ un libro de finanzas.
 | **Contraparte derivada** | No se captura si el movimiento es entre tus cuentas o con un tercero: se deduce del tipo. Traspaso o saldo inicial → propia; entrada o salida → tercero. Un campo que se captura a mano es un campo que se deja de mantener. |
 | **Salud de los datos** | Una pantalla que revisa en continuo: tipos que contradicen al signo del importe, transferencias sin su pareja, movimientos sin categoría, medios incoherentes con la cuenta, y descripciones casi idénticas (Levenshtein ≤ 2). Varios hallazgos se reparan con un botón. |
 | **Presupuesto y analítica** | Meta contra realidad por categoría y tendencia mensual. |
-| **Compromisos** | Lo que ya está comprometido y aún no se paga: mensualidades, suscripciones, gastos anuales. Cada uno lleva su cuenta, su categoría, su periodicidad y la fecha del siguiente pago, y avisa antes de vencer. **Registrar** abre la captura ya llena para que corrijas el monto si cambió. El plan nunca avanza solo: se desliza la tarjeta a la derecha y se elige **Cumplir** o **Descartar**; mientras nadie decida, el pago sigue pendiente aunque se pase de fecha. |
+| **Compromisos** | Lo que ya está comprometido y aún no se paga: mensualidades, suscripciones, gastos anuales. Cada uno lleva su cuenta, su categoría, su periodicidad y la fecha del siguiente pago, y avisa antes de vencer. **Registrar** abre la captura ya llena para que corrijas el monto si cambió. El plan nunca avanza solo: se desliza la tarjeta a la derecha y se elige **Cumplir** o **Descartar**; mientras nadie decida, el pago sigue pendiente aunque se pase de fecha. Las dos decisiones se deshacen y devuelven el plan justo a donde estaba, incluso uno que cae en día 31. |
 | **Importar y exportar .xlsx** | Tu respaldo es un libro de Excel que tú decides dónde guardar. |
 
 Todos los importes viven como **centavos en un `Long`**. Nunca como decimal flotante: así
@@ -75,6 +75,11 @@ app/src/main/java/com/carlosalbertoxw/ollin/finanzas/
 │   └── usecase/     RevisaCalidad, ReparaDatos
 └── ui/              Compose: pantallas, navegación, tema, componentes
 ```
+
+Cada pantalla recibe sus dependencias concretas —el repositorio, los ajustes, el caso de
+uso que usa—, no el contenedor entero. El único que lo conoce es `OllinRaiz`. Así un
+ViewModel declara de qué depende y se puede construir en una prueba sin levantar la base
+cifrada ni DataStore.
 
 Decisiones que no son las de default, y por qué:
 

@@ -49,6 +49,14 @@ import com.carlosalbertoxw.ollin.finanzas.ui.screens.TutorialesPantalla
 
 @Composable
 fun OllinRaiz(contenedor: Contenedor) {
+    // Unico lugar que conoce el contenedor entero. De aqui hacia abajo cada
+    // pantalla recibe solo lo que usa, y asi su ViewModel se puede construir en
+    // una prueba sin levantar la base cifrada ni DataStore.
+    val repo = contenedor.repositorio
+    val ajustes = contenedor.ajustes
+    val revisaCalidad = contenedor.revisaCalidad
+    val reparaDatos = contenedor.reparaDatos
+
     val nav = rememberNavController()
     val entrada by nav.currentBackStackEntryAsState()
     val rutaActual = entrada?.destination?.route
@@ -103,7 +111,9 @@ fun OllinRaiz(contenedor: Contenedor) {
 
                 composable(Destino.TABLERO.ruta) {
                     TableroPantalla(
-                        contenedor = contenedor,
+                        repo = repo,
+                        ajustes = ajustes,
+                        revisaCalidad = revisaCalidad,
                         alAbrirCuentas = { nav.navigate(Rutas.CUENTAS) },
                         alAbrirCalidad = { nav.navigate(Rutas.CALIDAD) },
                         alAbrirCompromisos = { nav.navigate(Rutas.COMPROMISOS) },
@@ -114,7 +124,7 @@ fun OllinRaiz(contenedor: Contenedor) {
 
                 composable(Destino.MOVIMIENTOS.ruta) {
                     MovimientosPantalla(
-                        contenedor = contenedor,
+                        repo = repo,
                         alAbrirMovimiento = { id -> nav.navigate(Rutas.captura(id)) },
                         alNuevaTransferencia = { nav.navigate(Rutas.transferencia()) }
                     )
@@ -122,18 +132,20 @@ fun OllinRaiz(contenedor: Contenedor) {
 
                 composable(Destino.PRESUPUESTO.ruta) {
                     PresupuestoPantalla(
-                        contenedor = contenedor,
+                        repo = repo,
                         alAbrirCategorias = { nav.navigate(Rutas.CATEGORIAS) }
                     )
                 }
 
                 composable(Destino.ANALITICA.ruta) {
-                    AnaliticaPantalla(contenedor)
+                    AnaliticaPantalla(repo)
                 }
 
                 composable(Destino.ARCHIVO.ruta) {
                     ArchivoPantalla(
-                        contenedor = contenedor,
+                        repo = repo,
+                        ajustes = ajustes,
+                        revisaCalidad = revisaCalidad,
                         alAbrirCalidad = { nav.navigate(Rutas.CALIDAD) }
                     )
                 }
@@ -146,7 +158,8 @@ fun OllinRaiz(contenedor: Contenedor) {
                     )
                 ) { destino ->
                     CapturaPantalla(
-                        contenedor = contenedor,
+                        repo = repo,
+                        ajustes = ajustes,
                         movimientoId = destino.arguments?.getLong("id")?.takeIf { it > 0L },
                         compromisoId = destino.arguments?.getLong("compromiso")?.takeIf { it > 0L },
                         alCerrar = { nav.popBackStack() },
@@ -170,23 +183,23 @@ fun OllinRaiz(contenedor: Contenedor) {
                     )
                 ) { destino ->
                     TransferenciaPantalla(
-                        contenedor = contenedor,
+                        repo = repo,
                         movimientoId = destino.arguments?.getLong("id")?.takeIf { it > 0L },
                         alCerrar = { nav.popBackStack() }
                     )
                 }
 
                 composable(Rutas.CUENTAS) {
-                    CuentasPantalla(contenedor) { nav.popBackStack() }
+                    CuentasPantalla(repo) { nav.popBackStack() }
                 }
 
                 composable(Rutas.CATEGORIAS) {
-                    CategoriasPantalla(contenedor) { nav.popBackStack() }
+                    CategoriasPantalla(repo) { nav.popBackStack() }
                 }
 
                 composable(Rutas.COMPROMISOS) {
                     CompromisosPantalla(
-                        contenedor = contenedor,
+                        repo = repo,
                         alPagar = { id -> nav.navigate(Rutas.capturaDeCompromiso(id)) },
                         alCerrar = { nav.popBackStack() }
                     )
@@ -194,7 +207,8 @@ fun OllinRaiz(contenedor: Contenedor) {
 
                 composable(Rutas.CALIDAD) {
                     CalidadPantalla(
-                        contenedor = contenedor,
+                        revisaCalidad = revisaCalidad,
+                        reparaDatos = reparaDatos,
                         alRevisarHallazgo = { clave -> nav.navigate(Rutas.revision(clave)) },
                         alCerrar = { nav.popBackStack() }
                     )
@@ -205,7 +219,8 @@ fun OllinRaiz(contenedor: Contenedor) {
                     arguments = listOf(navArgument("clave") { type = NavType.StringType })
                 ) { destino ->
                     RevisionPantalla(
-                        contenedor = contenedor,
+                        repo = repo,
+                        revisaCalidad = revisaCalidad,
                         clave = destino.arguments?.getString("clave").orEmpty(),
                         alAbrirMovimiento = { id -> nav.navigate(Rutas.captura(id)) },
                         alCerrar = { nav.popBackStack() }
@@ -214,7 +229,8 @@ fun OllinRaiz(contenedor: Contenedor) {
 
                 composable(Rutas.AJUSTES) {
                     AjustesPantalla(
-                        contenedor = contenedor,
+                        ajustes = ajustes,
+                        repo = repo,
                         alAbrirCuentas = { nav.navigate(Rutas.CUENTAS) },
                         alAbrirCategorias = { nav.navigate(Rutas.CATEGORIAS) },
                         alAbrirCompromisos = { nav.navigate(Rutas.COMPROMISOS) },

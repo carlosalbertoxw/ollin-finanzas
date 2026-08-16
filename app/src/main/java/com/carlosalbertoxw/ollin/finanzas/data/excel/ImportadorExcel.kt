@@ -7,8 +7,10 @@ import com.carlosalbertoxw.ollin.finanzas.data.db.CompromisoDao
 import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
 import com.carlosalbertoxw.ollin.finanzas.data.db.CuentaDao
 import com.carlosalbertoxw.ollin.finanzas.data.db.MapeoDescripcionDao
+import androidx.room.withTransaction
 import com.carlosalbertoxw.ollin.finanzas.data.db.Movimiento
 import com.carlosalbertoxw.ollin.finanzas.data.db.MovimientoDao
+import com.carlosalbertoxw.ollin.finanzas.data.db.OllinDatabase
 import com.carlosalbertoxw.ollin.finanzas.data.db.Presupuesto
 import com.carlosalbertoxw.ollin.finanzas.data.db.PresupuestoDao
 import com.carlosalbertoxw.ollin.finanzas.data.db.Semilla
@@ -117,14 +119,19 @@ data class DiagnosticoAgrupado(
  * completo y volver a importarlo devuelve el catalogo de cuentas y categorias,
  * las metas del mes y los pagos por venir, no solo los movimientos.
  */
-class ImportadorExcel(
-    private val cuentaDao: CuentaDao,
-    private val categoriaDao: CategoriaDao,
-    private val movimientoDao: MovimientoDao,
-    private val mapeoDao: MapeoDescripcionDao,
-    private val presupuestoDao: PresupuestoDao,
-    private val compromisoDao: CompromisoDao
-) {
+/**
+ * Recibe la base entera y no sus DAOs sueltos porque necesita abrir una
+ * transaccion: importar reemplazando borra todo antes de escribir, y sin
+ * atomicidad un fallo a medio camino deja el libro vacio. Ver [importa].
+ */
+class ImportadorExcel(private val db: OllinDatabase) {
+
+    private val cuentaDao: CuentaDao = db.cuentaDao()
+    private val categoriaDao: CategoriaDao = db.categoriaDao()
+    private val movimientoDao: MovimientoDao = db.movimientoDao()
+    private val mapeoDao: MapeoDescripcionDao = db.mapeoDescripcionDao()
+    private val presupuestoDao: PresupuestoDao = db.presupuestoDao()
+    private val compromisoDao: CompromisoDao = db.compromisoDao()
 
     private companion object {
         val SINONIMOS: Map<String, List<String>> = mapOf(
@@ -155,40 +162,56 @@ class ImportadorExcel(
         val nota: String?
     )
 
+    /**
+     * La lectura del archivo va fuera de la transaccion y toda la escritura
+     * dentro.
+     *
+     * Con `reemplazarTodo` la importacion borra los movimientos antes de
+     * insertar los nuevos, y entre una cosa y otra todavia crea categorias.
+     * Suelto, cualquier tropiezo en ese tramo —disco lleno, una restriccion, o
+     * que Android mate el proceso por memoria— dejaba el libro sin nada y sin
+     * reemplazo: la peor perdida posible en una app cuyo valor es el registro.
+     * Dentro de la transaccion, o entra el libro completo o no se toca nada.
+     *
+     * Parsear fuera tambien importa: es la parte que puede quedarse sin memoria
+     * con un archivo grande, y asi revienta antes de haber borrado nada.
+     */
     suspend fun importa(
         entrada: InputStream,
         opciones: OpcionesImportacion = OpcionesImportacion()
     ): ResultadoImportacion {
         val libro = XlsxLector.lee(entrada)
 
-        val diccionarios = if (opciones.importarOtrasHojas) {
-            LectorCatalogos.leeDiccionarios(libro)
-        } else {
-            LectorCatalogos.Diccionarios()
-        }
+        return db.withTransaction {
+            val diccionarios = if (opciones.importarOtrasHojas) {
+                LectorCatalogos.leeDiccionarios(libro)
+            } else {
+                LectorCatalogos.Diccionarios()
+            }
 
-        val delLibro = ClavesDelLibro()
-        val hoja = eligeHojaDeDatos(libro)
-        var resultado = if (hoja != null) {
-            procesa(hoja, opciones, diccionarios, delLibro)
-        } else {
-            // Un libro de puros catalogos tambien sirve: entra lo que traiga y
-            // los movimientos se quedan como estaban. Vaciarlos aqui borraria
-            // todo a cambio de nada.
-            sinRegistros(diccionarios, opciones, delLibro)
-        }
+            val delLibro = ClavesDelLibro()
+            val hoja = eligeHojaDeDatos(libro)
+            var resultado = if (hoja != null) {
+                procesa(hoja, opciones, diccionarios, delLibro)
+            } else {
+                // Un libro de puros catalogos tambien sirve: entra lo que traiga y
+                // los movimientos se quedan como estaban. Vaciarlos aqui borraria
+                // todo a cambio de nada.
+                sinRegistros(diccionarios, opciones, delLibro)
+            }
 
-        if (opciones.importarOtrasHojas) {
-            resultado = conPresupuestos(libro, resultado, opciones)
-            resultado = conCompromisos(libro, resultado, opciones)
-        }
+            if (opciones.importarOtrasHojas) {
+                resultado = conPresupuestos(libro, resultado, opciones)
+                resultado = conCompromisos(libro, resultado, opciones)
+            }
 
-        // Al final de todo: las metas y los compromisos tambien sostienen
-        // catalogo, y barrer antes de leerlos se llevaria lo que ellos usan.
-        if (hoja != null && opciones.reemplazarTodo) {
-            resultado = purgaCatalogoSinUso(resultado, delLibro)
+            // Al final de todo: las metas y los compromisos tambien sostienen
+            // catalogo, y barrer antes de leerlos se llevaria lo que ellos usan.
+            if (hoja != null && opciones.reemplazarTodo) {
+                resultado = purgaCatalogoSinUso(resultado, delLibro)
+            }
+            if (hoja == null) resultado.conAvisoDeHojaFaltante() else resultado
         }
-        return if (hoja == null) resultado.conAvisoDeHojaFaltante() else resultado
     }
 
     /**

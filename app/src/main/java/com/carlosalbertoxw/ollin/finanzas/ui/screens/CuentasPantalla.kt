@@ -49,7 +49,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
 import com.carlosalbertoxw.ollin.finanzas.data.db.SaldoCuenta
-import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
+import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Medio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCuenta
@@ -58,9 +58,8 @@ import com.carlosalbertoxw.ollin.finanzas.ui.components.TextoDinero
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
 
-class CuentasVm(contenedor: Contenedor) : ViewModel() {
+class CuentasVm(private val repo: FinanzasRepositorio) : ViewModel() {
 
-    private val repo = contenedor.repositorio
 
     val saldos: StateFlow<List<SaldoCuenta>> = repo.observaSaldos()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -100,8 +99,8 @@ class CuentasVm(contenedor: Contenedor) : ViewModel() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CuentasPantalla(contenedor: Contenedor, alCerrar: () -> Unit) {
-    val vm = recuerdaVm("cuentas") { CuentasVm(contenedor) }
+fun CuentasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
+    val vm = recuerdaVm("cuentas") { CuentasVm(repo) }
     val saldos by vm.saldos.collectAsStateWithLifecycle()
     val cuentas by vm.cuentas.collectAsStateWithLifecycle()
     val colores = LocalColoresOllin.current

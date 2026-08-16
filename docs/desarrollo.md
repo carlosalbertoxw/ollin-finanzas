@@ -126,8 +126,11 @@ Hay dos suites: **94 pruebas unitarias** en la JVM y **10 pruebas de interfaz** 
 | [`EnumsYNormalizacionTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EnumsYNormalizacionTest.kt) | `normalizaClave` (acentos, espacios, idempotencia) y el `desdeEtiqueta` de cada enum; el signo esperado de los seis tipos de movimiento |
 | [`ProyeccionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ProyeccionesTest.kt) | Las guardas de división entre cero de `tasaAhorro` y `avance`, y que el presupuesto use el absoluto del gasto |
 | [`ClavePinTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ClavePinTest.kt) | PIN correcto e incorrecto, hash o sal ausentes, Base64 corrupto, y que la derivación sea determinista por sal |
-| [`RevisaCalidadTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/RevisaCalidadTest.kt) | Los nueve detectores, uno por prueba, más el libro sano que no debe reportar nada |
+| [`RevisaCalidadTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/RevisaCalidadTest.kt) | Los nueve detectores, uno por prueba, más el libro sano que no debe reportar nada. Afirma sobre los **datos** del hallazgo (cuentas citadas, periodos, importe), no sobre su prosa |
 | [`ReparaDatosTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ReparaDatosTest.kt) | Las tres reparaciones automáticas, y sobre todo que **ninguna toque el importe** |
+| [`FinanzasRepositorioTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/FinanzasRepositorioTest.kt) | Los invariantes de la puerta única de escritura: una transferencia nace con sus dos patas y muere con las dos, el origen no puede ser el destino, la contraparte se deriva aunque le manden otra, y el plan de un compromiso avanza y se deshace sin perder el día del mes |
+| [`ControlBloqueoTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ControlBloqueoTest.kt) | Arrancar cerrado, la gracia del selector de archivos con reloj monótono, y el freno contra la fuerza bruta: escalada de la espera, tope y persistencia del contador |
+| [`RecordatoriosTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/RecordatoriosTest.kt) | Qué avisa y qué no: la ventana, lo vencido primero, planes apagados o ya terminados, y la fecha formateada para una persona |
 | [`ImportadorExcelTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ImportadorExcelTest.kt) | Round trip exportar→importar, sinónimos de encabezado, renglones incompletos, emparejado de transferencias e inferencia de tipo de cuenta |
 | [`ImportadorHojasTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ImportadorHojasTest.kt) | El regreso de Diccionarios, Presupuesto y Compromisos: naturaleza declarada, jerarquía de categorías, metas por mes, compromisos reconstruidos desde el próximo pago y el libro sin hoja de movimientos |
 | [`ExcelRoundTripTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ExcelRoundTripTest.kt) | Serial de fechas, letras de columna, centavos sin error acumulado, escritura y relectura del libro en ambos esquemas, escapado de XML, exportación parcial y libro vacío |
@@ -145,6 +148,15 @@ Dos detalles que se rompen solos si se tocan:
 - **`sdk = [34]`** — Robolectric 4.14.1 no trae imagen para la 36 del `targetSdk`, y sin fijarlo cada prueba muere al arrancar. Al subir Robolectric, sube también este número.
 
 Las claves foráneas están activas, así que un movimiento necesita una cuenta que exista de verdad; para eso están los ayudantes `nuevaCuenta` / `nuevoMovimiento`.
+
+### Lo que no necesita base
+
+`ControlBloqueoTest` y `RecordatoriosTest` corren sin Robolectric y sin DataStore, porque las clases que prueban reciben lo que usan en vez de un repositorio entero: `ControlBloqueo` toma un `Flow<Ajustes>`, la función que guarda los fallos y un reloj; `Recordatorios.porVencer` es una función pura sobre fechas.
+
+Dos trampas si tocas `ControlBloqueoTest`:
+
+- El control colecciona las preferencias **para siempre**, así que su scope no puede ser el de `runTest`: la prueba esperaría por siempre a ese hijo. Va en un `CoroutineScope` propio que se cancela en `@After`.
+- Ese scope usa `UnconfinedTestDispatcher`, así el `collect` corre al construirse y cada prueba arranca con las preferencias ya leídas. La prueba de "arranca bloqueado" es la excepción: recibe un flujo que todavía no emite, porque es justo el instante que quiere retratar.
 
 ### De interfaz (dispositivo)
 

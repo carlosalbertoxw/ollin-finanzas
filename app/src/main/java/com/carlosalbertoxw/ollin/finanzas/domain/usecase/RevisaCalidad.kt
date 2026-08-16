@@ -9,21 +9,54 @@ import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCategoria
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCuenta
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoMovimiento
 import com.carlosalbertoxw.ollin.finanzas.domain.model.normalizaClave
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.YearMonth
 import kotlin.math.abs
 import kotlin.math.min
 
 enum class GravedadHallazgo { ALTA, MEDIA, BAJA }
 
+/** Claves estables de los hallazgos. Las usan la navegacion y [ReparaDatos]. */
+object ClaveHallazgo {
+    const val TIPO_VS_SIGNO = "tipo_vs_signo"
+    const val TRANSFERENCIA_HUERFANA = "transferencia_huerfana"
+    const val SALDO_INICIAL_DUPLICADO = "saldo_inicial_duplicado"
+    const val SIN_CATEGORIA = "sin_categoria"
+    const val MEDIO_INCOHERENTE = "medio_incoherente"
+    const val PATRIMONIO_SIN_ESPEJO = "patrimonio_sin_espejo"
+    const val DESCRIPCIONES_PARECIDAS = "descripciones_parecidas"
+    const val MESES_VACIOS = "meses_vacios"
+    const val SALDO_NEGATIVO = "saldo_negativo"
+}
+
+/**
+ * Lo que hace falta para redactar el hallazgo, ya medido pero todavia sin
+ * frase. El dominio detecta y cuenta; escribir el texto que lee el usuario es
+ * trabajo de la interfaz, que es donde se puede cambiar una coma sin recompilar
+ * un caso de uso ni romper sus pruebas.
+ */
+data class DatosHallazgo(
+    /** Nombres de cuenta citados por el hallazgo. */
+    val cuentas: List<String> = emptyList(),
+    /** Periodos "yyyy-MM" implicados. */
+    val periodos: List<String> = emptyList(),
+    /** Pares de descripciones que se parecen entre si. */
+    val ejemplos: List<Pair<String, String>> = emptyList(),
+    /** Importe que resume el hallazgo, en centavos. */
+    val montoCentavos: Long? = null,
+    /** Si ya existe alguna cuenta de tipo Activo donde reflejar el patrimonio. */
+    val hayCuentaDeActivo: Boolean = false
+)
+
 data class Hallazgo(
     val clave: String,
-    val titulo: String,
-    val detalle: String,
     val gravedad: GravedadHallazgo,
     val afectados: Int,
     /** Movimientos implicados, para poder saltar a ellos desde la pantalla. */
     val idsMovimiento: List<Long> = emptyList(),
-    val reparable: Boolean = false
+    val reparable: Boolean = false,
+    val datos: DatosHallazgo = DatosHallazgo()
 )
 
 /**
@@ -32,14 +65,20 @@ data class Hallazgo(
  */
 class RevisaCalidad(private val repo: FinanzasRepositorio) {
 
-    suspend fun ejecuta(): List<Hallazgo> {
-        val movimientos = repo.datosParaExportar().movimientos
-        if (movimientos.isEmpty()) return emptyList()
+    /**
+     * En [Dispatchers.Default] a proposito. Las consultas se van a IO por su
+     * cuenta, pero el analisis posterior es CPU pura y crece con el cuadrado de
+     * las descripciones distintas; dejarlo en el hilo del llamador colgaba la
+     * interfaz, porque quien mas lo llama es el tablero al abrir la app.
+     */
+    suspend fun ejecuta(): List<Hallazgo> = withContext(Dispatchers.Default) {
+        val movimientos = repo.listaMovimientos()
+        if (movimientos.isEmpty()) return@withContext emptyList()
 
         val cuentas = repo.listaCuentas().associateBy { it.id }
         val categorias = repo.listaCategorias().associateBy { it.id }
 
-        return buildList {
+        buildList {
             tipoContraSigno(movimientos)?.let(::add)
             transferenciasHuerfanas(movimientos)?.let(::add)
             saldosInicialesDuplicados(movimientos, cuentas)?.let(::add)
@@ -61,10 +100,7 @@ class RevisaCalidad(private val repo: FinanzasRepositorio) {
         }
         if (malos.isEmpty()) return null
         return Hallazgo(
-            clave = "tipo_vs_signo",
-            titulo = "Tipo y signo se contradicen",
-            detalle = "Hay movimientos marcados como entrada con importe negativo, o al reves. " +
-                "Los saldos salen bien pero cualquier reporte por tipo queda mal.",
+            clave = ClaveHallazgo.TIPO_VS_SIGNO,
             gravedad = GravedadHallazgo.ALTA,
             afectados = malos.size,
             idsMovimiento = malos.map { it.id },
@@ -81,11 +117,7 @@ class RevisaCalidad(private val repo: FinanzasRepositorio) {
                 .values.flatten()
         if (sueltas.isEmpty()) return null
         return Hallazgo(
-            clave = "transferencia_huerfana",
-            titulo = "Transferencias sin su contraparte",
-            detalle = "Una transferencia debe mover dinero de una cuenta a otra, con dos renglones " +
-                "que se cancelan. Estas quedaron a medias, asi que el patrimonio total esta desviado. " +
-                "Abre cada una y completa la cuenta que falta.",
+            clave = ClaveHallazgo.TRANSFERENCIA_HUERFANA,
             gravedad = GravedadHallazgo.ALTA,
             afectados = sueltas.size,
             idsMovimiento = sueltas.map { it.id }
@@ -111,20 +143,18 @@ class RevisaCalidad(private val repo: FinanzasRepositorio) {
         if (repetidos.isEmpty()) return null
 
         val implicados = repetidos.values.flatten()
-        val nombres = repetidos.keys.joinToString { cuentas[it]?.nombre ?: "cuenta $it" }
         val inflado = repetidos.values.sumOf { porCuenta ->
             porCuenta.sumOf { it.importeCentavos } - porCuenta.maxBy { abs(it.importeCentavos) }.importeCentavos
         }
         return Hallazgo(
-            clave = "saldo_inicial_duplicado",
-            titulo = "Cuentas con mas de un saldo inicial",
-            detalle = "Una cuenta arranca una sola vez, pero estas tienen varios y todos se " +
-                "suman: $nombres. Los renglones de mas valen " +
-                "${com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero.formatea(inflado)}, y ese desvio se " +
-                "arrastra a tu patrimonio y a los meses de colchon. Abrelos y borra el que sobre.",
+            clave = ClaveHallazgo.SALDO_INICIAL_DUPLICADO,
             gravedad = GravedadHallazgo.ALTA,
             afectados = implicados.size,
-            idsMovimiento = implicados.map { it.id }
+            idsMovimiento = implicados.map { it.id },
+            datos = DatosHallazgo(
+                cuentas = repetidos.keys.map { cuentas[it]?.nombre ?: "cuenta $it" },
+                montoCentavos = inflado
+            )
         )
     }
 
@@ -133,17 +163,13 @@ class RevisaCalidad(private val repo: FinanzasRepositorio) {
             it.categoriaId == null && !it.tipo.esInterno && !it.tipo.esTransferencia
         }
         if (huerfanos.isEmpty()) return null
-        val monto = huerfanos.sumOf { abs(it.importeCentavos) }
         return Hallazgo(
-            clave = "sin_categoria",
-            titulo = "Movimientos sin categoria",
-            detalle = "Suman ${com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero.formatea(monto)} que no aparecen " +
-                "en ningun analisis por categoria. Corregir automaticamente clasifica los que " +
-                "repiten una descripcion que ya usaste antes; el resto se revisa uno por uno.",
+            clave = ClaveHallazgo.SIN_CATEGORIA,
             gravedad = GravedadHallazgo.MEDIA,
             afectados = huerfanos.size,
             idsMovimiento = huerfanos.map { it.id },
-            reparable = true
+            reparable = true,
+            datos = DatosHallazgo(montoCentavos = huerfanos.sumOf { abs(it.importeCentavos) })
         )
     }
 
@@ -164,10 +190,7 @@ class RevisaCalidad(private val repo: FinanzasRepositorio) {
         }
         if (malos.isEmpty()) return null
         return Hallazgo(
-            clave = "medio_incoherente",
-            titulo = "Medio que no cuadra con la cuenta",
-            detalle = "Una salida de la cartera no puede ser electronica, ni una cuenta marcada " +
-                "como solo electronica puede recibir efectivo.",
+            clave = ClaveHallazgo.MEDIO_INCOHERENTE,
             gravedad = GravedadHallazgo.BAJA,
             afectados = malos.size,
             idsMovimiento = malos.map { it.id },
@@ -189,43 +212,46 @@ class RevisaCalidad(private val repo: FinanzasRepositorio) {
                 categorias[it.categoriaId]?.tipo == TipoCategoria.PATRIMONIO
         }
         if (compras.isEmpty()) return null
-        val hayCuentaActivo = cuentas.values.any { it.tipo == TipoCuenta.ACTIVO }
-        val monto = compras.sumOf { abs(it.importeCentavos) }
         return Hallazgo(
-            clave = "patrimonio_sin_espejo",
-            titulo = "Compras de patrimonio contadas como gasto",
-            detalle = "${com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero.formatea(monto)} en terreno, cripto o " +
-                "bienes duraderos salieron de tus cuentas pero no entraron a ninguna cuenta de activo" +
-                if (hayCuentaActivo) ". Registralas como transferencia hacia la cuenta de activo."
-                else ". Crea una cuenta de tipo Activo para reflejarlas.",
+            clave = ClaveHallazgo.PATRIMONIO_SIN_ESPEJO,
             gravedad = GravedadHallazgo.MEDIA,
             afectados = compras.size,
-            idsMovimiento = compras.map { it.id }
+            idsMovimiento = compras.map { it.id },
+            datos = DatosHallazgo(
+                montoCentavos = compras.sumOf { abs(it.importeCentavos) },
+                hayCuentaDeActivo = cuentas.values.any { it.tipo == TipoCuenta.ACTIVO }
+            )
         )
     }
 
-    /** Dos formas de escribir lo mismo, antes de que se vuelvan dos categorias distintas. */
+    /**
+     * Dos formas de escribir lo mismo, antes de que se vuelvan dos categorias
+     * distintas.
+     *
+     * La clave normalizada se calcula una sola vez por descripcion y no dentro
+     * del bucle: son n comparaciones de longitud contra n^2 pares, y normalizar
+     * ahi dentro repetia el mismo trabajo millones de veces.
+     */
     private fun descripcionesParecidas(movimientos: List<Movimiento>): Hallazgo? {
         val distintas = movimientos.map { it.descripcion }.distinct().filter { it.length >= 5 }
+        val claves = distintas.map { it.normalizaClave() }
+
         val sospechosas = mutableListOf<Pair<String, String>>()
         for (i in distintas.indices) {
+            val a = claves[i]
             for (j in i + 1 until distintas.size) {
-                val a = distintas[i].normalizaClave()
-                val b = distintas[j].normalizaClave()
+                val b = claves[j]
                 if (a == b) continue
                 if (abs(a.length - b.length) > 2) continue
                 if (distancia(a, b) <= 2) sospechosas += distintas[i] to distintas[j]
             }
         }
         if (sospechosas.isEmpty()) return null
-        val ejemplos = sospechosas.take(3).joinToString("; ") { "\"${it.first}\" / \"${it.second}\"" }
         return Hallazgo(
-            clave = "descripciones_parecidas",
-            titulo = "Descripciones casi identicas",
-            detalle = "Probablemente sean la misma cosa escrita de dos formas, y el gasto se te " +
-                "esta partiendo en dos renglones: $ejemplos",
+            clave = ClaveHallazgo.DESCRIPCIONES_PARECIDAS,
             gravedad = GravedadHallazgo.BAJA,
-            afectados = sospechosas.size
+            afectados = sospechosas.size,
+            datos = DatosHallazgo(ejemplos = sospechosas.take(3))
         )
     }
 
@@ -240,31 +266,34 @@ class RevisaCalidad(private val repo: FinanzasRepositorio) {
         }
         if (faltantes.isEmpty()) return null
         return Hallazgo(
-            clave = "meses_vacios",
-            titulo = "Meses sin ningun movimiento",
-            detalle = "No hay registros en ${faltantes.joinToString(", ")}. O no capturaste, " +
-                "o falta importar un periodo.",
+            clave = ClaveHallazgo.MESES_VACIOS,
             gravedad = GravedadHallazgo.MEDIA,
-            afectados = faltantes.size
+            afectados = faltantes.size,
+            datos = DatosHallazgo(periodos = faltantes.map { it.toString() })
         )
     }
 
+    /**
+     * Los saldos se acumulan en una sola pasada. Antes se recorria la lista
+     * entera de movimientos una vez por cuenta, que con un libro grande y una
+     * decena de cuentas era trabajo multiplicado por nada.
+     */
     private fun saldoNegativoEnCuentaDeActivo(
         movimientos: List<Movimiento>,
         cuentas: Map<Long, Cuenta>
     ): Hallazgo? {
+        val saldos = HashMap<Long, Long>(cuentas.size)
+        for (m in movimientos) saldos[m.cuentaId] = (saldos[m.cuentaId] ?: 0L) + m.importeCentavos
+
         val negativas = cuentas.values.filter { cuenta ->
-            !cuenta.tipo.esDeuda &&
-                movimientos.filter { it.cuentaId == cuenta.id }.sumOf { it.importeCentavos } < 0
+            !cuenta.tipo.esDeuda && (saldos[cuenta.id] ?: 0L) < 0
         }
         if (negativas.isEmpty()) return null
         return Hallazgo(
-            clave = "saldo_negativo",
-            titulo = "Cuentas que no son de credito con saldo negativo",
-            detalle = "Estas cuentas quedaron en rojo: ${negativas.joinToString { it.nombre }}. " +
-                "Suele faltar el saldo inicial o sobrar una salida.",
+            clave = ClaveHallazgo.SALDO_NEGATIVO,
             gravedad = GravedadHallazgo.ALTA,
-            afectados = negativas.size
+            afectados = negativas.size,
+            datos = DatosHallazgo(cuentas = negativas.map { it.nombre })
         )
     }
 

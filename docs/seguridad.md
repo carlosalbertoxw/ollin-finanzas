@@ -56,6 +56,18 @@ La comparación es en tiempo constante (`MessageDigest.isEqual`): un `==` normal
 
 **Si eliges PIN propio y lo olvidas, no hay forma de recuperarlo.** Habría que reinstalar la app, y con ella se van los datos que no se hayan exportado.
 
+#### El freno contra la fuerza bruta
+
+PBKDF2 encarece cada intento, pero por sí solo no impide que alguien con el teléfono en la mano siga probando. [`ControlBloqueo`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/seguridad/ControlBloqueo.kt) lleva la cuenta de fallos seguidos:
+
+- Los primeros cuatro salen gratis: teclear mal el PIN es normal.
+- A partir del quinto la espera **duplica** —1 s, 2 s, 4 s…— hasta un tope de 5 minutos. Más allá, castigar más solo estorbaría al dueño.
+- Acertar limpia la cuenta: el freno es contra quien adivina, no contra ti.
+
+**El contador vive en DataStore, no en memoria.** Si viviera en el proceso, cerrar la app de un manotazo lo reiniciaría y probar diez mil PIN volvería a ser gratis. La espera en curso sí es de memoria y usa el reloj monótono, así que se reinicia al reabrir la app —pero su duración la fija el número de fallos, que sí persiste.
+
+El control recibe el flujo de preferencias y la función que guarda los fallos, no el `AjustesRepositorio` entero: es código de seguridad y sus reglas tienen que poder probarse sin levantar DataStore. El reloj también se inyecta, así que las pruebas de espera no cuestan tiempo real.
+
 ### La credencial del sistema
 
 [`CredencialDelSistema`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/seguridad/CredencialDelSistema.kt) pide huella, patrón o PIN del teléfono. Desde Android 11 usa `BiometricPrompt` con `BIOMETRIC_WEAK or DEVICE_CREDENTIAL`; antes, el diálogo unificado no admite credencial del dispositivo, así que abre la pantalla de desbloqueo del sistema.

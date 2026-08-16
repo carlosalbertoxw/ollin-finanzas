@@ -114,7 +114,16 @@ Toda escritura pasa por [`FinanzasRepositorio`](../app/src/main/java/com/carlosa
 - **Borrar una pata borra la otra.** Media transferencia no es un estado válido.
 - **El origen y el destino no pueden ser la misma cuenta**, y el importe se captura en positivo.
 - **Cada categoría elegida se aprende**: se guarda el par descripción → categoría en `mapeo_descripcion`, salvo en transferencias.
-- **El compromiso solo avanza cuando el usuario lo decide.** Guardar un movimiento ligado a un compromiso no sube el contador: cumplir o descartar el pago es un gesto explícito en la lista de compromisos, porque el cargo puede llegar por fuera de la app o no llegar. Cumplir sube `pagosRealizados`; descartar recorre `fechaPrimerPago` una periodicidad. Ambas tienen su inversa (`retrocedeCompromiso`, `restauraPagoCompromiso`) para deshacer el toque.
+- **El compromiso solo avanza cuando el usuario lo decide.** Guardar un movimiento ligado a un compromiso no sube el contador: cumplir o descartar el pago es un gesto explícito en la lista de compromisos, porque el cargo puede llegar por fuera de la app o no llegar. Cumplir sube `pagosRealizados`; descartar sube `pagosDescartados`. Ambas tienen su inversa (`retrocedeCompromiso`, `restauraPagoCompromiso`) para deshacer el toque.
+- **Una reparación de Salud es todo o nada.** [`ReparaDatos`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/domain/usecase/ReparaDatos.kt) no escribe por su cuenta: arma la lista de movimientos corregidos y la manda a `actualizaMovimientos`, que la aplica en una sola transacción. A medias dejaría el libro en un estado que nadie pidió.
+
+### El próximo pago se calcula, no se guarda
+
+`Compromiso` ancla en `fechaPrimerPago` —la fecha del pago número cero, que no se mueve nunca— y expone `proximoPago` sumando hacia adelante `(pagosRealizados + pagosDescartados)` periodicidades. Es la única fórmula: la usan los recordatorios, el tablero, la captura precargada y la hoja de Excel.
+
+El ancla es inmóvil por una razón concreta. `plusMonths` recorta el día al último válido del mes destino y no lo recuerda, así que **encadenar sumas sobre un valor ya recortado arrastra el error**. Antes, descartar un pago movía `fechaPrimerPago`: un plan del 31 de enero pasaba al 28 de febrero, y restaurarlo lo devolvía al 28 de enero en vez de al 31. El día se perdía para siempre y cada descarte volvía a recortarlo. Calculando siempre desde el ancla, el 31 reaparece en cada mes que lo tiene.
+
+Queda una limitación conocida, anotada en el diálogo de edición: si eliges un próximo pago cuyo día no existe en el mes del ancla (un 31 retrocedido a febrero), el día se recorta. No hay ancla que lo evite —ninguna fecha de febrero más un mes cae en un 31 de marzo—; resolverlo pediría guardar el día de pago aparte del ancla.
 
 ## Proyecciones
 
@@ -139,3 +148,7 @@ Toda escritura pasa por [`FinanzasRepositorio`](../app/src/main/java/com/carlosa
 Esto deja de valer con la primera versión que instale alguien más. A partir de ahí, cada cambio de esquema necesita su migración: cambia las entidades, sube `version` en [`OllinDatabase`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/OllinDatabase.kt), escribe la `Migration`, regístrala con `addMigrations(...)` y versiona el nuevo `app/schemas/N.json` que genera KSP.
 
 Room **no sabe bajar de versión**: si durante el desarrollo se sube `version` y luego se vuelve atrás, la base que quedó en el teléfono ya no abre. Desinstala la app o borra sus datos; está cifrada, así que no hay forma de rescatarla a mano.
+
+**Nunca uses `fallbackToDestructiveMigration()`.** Es la salida cómoda cuando Room reclama una migración que falta, y lo que hace es borrar la base entera y volver a crearla: en esta app eso es tirar el libro de finanzas del usuario, en silencio y sin posibilidad de deshacer. Si Room reclama, lo que falta es la `Migration`. La prohibición está anotada también en el `databaseBuilder` de [`OllinDatabase`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/OllinDatabase.kt), que es donde daría la tentación.
+
+Mientras la app siga sin publicar, cambiar el esquema sobre la versión 1 sí es válido, pero tiene un precio local: la base que ya está en tu teléfono deja de abrir porque su `identityHash` no coincide. Desinstala y vuelve a instalar.

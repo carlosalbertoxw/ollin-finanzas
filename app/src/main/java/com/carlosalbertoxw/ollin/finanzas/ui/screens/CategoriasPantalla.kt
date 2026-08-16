@@ -46,7 +46,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.data.db.Categoria
-import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
+import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCategoria
 import com.carlosalbertoxw.ollin.finanzas.ui.components.SeccionTitulo
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
@@ -68,9 +68,8 @@ data class RenglonCategoria(
     val sePuedeBorrar: Boolean get() = movimientos == 0 && hijas == 0
 }
 
-class CategoriasVm(contenedor: Contenedor) : ViewModel() {
+class CategoriasVm(private val repo: FinanzasRepositorio) : ViewModel() {
 
-    private val repo = contenedor.repositorio
 
     val renglones: StateFlow<List<RenglonCategoria>> = combine(
         repo.observaTodasLasCategorias(),
@@ -106,8 +105,8 @@ class CategoriasVm(contenedor: Contenedor) : ViewModel() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CategoriasPantalla(contenedor: Contenedor, alCerrar: () -> Unit) {
-    val vm = recuerdaVm("categorias") { CategoriasVm(contenedor) }
+fun CategoriasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
+    val vm = recuerdaVm("categorias") { CategoriasVm(repo) }
     val renglones by vm.renglones.collectAsStateWithLifecycle()
     val colores = LocalColoresOllin.current
 

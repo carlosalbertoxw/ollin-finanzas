@@ -28,12 +28,14 @@ class Contenedor(contexto: Context) {
 
     val ajustes: AjustesRepositorio by lazy { AjustesRepositorio(app) }
 
-    val controlBloqueo: ControlBloqueo by lazy { ControlBloqueo(ajustes) }
+    val controlBloqueo: ControlBloqueo by lazy {
+        ControlBloqueo(ajustes.ajustes, ajustes::guardaFallosDePin)
+    }
 
 
     val revisaCalidad: RevisaCalidad by lazy { RevisaCalidad(repositorio) }
 
-    val reparaDatos: ReparaDatos by lazy { ReparaDatos(baseDeDatos) }
+    val reparaDatos: ReparaDatos by lazy { ReparaDatos(repositorio) }
 
     val sembrador: Sembrador by lazy {
         Sembrador(

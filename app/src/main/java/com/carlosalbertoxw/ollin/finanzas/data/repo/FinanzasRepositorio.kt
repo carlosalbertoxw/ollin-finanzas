@@ -80,6 +80,40 @@ class FinanzasRepositorio(
         desplazamiento = desplazamiento
     )
 
+    /** Suma de todo lo que cumple el filtro, no solo de la pagina cargada. */
+    fun observaTotalFiltrado(
+        cuentaId: Long? = null,
+        categoriaId: Long? = null,
+        desde: LocalDate? = null,
+        hasta: LocalDate? = null,
+        incluyeTraspasos: Boolean = true,
+        texto: String? = null
+    ): Flow<Long> = movimientos.observaTotalFiltrado(
+        cuentaId = cuentaId,
+        categoriaId = categoriaId,
+        desde = desde?.toEpochDay(),
+        hasta = hasta?.toEpochDay(),
+        incluyeTraspasos = incluyeTraspasos,
+        texto = texto?.ifBlank { null }
+    )
+
+    /** Cuantos cumplen el filtro, para saber si queda algo por debajo de la pagina. */
+    fun observaConteoFiltrado(
+        cuentaId: Long? = null,
+        categoriaId: Long? = null,
+        desde: LocalDate? = null,
+        hasta: LocalDate? = null,
+        incluyeTraspasos: Boolean = true,
+        texto: String? = null
+    ): Flow<Int> = movimientos.observaConteoFiltrado(
+        cuentaId = cuentaId,
+        categoriaId = categoriaId,
+        desde = desde?.toEpochDay(),
+        hasta = hasta?.toEpochDay(),
+        incluyeTraspasos = incluyeTraspasos,
+        texto = texto?.ifBlank { null }
+    )
+
     /** Los movimientos exactos que senala un hallazgo de calidad. */
     fun observaMovimientosPorIds(ids: List<Long>): Flow<List<MovimientoDetallado>> =
         if (ids.isEmpty()) flowOf(emptyList()) else movimientos.observaPorIds(ids)
@@ -97,6 +131,15 @@ class FinanzasRepositorio(
     suspend fun listaCuentas(): List<Cuenta> = cuentas.todas()
     suspend fun listaCategorias(): List<Categoria> = categorias.todas()
     suspend fun listaCompromisos(): List<Compromiso> = compromisos.todos()
+
+    /**
+     * Todos los movimientos y nada mas. La auditoria de calidad usaba
+     * [datosParaExportar] para llegar a ellos, y de paso cargaba presupuestos y
+     * compromisos que no mira.
+     */
+    suspend fun listaMovimientos(): List<Movimiento> = withContext(Dispatchers.IO) {
+        movimientos.todos()
+    }
     suspend fun totalCategoriaEnPeriodo(categoriaId: Long, periodo: String): Long =
         movimientos.totalCategoriaEnPeriodo(categoriaId, periodo)
 
@@ -195,6 +238,28 @@ class FinanzasRepositorio(
         if (grupo != null) movimientos.eliminaGrupo(grupo) else movimientos.elimina(movimiento)
     }
 
+    /**
+     * Corrige un lote de movimientos en una sola transaccion. La usa
+     * [com.carlosalbertoxw.ollin.finanzas.domain.usecase.ReparaDatos]: una
+     * reparacion es todo o nada, porque a medias deja el libro en un estado
+     * que nadie pidio.
+     *
+     * No pasa por [guardaMovimiento] a proposito: aqui ya vienen las filas
+     * completas y volver a derivar la contraparte de cada una pisaria justo lo
+     * que la reparacion acaba de decidir.
+     */
+    suspend fun actualizaMovimientos(cambios: List<Movimiento>): Int {
+        if (cambios.isEmpty()) return 0
+        val ahora = System.currentTimeMillis()
+        val sellados = cambios.map { it.copy(actualizadoEn = ahora) }
+        db.withTransaction { movimientos.actualizaTodos(sellados) }
+        return sellados.size
+    }
+
+    /** Todas las descripciones ya clasificadas, de clave normalizada a categoria. */
+    suspend fun mapeoDeDescripciones(): Map<String, Long> =
+        mapeos.todos().associate { it.clave to it.categoriaId }
+
     /** Recuerda la categoria que elegiste para esa descripcion y la reusa despues. */
     private suspend fun aprendeCategoria(movimiento: Movimiento) {
         val categoriaId = movimiento.categoriaId ?: return
@@ -262,31 +327,32 @@ class FinanzasRepositorio(
 
     /**
      * Descarta el pago que toca sin darlo por hecho: recorre el plan al
-     * siguiente sin subir el contador. Es lo que se hace con el mes que no se
-     * cobro o con el cargo que decidiste saltarte, y por eso no acorta un MSI.
+     * siguiente sin subir el contador de cumplidos. Es lo que se hace con el
+     * mes que no se cobro o con el cargo que decidiste saltarte, y por eso no
+     * acorta un MSI.
+     *
+     * Sube un contador en vez de mover [Compromiso.fechaPrimerPago]. Moverla
+     * con `plusMonths` recortaba el dia en los meses cortos y el descarte no se
+     * podia deshacer: un plan del 31 de enero volvia al 28 y perdia el 31 para
+     * siempre. Ver [Compromiso.proximoPago].
      */
     suspend fun descartaPagoCompromiso(compromisoId: Long) {
         val c = compromisos.porId(compromisoId) ?: return
-        compromisos.actualiza(
-            c.copy(fechaPrimerPago = c.fechaPrimerPago.plusMonths(c.periodicidad.meses.toLong()))
-        )
+        compromisos.actualiza(c.copy(pagosDescartados = c.pagosDescartados + 1))
     }
 
     /** Deshace un descarte: devuelve el plan al pago que se habia saltado. */
     suspend fun restauraPagoCompromiso(compromisoId: Long) {
         val c = compromisos.porId(compromisoId) ?: return
-        compromisos.actualiza(
-            c.copy(fechaPrimerPago = c.fechaPrimerPago.minusMonths(c.periodicidad.meses.toLong()))
-        )
+        if (c.pagosDescartados == 0) return
+        compromisos.actualiza(c.copy(pagosDescartados = c.pagosDescartados - 1))
     }
 
     // ---------------------------------------------------------- import/export
 
     suspend fun importa(uri: Uri, opciones: OpcionesImportacion): ResultadoImportacion =
         withContext(Dispatchers.IO) {
-            val importador = ImportadorExcel(
-                cuentas, categorias, movimientos, mapeos, presupuestos, compromisos
-            )
+            val importador = ImportadorExcel(db)
             resolver.openInputStream(uri)?.use { importador.importa(it, opciones) }
                 ?: error("No se pudo abrir el archivo seleccionado")
         }

@@ -44,7 +44,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.data.db.Presupuesto
-import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
+import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCategoria
 import com.carlosalbertoxw.ollin.finanzas.ui.components.BarraAvance
@@ -66,9 +66,8 @@ data class RenglonMeta(
     val restanteCentavos: Long get() = metaCentavos - abs(realCentavos)
 }
 
-class PresupuestoVm(contenedor: Contenedor) : ViewModel() {
+class PresupuestoVm(private val repo: FinanzasRepositorio) : ViewModel() {
 
-    private val repo = contenedor.repositorio
 
     private val _mes = MutableStateFlow(YearMonth.now())
     val mes: StateFlow<YearMonth> = _mes
@@ -129,8 +128,8 @@ class PresupuestoVm(contenedor: Contenedor) : ViewModel() {
 }
 
 @Composable
-fun PresupuestoPantalla(contenedor: Contenedor, alAbrirCategorias: () -> Unit) {
-    val vm = recuerdaVm("presupuesto") { PresupuestoVm(contenedor) }
+fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit) {
+    val vm = recuerdaVm("presupuesto") { PresupuestoVm(repo) }
     val mes by vm.mes.collectAsStateWithLifecycle()
     val renglones by vm.renglones.collectAsStateWithLifecycle()
     val colores = LocalColoresOllin.current

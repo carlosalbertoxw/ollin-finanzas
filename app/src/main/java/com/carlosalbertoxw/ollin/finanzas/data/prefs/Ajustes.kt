@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -43,7 +44,13 @@ data class Ajustes(
     val modoBloqueo: ModoBloqueo = ModoBloqueo.NINGUNO,
     /** Del PIN solo se guarda su huella derivada; el PIN en claro no se escribe nunca. */
     val pinHash: String? = null,
-    val pinSal: String? = null
+    val pinSal: String? = null,
+    /**
+     * Intentos fallidos seguidos. En disco y no en memoria: si viviera en el
+     * proceso, cerrar la app reiniciaria el contador y el freno contra la
+     * fuerza bruta no serviria de nada.
+     */
+    val pinFallos: Int = 0
 )
 
 class AjustesRepositorio(private val contexto: Context) {
@@ -61,6 +68,7 @@ class AjustesRepositorio(private val contexto: Context) {
         val BLOQUEO = stringPreferencesKey("modo_bloqueo")
         val PIN_HASH = stringPreferencesKey("pin_hash")
         val PIN_SAL = stringPreferencesKey("pin_sal")
+        val PIN_FALLOS = intPreferencesKey("pin_fallos")
     }
 
     val ajustes: Flow<Ajustes> = contexto.almacen.data.map(::mapea)
@@ -89,8 +97,15 @@ class AjustesRepositorio(private val contexto: Context) {
             ?.let { runCatching { ModoBloqueo.valueOf(it) }.getOrNull() }
             ?: ModoBloqueo.NINGUNO,
         pinHash = p[Claves.PIN_HASH],
-        pinSal = p[Claves.PIN_SAL]
+        pinSal = p[Claves.PIN_SAL],
+        pinFallos = p[Claves.PIN_FALLOS] ?: 0
     )
+
+    suspend fun guardaFallosDePin(fallos: Int) {
+        contexto.almacen.edit {
+            if (fallos == 0) it.remove(Claves.PIN_FALLOS) else it[Claves.PIN_FALLOS] = fallos
+        }
+    }
 
     /**
      * Las tres transiciones de bloqueo se escriben de golpe. Si el modo y el PIN

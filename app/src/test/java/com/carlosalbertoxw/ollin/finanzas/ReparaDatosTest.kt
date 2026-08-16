@@ -17,7 +17,7 @@ import org.junit.Test
  */
 class ReparaDatosTest : BaseEnMemoria() {
 
-    private fun repara() = ReparaDatos(db)
+    private fun repara() = ReparaDatos(repositorio)
 
     private suspend fun importes(): List<Long> = movimientoDao.todos().map { it.importeCentavos }
 

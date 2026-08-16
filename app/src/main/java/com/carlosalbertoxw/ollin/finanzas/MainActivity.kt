@@ -65,7 +65,7 @@ class MainActivity : FragmentActivity() {
                     bloqueado && ajustes.modoBloqueo != ModoBloqueo.NINGUNO -> BloqueoPantalla(
                         actividad = this,
                         ajustes = ajustes,
-                        alDesbloquear = bloqueo::desbloquea
+                        bloqueo = bloqueo
                     )
 
                     // No hay candado puesto, pero el control aun no lo sabe.

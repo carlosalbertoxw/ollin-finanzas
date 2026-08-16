@@ -48,10 +48,12 @@ import com.carlosalbertoxw.ollin.finanzas.data.db.FlujoMes
 import com.carlosalbertoxw.ollin.finanzas.data.db.MovimientoDetallado
 import com.carlosalbertoxw.ollin.finanzas.data.db.SaldoCuenta
 import com.carlosalbertoxw.ollin.finanzas.data.notify.Recordatorios
-import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
+import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
+import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.GravedadHallazgo
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.Hallazgo
+import com.carlosalbertoxw.ollin.finanzas.domain.usecase.RevisaCalidad
 import com.carlosalbertoxw.ollin.finanzas.ui.components.BarrasFlujo
 import com.carlosalbertoxw.ollin.finanzas.ui.components.LineaEvolucion
 import com.carlosalbertoxw.ollin.finanzas.ui.components.Punto
@@ -60,6 +62,7 @@ import com.carlosalbertoxw.ollin.finanzas.ui.components.TarjetaCifra
 import com.carlosalbertoxw.ollin.finanzas.ui.components.TarjetaValor
 import com.carlosalbertoxw.ollin.finanzas.ui.components.TextoDinero
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
+import com.carlosalbertoxw.ollin.finanzas.ui.titulo
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
 import java.time.LocalDate
 import kotlin.math.abs
@@ -114,9 +117,12 @@ data class EstadoTablero(
         }
 }
 
-class TableroVm(private val contenedor: Contenedor) : ViewModel() {
+class TableroVm(
+    private val repo: FinanzasRepositorio,
+    private val ajustes: AjustesRepositorio,
+    private val revisaCalidad: RevisaCalidad
+) : ViewModel() {
 
-    private val repo = contenedor.repositorio
     private val hallazgos = MutableStateFlow<List<Hallazgo>>(emptyList())
 
     val estado: StateFlow<EstadoTablero> = combine(
@@ -134,7 +140,7 @@ class TableroVm(private val contenedor: Contenedor) : ViewModel() {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EstadoTablero())
 
     /** Manda si el tablero enseña o no sus atajos de ayuda. */
-    val muestraTutoriales: StateFlow<Boolean> = contenedor.ajustes.ajustes
+    val muestraTutoriales: StateFlow<Boolean> = ajustes.ajustes
         .map { it.muestraTutoriales }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
@@ -144,21 +150,23 @@ class TableroVm(private val contenedor: Contenedor) : ViewModel() {
 
     fun revisaCalidad() {
         viewModelScope.launch {
-            hallazgos.value = runCatching { contenedor.revisaCalidad.ejecuta() }.getOrDefault(emptyList())
+            hallazgos.value = runCatching { revisaCalidad.ejecuta() }.getOrDefault(emptyList())
         }
     }
 }
 
 @Composable
 fun TableroPantalla(
-    contenedor: Contenedor,
+    repo: FinanzasRepositorio,
+    ajustes: AjustesRepositorio,
+    revisaCalidad: RevisaCalidad,
     alAbrirCuentas: () -> Unit,
     alAbrirCalidad: () -> Unit,
     alAbrirCompromisos: () -> Unit,
     alAbrirAjustes: () -> Unit,
     alAbrirTutoriales: () -> Unit
 ) {
-    val vm = recuerdaVm("tablero") { TableroVm(contenedor) }
+    val vm = recuerdaVm("tablero") { TableroVm(repo, ajustes, revisaCalidad) }
     val estado by vm.estado.collectAsStateWithLifecycle()
     val muestraTutoriales by vm.muestraTutoriales.collectAsStateWithLifecycle()
     val colores = LocalColoresOllin.current
@@ -263,7 +271,7 @@ fun TableroPantalla(
                                 style = MaterialTheme.typography.titleSmall
                             )
                             Text(
-                                estado.hallazgos.first().titulo,
+                                estado.hallazgos.first().titulo(),
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis

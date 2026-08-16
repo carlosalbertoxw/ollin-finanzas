@@ -36,14 +36,20 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
+import com.carlosalbertoxw.ollin.finanzas.domain.usecase.ReparaDatos
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.GravedadHallazgo
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.Hallazgo
+import com.carlosalbertoxw.ollin.finanzas.domain.usecase.RevisaCalidad
 import com.carlosalbertoxw.ollin.finanzas.ui.components.EstadoVacio
+import com.carlosalbertoxw.ollin.finanzas.ui.detalle
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
+import com.carlosalbertoxw.ollin.finanzas.ui.titulo
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
 
-class CalidadVm(private val contenedor: Contenedor) : ViewModel() {
+class CalidadVm(
+    private val revisaCalidad: RevisaCalidad,
+    private val reparaDatos: ReparaDatos
+) : ViewModel() {
 
     private val _hallazgos = MutableStateFlow<List<Hallazgo>>(emptyList())
     val hallazgos: StateFlow<List<Hallazgo>> = _hallazgos
@@ -57,14 +63,14 @@ class CalidadVm(private val contenedor: Contenedor) : ViewModel() {
     /** Se vuelve a correr cada vez que la pantalla queda al frente, no solo al crearla. */
     fun revisa() {
         viewModelScope.launch {
-            _hallazgos.value = runCatching { contenedor.revisaCalidad.ejecuta() }.getOrDefault(emptyList())
+            _hallazgos.value = runCatching { revisaCalidad.ejecuta() }.getOrDefault(emptyList())
             _cargando.value = false
         }
     }
 
     fun repara(hallazgo: Hallazgo) {
         viewModelScope.launch {
-            val n = runCatching { contenedor.reparaDatos.repara(hallazgo.clave) }.getOrDefault(0)
+            val n = runCatching { reparaDatos.repara(hallazgo.clave) }.getOrDefault(0)
             _ultimaReparacion.value = when {
                 n > 0 -> "Se corrigieron $n movimientos."
                 hallazgo.idsMovimiento.isNotEmpty() ->
@@ -79,11 +85,12 @@ class CalidadVm(private val contenedor: Contenedor) : ViewModel() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalidadPantalla(
-    contenedor: Contenedor,
+    revisaCalidad: RevisaCalidad,
+    reparaDatos: ReparaDatos,
     alRevisarHallazgo: (String) -> Unit,
     alCerrar: () -> Unit
 ) {
-    val vm = recuerdaVm("calidad") { CalidadVm(contenedor) }
+    val vm = recuerdaVm("calidad") { CalidadVm(revisaCalidad, reparaDatos) }
     val hallazgos by vm.hallazgos.collectAsStateWithLifecycle()
     val cargando by vm.cargando.collectAsStateWithLifecycle()
     val reparacion by vm.ultimaReparacion.collectAsStateWithLifecycle()
@@ -155,14 +162,14 @@ fun CalidadPantalla(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(hallazgo.titulo, style = MaterialTheme.typography.titleSmall)
+                                Text(hallazgo.titulo(), style = MaterialTheme.typography.titleSmall)
                                 Text(
                                     "${hallazgo.afectados}",
                                     style = MaterialTheme.typography.titleMedium
                                 )
                             }
                             Spacer(Modifier.height(6.dp))
-                            Text(hallazgo.detalle, style = MaterialTheme.typography.bodyMedium)
+                            Text(hallazgo.detalle(), style = MaterialTheme.typography.bodyMedium)
                             if (hallazgo.reparable || hallazgo.idsMovimiento.isNotEmpty()) {
                                 Spacer(Modifier.height(4.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {

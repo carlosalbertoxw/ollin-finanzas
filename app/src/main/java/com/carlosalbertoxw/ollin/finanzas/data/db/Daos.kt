@@ -127,6 +127,56 @@ interface MovimientoDao {
         desplazamiento: Int
     ): Flow<List<MovimientoDetallado>>
 
+    /**
+     * Suma de todo lo que cumple el filtro, sin paginar.
+     *
+     * Va aparte de [observaFiltrados] a proposito: sumar en Kotlin la pagina
+     * cargada daba un total que solo contaba los primeros renglones y se
+     * presentaba como si fuera el del filtro completo.
+     */
+    @Query(
+        """
+        SELECT COALESCE(SUM(m.importeCentavos), 0)
+        FROM movimiento m
+        WHERE (:cuentaId IS NULL OR m.cuentaId = :cuentaId)
+          AND (:categoriaId IS NULL OR m.categoriaId = :categoriaId)
+          AND (:desde IS NULL OR m.fecha >= :desde)
+          AND (:hasta IS NULL OR m.fecha <= :hasta)
+          AND (:incluyeTraspasos = 1 OR m.tipo NOT IN ('TRANSFERENCIA_ENTRADA','TRANSFERENCIA_SALIDA'))
+          AND (:texto IS NULL OR m.descripcion LIKE '%' || :texto || '%' OR m.nota LIKE '%' || :texto || '%')
+        """
+    )
+    fun observaTotalFiltrado(
+        cuentaId: Long?,
+        categoriaId: Long?,
+        desde: Long?,
+        hasta: Long?,
+        incluyeTraspasos: Boolean,
+        texto: String?
+    ): Flow<Long>
+
+    /** Cuantos cumplen el filtro. Dice si la pagina cargada se quedo corta. */
+    @Query(
+        """
+        SELECT COUNT(*)
+        FROM movimiento m
+        WHERE (:cuentaId IS NULL OR m.cuentaId = :cuentaId)
+          AND (:categoriaId IS NULL OR m.categoriaId = :categoriaId)
+          AND (:desde IS NULL OR m.fecha >= :desde)
+          AND (:hasta IS NULL OR m.fecha <= :hasta)
+          AND (:incluyeTraspasos = 1 OR m.tipo NOT IN ('TRANSFERENCIA_ENTRADA','TRANSFERENCIA_SALIDA'))
+          AND (:texto IS NULL OR m.descripcion LIKE '%' || :texto || '%' OR m.nota LIKE '%' || :texto || '%')
+        """
+    )
+    fun observaConteoFiltrado(
+        cuentaId: Long?,
+        categoriaId: Long?,
+        desde: Long?,
+        hasta: Long?,
+        incluyeTraspasos: Boolean,
+        texto: String?
+    ): Flow<Int>
+
     @Query("SELECT * FROM movimiento WHERE id = :id")
     suspend fun porId(id: Long): Movimiento?
 
@@ -184,6 +234,10 @@ interface MovimientoDao {
 
     @Update
     suspend fun actualiza(movimiento: Movimiento)
+
+    /** Un solo viaje para las reparaciones en lote de [com.carlosalbertoxw.ollin.finanzas.domain.usecase.ReparaDatos]. */
+    @Update
+    suspend fun actualizaTodos(movimientos: List<Movimiento>)
 
     @Delete
     suspend fun elimina(movimiento: Movimiento)

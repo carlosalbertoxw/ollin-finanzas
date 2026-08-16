@@ -53,16 +53,17 @@ import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.Ajustes
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ClavePin
-import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
+import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
+import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.seguridad.pedirCredencialDelSistema
 import com.carlosalbertoxw.ollin.finanzas.ui.seguridad.telefonoAsegurado
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
 
-class AjustesVm(contenedor: Contenedor) : ViewModel() {
-
-    private val prefs = contenedor.ajustes
-    private val repo = contenedor.repositorio
+class AjustesVm(
+    private val prefs: AjustesRepositorio,
+    private val repo: FinanzasRepositorio
+) : ViewModel() {
 
     val ajustes: StateFlow<Ajustes> = prefs.ajustes
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Ajustes())
@@ -105,7 +106,8 @@ class AjustesVm(contenedor: Contenedor) : ViewModel() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AjustesPantalla(
-    contenedor: Contenedor,
+    ajustes: AjustesRepositorio,
+    repo: FinanzasRepositorio,
     alAbrirCuentas: () -> Unit,
     alAbrirCategorias: () -> Unit,
     alAbrirCompromisos: () -> Unit,
@@ -113,7 +115,7 @@ fun AjustesPantalla(
     alAbrirAcercaDe: () -> Unit,
     alCerrar: () -> Unit
 ) {
-    val vm = recuerdaVm("ajustes") { AjustesVm(contenedor) }
+    val vm = recuerdaVm("ajustes") { AjustesVm(ajustes, repo) }
     val ajustes by vm.ajustes.collectAsStateWithLifecycle()
     val movimientos by vm.movimientos.collectAsStateWithLifecycle()
     val colores = LocalColoresOllin.current

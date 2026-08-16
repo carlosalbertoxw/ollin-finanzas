@@ -36,7 +36,7 @@ import kotlinx.coroutines.flow.stateIn
 import com.carlosalbertoxw.ollin.finanzas.data.db.Categoria
 import com.carlosalbertoxw.ollin.finanzas.data.db.FlujoMes
 import com.carlosalbertoxw.ollin.finanzas.data.db.MovimientoDetallado
-import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
+import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCategoria
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoMovimiento
@@ -55,9 +55,8 @@ data class GrupoGasto(
     val esPatrimonio: Boolean
 )
 
-class AnaliticaVm(contenedor: Contenedor) : ViewModel() {
+class AnaliticaVm(private val repo: FinanzasRepositorio) : ViewModel() {
 
-    private val repo = contenedor.repositorio
 
     val flujo: StateFlow<List<FlujoMes>> = repo.observaFlujoMensual()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -105,8 +104,8 @@ class AnaliticaVm(contenedor: Contenedor) : ViewModel() {
 }
 
 @Composable
-fun AnaliticaPantalla(contenedor: Contenedor) {
-    val vm = recuerdaVm("analitica") { AnaliticaVm(contenedor) }
+fun AnaliticaPantalla(repo: FinanzasRepositorio) {
+    val vm = recuerdaVm("analitica") { AnaliticaVm(repo) }
     val flujo by vm.flujo.collectAsStateWithLifecycle()
     val grupos by vm.grupos.collectAsStateWithLifecycle()
     val colores = LocalColoresOllin.current

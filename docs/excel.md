@@ -68,7 +68,9 @@ El lector carga el paquete completo en memoria porque `sharedStrings.xml` puede 
 
 ## Importación
 
-`Archivo → Importar` abre el selector del sistema. La app también acepta "Abrir con Ollin Finanzas" desde un gestor de archivos o desde la nube, gracias al `intent-filter` de tipo `spreadsheetml.sheet`.
+`Archivo → Importar` abre el selector del sistema. Es la única entrada: el archivo lo eliges tú, dentro de la app.
+
+Hubo un `intent-filter` de tipo `spreadsheetml.sheet` para aceptar "Abrir con Ollin Finanzas" desde un gestor de archivos o desde la nube, pero **nadie leía el `Intent` entrante**: elegir el archivo abría el tablero y lo ignoraba. Se retiró hasta que haya con qué atenderlo. Cuando se implemente, la URI llega de otra app —el filtro es `exported` y `BROWSABLE`— así que es entrada no confiable: hay que importarla solo tras confirmación explícita, nunca al vuelo, porque importar con Reemplazar borra el libro.
 
 ### Qué hojas se leen
 
@@ -135,6 +137,14 @@ Un renglón sin fecha, sin cantidad o sin cuenta se omite y se reporta con su n�
 - **Corregir al importar** (por omisión) enciende la alineación de tipo con signo y el recálculo de contraparte.
 - El emparejado de transferencias, la creación de cuentas faltantes y la lectura de las otras pestañas van siempre.
 
+### Todo o nada
+
+**Importar es atómico.** La lectura del `.xlsx` va fuera de la transacción y toda la escritura dentro de un único `db.withTransaction`: movimientos, metas, compromisos y la purga de catálogo. Por eso [`ImportadorExcel`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/ImportadorExcel.kt) recibe la base entera y no sus DAO sueltos.
+
+No es un detalle de estilo. Con **Reemplazar** encendido —que es lo normal— la importación borra todos los movimientos antes de insertar los nuevos, y entre una cosa y otra todavía crea categorías. Suelto, cualquier tropiezo en ese tramo —disco lleno, una restricción, o que Android mate el proceso por memoria— dejaba el libro **sin nada y sin reemplazo**: la peor pérdida posible en una app cuyo valor entero es el registro, e irrecuperable salvo que conserves el `.xlsx`.
+
+Parsear fuera de la transacción también importa: es la parte que puede quedarse sin memoria con un archivo grande, y así revienta antes de haber borrado nada.
+
 ### Resultado
 
 `ResultadoImportacion` devuelve filas leídas, importadas, omitidas, cuentas y categorías creadas y eliminadas, cuántas quedaron sin categoría, tipos corregidos, contrapartes recalculadas, transferencias emparejadas y huérfanas, metas y compromisos importados, más una lista de diagnósticos con severidad `INFO`, `AVISO` o `ERROR` y su número de fila.
@@ -155,5 +165,7 @@ El selector propone la carpeta Descargas como punto de partida. Es solo una suge
 - [`ExportadorBordesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ExportadorBordesTest.kt) — lo que el round trip no toca: compromisos con datos, catálogos incompletos (categoría cuyo padre no existe, cuenta con apóstrofo, movimientos que apuntan a ids inexistentes) y tres años de movimientos diarios.
 - [`ImportadorExcelTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ImportadorExcelTest.kt) — el lado que decide cosas por ti: corrección de tipos, emparejado de transferencias, cuentas inventadas y contrapartes recalculadas.
 - [`ImportadorHojasTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ImportadorHojasTest.kt) — el viaje de regreso de Diccionarios, Presupuesto y Compromisos, incluido el libro completo de ida y vuelta: si alguien mueve una columna del exportador, la prueba se entera.
+
+El lector XML prohíbe el `DOCTYPE` y las entidades externas, y **aborta si el parser de la plataforma no acepta esas banderas** en vez de seguir sin ellas. Es lo que corta de raíz una bomba de entidades: el tope de 64 MB no la ataja, porque cuenta lo que se lee del zip y no lo que el parser expande después.
 
 Los libros quedan en `app/build/pruebas/` para poder abrirlos a mano y comprobar el resultado.

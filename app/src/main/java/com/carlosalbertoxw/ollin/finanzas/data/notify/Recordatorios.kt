@@ -23,6 +23,8 @@ import com.carlosalbertoxw.ollin.finanzas.data.db.Compromiso
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * Avisos de compromisos por vencer. Un gasto anual como el seguro del carro
@@ -32,6 +34,15 @@ object Recordatorios {
 
     const val CANAL = "ollin_recordatorios"
     private const val CODIGO_DIARIO = 1001
+
+    /**
+     * El aviso lo lee una persona, no un sistema. `LocalDate.toString()` daba
+     * "2026-08-16" en la barra de notificaciones.
+     */
+    private val FORMATO_FECHA: DateTimeFormatter =
+        DateTimeFormatter.ofPattern("d 'de' MMMM", Locale("es", "MX"))
+
+    fun formateaFecha(fecha: LocalDate): String = fecha.format(FORMATO_FECHA)
 
     fun creaCanal(contexto: Context) {
         val gestor = contexto.getSystemService(NotificationManager::class.java) ?: return
@@ -102,9 +113,8 @@ object Recordatorios {
      */
     fun porVencer(compromisos: List<Compromiso>, hoy: LocalDate = LocalDate.now()): List<Pair<Compromiso, LocalDate>> =
         compromisos.filter { it.activo }.mapNotNull { c ->
-            val restantes = c.totalPagos?.let { it - c.pagosRealizados } ?: Int.MAX_VALUE
-            if (restantes <= 0) return@mapNotNull null
-            val proximo = c.fechaPrimerPago.plusMonths(c.pagosRealizados.toLong() * c.periodicidad.meses)
+            if ((c.pagosRestantes ?: Int.MAX_VALUE) <= 0) return@mapNotNull null
+            val proximo = c.proximoPago
             val dias = java.time.temporal.ChronoUnit.DAYS.between(hoy, proximo)
             if (dias <= c.avisarDiasAntes.toLong()) c to proximo else null
         }.sortedBy { it.second }
@@ -121,7 +131,8 @@ class RecordatorioReceiver : BroadcastReceiver() {
                 val compromisos = app.contenedor.repositorio.listaCompromisos()
                 val hoy = LocalDate.now()
                 Recordatorios.porVencer(compromisos).forEachIndexed { i, (compromiso, fecha) ->
-                    val cuando = if (fecha.isBefore(hoy)) "vencio el $fecha" else "el $fecha"
+                    val texto = Recordatorios.formateaFecha(fecha)
+                    val cuando = if (fecha.isBefore(hoy)) "vencio el $texto" else "el $texto"
                     Recordatorios.notifica(
                         contexto,
                         id = 2000 + i,

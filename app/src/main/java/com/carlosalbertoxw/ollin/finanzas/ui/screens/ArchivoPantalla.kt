@@ -63,7 +63,9 @@ import com.carlosalbertoxw.ollin.finanzas.data.excel.ResultadoImportacion
 import com.carlosalbertoxw.ollin.finanzas.data.excel.Severidad
 import com.carlosalbertoxw.ollin.finanzas.data.excel.XlsxLector
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.Ajustes
-import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
+import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
+import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
+import com.carlosalbertoxw.ollin.finanzas.domain.usecase.RevisaCalidad
 import com.carlosalbertoxw.ollin.finanzas.ui.components.Marco
 import com.carlosalbertoxw.ollin.finanzas.ui.components.SeccionTitulo
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
@@ -115,10 +117,11 @@ sealed interface EstadoArchivo {
     data class Fallo(val mensaje: String) : EstadoArchivo
 }
 
-class ArchivoVm(private val contenedor: Contenedor) : ViewModel() {
-
-    private val repo = contenedor.repositorio
-    private val prefs = contenedor.ajustes
+class ArchivoVm(
+    private val repo: FinanzasRepositorio,
+    private val prefs: AjustesRepositorio,
+    private val revisaCalidad: RevisaCalidad
+) : ViewModel() {
 
     val ajustes: StateFlow<Ajustes> = prefs.ajustes
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Ajustes())
@@ -171,7 +174,7 @@ class ArchivoVm(private val contenedor: Contenedor) : ViewModel() {
                 onSuccess = { resultado ->
                     // La auditoria corre aqui, sobre los datos ya importados,
                     // para saber si mandar a Salud tiene algo que ofrecer.
-                    val hallazgos = runCatching { contenedor.revisaCalidad.ejecuta().size }
+                    val hallazgos = runCatching { revisaCalidad.ejecuta().size }
                         .getOrDefault(0)
                     _estado.value = EstadoArchivo.Importado(resultado, hallazgos)
                 },
@@ -229,8 +232,13 @@ class ArchivoVm(private val contenedor: Contenedor) : ViewModel() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ArchivoPantalla(contenedor: Contenedor, alAbrirCalidad: () -> Unit) {
-    val vm = recuerdaVm("archivo") { ArchivoVm(contenedor) }
+fun ArchivoPantalla(
+    repo: FinanzasRepositorio,
+    ajustes: AjustesRepositorio,
+    revisaCalidad: RevisaCalidad,
+    alAbrirCalidad: () -> Unit
+) {
+    val vm = recuerdaVm("archivo") { ArchivoVm(repo, ajustes, revisaCalidad) }
     val ajustes by vm.ajustes.collectAsStateWithLifecycle()
     val estado by vm.estado.collectAsStateWithLifecycle()
     val total by vm.totalMovimientos.collectAsStateWithLifecycle()

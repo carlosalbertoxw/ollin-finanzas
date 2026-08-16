@@ -146,14 +146,43 @@ data class Compromiso(
     /** Importe de cada pago, en centavos y positivo. */
     val montoCentavos: Long,
     val periodicidad: Periodicidad = Periodicidad.MENSUAL,
+    /**
+     * Ancla del plan: la fecha del pago numero cero. No se mueve nunca, y por
+     * eso [proximoPago] siempre se calcula hacia adelante desde aqui.
+     */
     val fechaPrimerPago: LocalDate,
     /** null = indefinido (una suscripcion). Un MSI si tiene numero de pagos. */
     val totalPagos: Int? = null,
     val pagosRealizados: Int = 0,
+    /**
+     * Pagos que se saltaron sin cumplirse: el mes que no te cobraron, el cargo
+     * que decidiste no hacer. Recorren el plan igual que un pago cumplido pero
+     * no acortan un MSI, y por eso se cuentan aparte de [pagosRealizados].
+     */
+    val pagosDescartados: Int = 0,
     val activo: Boolean = true,
     val avisarDiasAntes: Int = 3,
     val notas: String? = null
-)
+) {
+    /**
+     * Cuando toca el siguiente pago.
+     *
+     * Siempre se suma sobre [fechaPrimerPago] y nunca sobre el resultado
+     * anterior. `plusMonths` recorta el dia al ultimo valido del mes destino y
+     * no lo recuerda, asi que encadenar sumas sobre un valor ya recortado
+     * arrastra el error: un plan del 31 de enero se volvia del 28 y se quedaba
+     * ahi para siempre. Desde el ancla, el 31 se recupera en cada mes que lo
+     * tiene.
+     */
+    val proximoPago: LocalDate
+        get() = fechaPrimerPago.plusMonths(
+            (pagosRealizados + pagosDescartados).toLong() * periodicidad.meses
+        )
+
+    /** null = plan indefinido. */
+    val pagosRestantes: Int?
+        get() = totalPagos?.let { (it - pagosRealizados).coerceAtLeast(0) }
+}
 
 /**
  * Traduce una descripcion a su categoria al importar. Es lo que permite que un

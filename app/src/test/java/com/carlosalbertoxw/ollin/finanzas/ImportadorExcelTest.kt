@@ -38,7 +38,7 @@ import java.time.LocalDate
 class ImportadorExcelTest : BaseEnMemoria() {
 
     private fun importador() =
-        ImportadorExcel(cuentaDao, categoriaDao, movimientoDao, mapeoDao, presupuestoDao, compromisoDao)
+        ImportadorExcel(db)
 
     private val encabezadosCompletos = listOf(
         "Fecha", "Cantidad", "Cuenta", "Categoria", "Descripcion", "Medio", "Contraparte", "Tipo"

@@ -114,10 +114,29 @@ object XlsxLector {
 
     // ------------------------------------------------------------- parseo
 
+    /**
+     * Prohibir el DOCTYPE es lo que corta de raiz las entidades XML: sin el, un
+     * libro puede traer una bomba de entidades que se expande en memoria hasta
+     * tumbar la app. El limite de [LIMITE_BYTES] no la ataja, porque cuenta lo
+     * que se lee del zip y no lo que el parser expande despues.
+     *
+     * Si el parser de la plataforma no acepta la bandera, se aborta en vez de
+     * seguir sin ella: leer el archivo indefenso es peor que no leerlo.
+     */
     private fun parsea(bytes: ByteArray, handler: DefaultHandler) {
         val factory = SAXParserFactory.newInstance().apply {
             isNamespaceAware = false
-            runCatching { setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) }
+            isXIncludeAware = false
+            try {
+                setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+                setFeature("http://xml.org/sax/features/external-general-entities", false)
+                setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+            } catch (e: Exception) {
+                throw ArchivoInvalido(
+                    "Este telefono no puede leer el archivo de forma segura. Abrelo en una computadora.",
+                    e
+                )
+            }
         }
         factory.newSAXParser().parse(ByteArrayInputStream(bytes), handler)
     }

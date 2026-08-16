@@ -54,8 +54,10 @@ abstract class OllinDatabase : RoomDatabase() {
             val frase = LlaveBase.frase(app)
             return Room.databaseBuilder(app, OllinDatabase::class.java, NOMBRE)
                 .openHelperFactory(SupportOpenHelperFactory(frase.toByteArray(Charsets.UTF_8)))
-                // Las claves foraneas cuidan que no quede un movimiento sin cuenta.
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
+                // Nunca fallbackToDestructiveMigration: borraria el libro entero
+                // en silencio. Cada version nueva lleva su Migration. Ver
+                // docs/modelo-de-datos.md.
                 .build()
         }
     }

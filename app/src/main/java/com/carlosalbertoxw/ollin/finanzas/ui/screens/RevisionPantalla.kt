@@ -44,11 +44,14 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.data.db.Categoria
 import com.carlosalbertoxw.ollin.finanzas.data.db.MovimientoDetallado
-import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
+import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCategoria
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.Hallazgo
+import com.carlosalbertoxw.ollin.finanzas.domain.usecase.RevisaCalidad
 import com.carlosalbertoxw.ollin.finanzas.ui.components.EstadoVacio
+import com.carlosalbertoxw.ollin.finanzas.ui.detalle
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
+import com.carlosalbertoxw.ollin.finanzas.ui.titulo
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
 
 /**
@@ -59,11 +62,11 @@ import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
  * eligiendola sin salir de la lista.
  */
 class RevisionVm(
-    private val contenedor: Contenedor,
+    private val repo: FinanzasRepositorio,
+    private val revisaCalidad: RevisaCalidad,
     private val clave: String
 ) : ViewModel() {
 
-    private val repo = contenedor.repositorio
 
     private val _hallazgo = MutableStateFlow<Hallazgo?>(null)
     val hallazgo: StateFlow<Hallazgo?> = _hallazgo
@@ -82,7 +85,7 @@ class RevisionVm(
     /** Sin apagar la lista: la revision se repite al volver de editar un movimiento. */
     fun revisa() {
         viewModelScope.launch {
-            _hallazgo.value = runCatching { contenedor.revisaCalidad.ejecuta() }
+            _hallazgo.value = runCatching { revisaCalidad.ejecuta() }
                 .getOrDefault(emptyList())
                 .firstOrNull { it.clave == clave }
             _cargando.value = false
@@ -106,12 +109,13 @@ class RevisionVm(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RevisionPantalla(
-    contenedor: Contenedor,
+    repo: FinanzasRepositorio,
+    revisaCalidad: RevisaCalidad,
     clave: String,
     alAbrirMovimiento: (Long) -> Unit,
     alCerrar: () -> Unit
 ) {
-    val vm = recuerdaVm("revision-$clave") { RevisionVm(contenedor, clave) }
+    val vm = recuerdaVm("revision-$clave") { RevisionVm(repo, revisaCalidad, clave) }
     val hallazgo by vm.hallazgo.collectAsStateWithLifecycle()
     val cargando by vm.cargando.collectAsStateWithLifecycle()
     val movimientos by vm.movimientos.collectAsStateWithLifecycle()
@@ -124,7 +128,7 @@ fun RevisionPantalla(
         TopAppBar(
             title = {
                 Text(
-                    hallazgo?.titulo ?: "Revisar",
+                    hallazgo?.titulo() ?: "Revisar",
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -154,7 +158,7 @@ fun RevisionPantalla(
             ) {
                 item {
                     Text(
-                        hallazgo?.detalle.orEmpty(),
+                        hallazgo?.detalle().orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
                         color = colores.textoTenue,
                         modifier = Modifier.padding(bottom = 8.dp)

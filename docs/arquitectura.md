@@ -18,11 +18,15 @@ Room (OllinDatabase, cifrada con SQLCipher)
 
 Una pantalla por archivo en `ui/screens/`, cada una con su `ViewModel` declarado en el mismo archivo. Los estados se exponen como `StateFlow` y se consumen con `collectAsStateWithLifecycle`.
 
-No hay `Factory` por pantalla: [`recuerdaVm`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/Fabrica.kt) crea el ViewModel pasándole el `Contenedor` a mano.
+No hay `Factory` por pantalla: [`recuerdaVm`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/Fabrica.kt) crea el ViewModel pasándole a mano lo que necesita.
 
 ```kotlin
-val vm = recuerdaVm("archivo") { ArchivoVm(contenedor) }
+val vm = recuerdaVm("archivo") { ArchivoVm(repo, ajustes, revisaCalidad) }
 ```
+
+**Cada pantalla recibe sus dependencias concretas, no el `Contenedor` entero.** El único que lo conoce es `OllinRaiz`, que lo desarma una vez y reparte. La diferencia importa para probar: un `ArchivoVm(repo, ajustes, revisaCalidad)` declara de qué depende y se puede construir en una prueba con dobles; un `ArchivoVm(contenedor)` declara que depende de todo, y montarlo exige levantar la base cifrada, DataStore y el contexto de Android.
+
+Los textos de los hallazgos de Salud también viven aquí, en [`TextosHallazgo`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/TextosHallazgo.kt), no en el caso de uso. El dominio detecta y mide; redactar la frase que lee el usuario es material de producto y se cambia sin tocar `RevisaCalidad` ni sus pruebas.
 
 La navegación vive en [`OllinRaiz`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/OllinRaiz.kt), con un `NavHost` de Navigation Compose. Las cinco pestañas inferiores son el enum [`Destino`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/nav/Destinos.kt) —Tablero, Movimientos, Presupuesto, Analítica, Archivo— y el resto de las rutas (captura, transferencia, cuentas, categorías, compromisos, calidad, revisión, ajustes, tutoriales, acerca de) son constantes en `Rutas`.
 
@@ -52,11 +56,11 @@ Sin dependencias de Android. Contiene:
 - `seguridad/` — llave de la base, derivación del PIN y control de bloqueo. Ver [seguridad](seguridad.md).
 - `notify/` — recordatorios de compromisos por vencer.
 
-`ReparaDatos` es la excepción a la regla del repositorio: reescribe renglones en lote y trabaja contra los DAO directamente.
+No hay excepciones a la regla del repositorio. `ReparaDatos` arma la lista de correcciones y la manda a `actualizaMovimientos`, que las aplica en una sola transacción; `ImportadorExcel` recibe la base entera justamente para poder abrir la suya.
 
 ## Inyección de dependencias
 
-Manual, en [`Contenedor`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/di/Contenedor.kt): base de datos, repositorio, ajustes, control de bloqueo, revisión de calidad, reparación y sembrador, todos `by lazy`. Se construye una vez en [`OllinApp`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/OllinApp.kt) y se pasa por parámetro a las pantallas.
+Manual, en [`Contenedor`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/di/Contenedor.kt): base de datos, repositorio, ajustes, control de bloqueo, revisión de calidad, reparación y sembrador, todos `by lazy`. Se construye una vez en [`OllinApp`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/OllinApp.kt) y viaja hasta `OllinRaiz`, que es el último punto que lo conoce: de ahí hacia abajo cada pantalla recibe solo las piezas que usa.
 
 Con un módulo y media docena de objetos compartidos, Hilt aportaría anotaciones y tiempo de compilación sin resolver ningún problema real.
 

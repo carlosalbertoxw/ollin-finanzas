@@ -59,7 +59,8 @@ import com.carlosalbertoxw.ollin.finanzas.data.db.Compromiso
 import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
 import com.carlosalbertoxw.ollin.finanzas.data.db.Movimiento
 import com.carlosalbertoxw.ollin.finanzas.data.db.SaldoCuenta
-import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
+import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
+import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Contraparte
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Medio
@@ -89,13 +90,13 @@ enum class NaturalezaCaptura(val etiqueta: String) {
 }
 
 class CapturaVm(
-    private val contenedor: Contenedor,
+    private val repo: FinanzasRepositorio,
+    private val ajustes: AjustesRepositorio,
     private val movimientoId: Long?,
     /** Compromiso que se esta pagando. Precarga la captura y queda ligado al movimiento. */
     private val compromisoId: Long? = null
 ) : ViewModel() {
 
-    private val repo = contenedor.repositorio
 
     var fecha by mutableStateOf(LocalDate.now())
     var importeTexto by mutableStateOf("")
@@ -139,7 +140,7 @@ class CapturaVm(
     val saldos: StateFlow<List<SaldoCuenta>> = repo.observaSaldos()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val muestraSaldoInicial: StateFlow<Boolean> = contenedor.ajustes.ajustes
+    val muestraSaldoInicial: StateFlow<Boolean> = ajustes.ajustes
         .map { it.muestraSaldoInicial }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
@@ -201,7 +202,7 @@ class CapturaVm(
      */
     private suspend fun precarga(c: Compromiso) {
         compromisoPagado = c
-        fecha = c.fechaPrimerPago.plusMonths(c.pagosRealizados.toLong() * c.periodicidad.meses)
+        fecha = c.proximoPago
         importeTexto = Dinero.aTextoHoja(c.montoCentavos)
         descripcion = c.nombre
         nota = c.notas.orEmpty()
@@ -388,7 +389,8 @@ class CapturaVm(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CapturaPantalla(
-    contenedor: Contenedor,
+    repo: FinanzasRepositorio,
+    ajustes: AjustesRepositorio,
     movimientoId: Long?,
     alCerrar: () -> Unit,
     alCambiarATransferencia: () -> Unit,
@@ -396,7 +398,7 @@ fun CapturaPantalla(
     compromisoId: Long? = null
 ) {
     val vm = recuerdaVm("captura-${movimientoId ?: 0}-${compromisoId ?: 0}") {
-        CapturaVm(contenedor, movimientoId, compromisoId)
+        CapturaVm(repo, ajustes, movimientoId, compromisoId)
     }
     val cuentas by vm.cuentas.collectAsStateWithLifecycle()
     val categorias by vm.categorias.collectAsStateWithLifecycle()

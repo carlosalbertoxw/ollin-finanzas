@@ -42,7 +42,7 @@ import java.time.LocalDate
 class ImportadorHojasTest : BaseEnMemoria() {
 
     private fun importador() =
-        ImportadorExcel(cuentaDao, categoriaDao, movimientoDao, mapeoDao, presupuestoDao, compromisoDao)
+        ImportadorExcel(db)
 
     private fun libro(vararg hojas: Hoja): InputStream {
         val salida = ByteArrayOutputStream()

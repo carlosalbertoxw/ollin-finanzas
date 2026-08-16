@@ -40,7 +40,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
-import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
+import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
@@ -58,11 +58,9 @@ import java.time.ZoneOffset
  * medias.
  */
 class TransferenciaVm(
-    contenedor: Contenedor,
+    private val repo: FinanzasRepositorio,
     private val movimientoId: Long?
 ) : ViewModel() {
-
-    private val repo = contenedor.repositorio
 
     var fecha by mutableStateOf(LocalDate.now())
     var importeTexto by mutableStateOf("")
@@ -160,12 +158,12 @@ class TransferenciaVm(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransferenciaPantalla(
-    contenedor: Contenedor,
+    repo: FinanzasRepositorio,
     movimientoId: Long? = null,
     alCerrar: () -> Unit
 ) {
     val vm = recuerdaVm("transferencia-${movimientoId ?: 0}") {
-        TransferenciaVm(contenedor, movimientoId)
+        TransferenciaVm(repo, movimientoId)
     }
     val cuentas by vm.cuentas.collectAsStateWithLifecycle()
     val cerrar by vm.cerrar.collectAsStateWithLifecycle()

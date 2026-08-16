@@ -79,7 +79,7 @@ import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.data.db.Categoria
 import com.carlosalbertoxw.ollin.finanzas.data.db.Compromiso
 import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
-import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
+import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Periodicidad
 import com.carlosalbertoxw.ollin.finanzas.ui.components.EstadoVacio
@@ -92,9 +92,8 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlin.math.roundToInt
 
-class CompromisosVm(contenedor: Contenedor) : ViewModel() {
+class CompromisosVm(private val repo: FinanzasRepositorio) : ViewModel() {
 
-    private val repo = contenedor.repositorio
 
     /**
      * Lo urgente arriba. El orden lo manda el proximo pago, que no es una
@@ -148,22 +147,18 @@ class CompromisosVm(contenedor: Contenedor) : ViewModel() {
     }
 }
 
-private fun proximoPago(c: Compromiso): LocalDate =
-    c.fechaPrimerPago.plusMonths(c.pagosRealizados.toLong() * c.periodicidad.meses)
+private fun proximoPago(c: Compromiso): LocalDate = c.proximoPago
 
-private fun pendiente(c: Compromiso): Long {
-    val restantes = c.totalPagos?.let { (it - c.pagosRealizados).coerceAtLeast(0) } ?: return 0L
-    return c.montoCentavos * restantes
-}
+private fun pendiente(c: Compromiso): Long = c.montoCentavos * (c.pagosRestantes ?: 0)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompromisosPantalla(
-    contenedor: Contenedor,
+    repo: FinanzasRepositorio,
     alPagar: (Long) -> Unit,
     alCerrar: () -> Unit
 ) {
-    val vm = recuerdaVm("compromisos") { CompromisosVm(contenedor) }
+    val vm = recuerdaVm("compromisos") { CompromisosVm(repo) }
     val compromisos by vm.compromisos.collectAsStateWithLifecycle()
     val cuentas by vm.cuentas.collectAsStateWithLifecycle()
     val categorias by vm.categorias.collectAsStateWithLifecycle()
@@ -549,10 +544,20 @@ private fun DialogoCompromiso(
                             montoCentavos = Dinero.parsea(monto)?.let { kotlin.math.abs(it) } ?: 0L,
                             periodicidad = periodicidad,
                             // La entidad ancla en el primer pago y cuenta hacia
-                            // adelante, asi que se retrocede lo ya pagado. En un
-                            // compromiso nuevo no hay nada que retroceder.
+                            // adelante, asi que se retrocede lo ya pagado y lo
+                            // descartado. En un compromiso nuevo no hay nada que
+                            // retroceder.
+                            //
+                            // Limitacion conocida: si el dia elegido no existe en
+                            // el mes del ancla (un 31 retrocedido a febrero),
+                            // `minusMonths` lo recorta y el proximo pago cae unos
+                            // dias antes del elegido. No hay ancla que lo evite:
+                            // ninguna fecha de febrero mas un mes da un 31 de
+                            // marzo. Resolverlo pide guardar el dia de pago
+                            // aparte del ancla.
                             fechaPrimerPago = siguientePago.minusMonths(
-                                compromiso.pagosRealizados.toLong() * periodicidad.meses
+                                (compromiso.pagosRealizados + compromiso.pagosDescartados).toLong() *
+                                    periodicidad.meses
                             ),
                             totalPagos = totalPagos.toIntOrNull(),
                             cuentaId = cuentaId,
