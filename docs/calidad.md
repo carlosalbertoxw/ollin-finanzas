@@ -2,7 +2,7 @@
 
 Un libro de finanzas se degrada con el uso: se captura de prisa, se importa un archivo viejo, se borra media transferencia. Si los datos están mal, todo lo demás miente — y por eso los hallazgos salen **arriba** de las cifras del tablero y no escondidos en un menú.
 
-[`RevisaCalidad`](../app/src/main/java/mx/ollin/finanzas/domain/usecase/RevisaCalidad.kt) corre cada vez que se abre el tablero o la pantalla de Salud, no una sola vez al importar.
+[`RevisaCalidad`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/domain/usecase/RevisaCalidad.kt) corre cada vez que se abre el tablero o la pantalla de Salud, no una sola vez al importar.
 
 ## Los hallazgos
 
@@ -34,7 +34,7 @@ Lo único que vale para cualquier cuenta es que **el dinero de una cartera se mu
 
 ## Las reparaciones
 
-[`ReparaDatos`](../app/src/main/java/mx/ollin/finanzas/domain/usecase/ReparaDatos.kt) arregla los hallazgos con corrección inequívoca. Devuelve cuántos renglones tocó.
+[`ReparaDatos`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/domain/usecase/ReparaDatos.kt) arregla los hallazgos con corrección inequívoca. Devuelve cuántos renglones tocó.
 
 **Regla de oro: nunca se toca el importe.** El importe es lo que realmente pasó y de él dependen todos los saldos; lo que se corrige es la etiqueta que lo describe mal.
 
@@ -48,7 +48,7 @@ Lo único que vale para cualquier cuenta es que **el dinero de una cartera se mu
 
 ## La pantalla de revisión
 
-Desde Salud de los datos, cada hallazgo abre `revision/{clave}` con **la lista concreta** de movimientos detrás del aviso ([`RevisionPantalla`](../app/src/main/java/mx/ollin/finanzas/ui/screens/RevisionPantalla.kt)). El aviso dice cuántos están mal; aquí se ve cuáles.
+Desde Salud de los datos, cada hallazgo abre `revision/{clave}` con **la lista concreta** de movimientos detrás del aviso ([`RevisionPantalla`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/screens/RevisionPantalla.kt)). El aviso dice cuántos están mal; aquí se ve cuáles.
 
 - Cuando lo único que falta es la categoría, se elige desde la misma lista sin abrir el movimiento. Solo se ofrecen las categorías hoja que corresponden al signo del importe: gasto y patrimonio si sale dinero, ingreso si entra.
 - El resto abre la captura del movimiento.

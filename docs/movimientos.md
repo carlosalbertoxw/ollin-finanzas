@@ -4,7 +4,7 @@ Las reglas con las que Ollin Finanzas interpreta un renglón. Todo lo demás —
 
 ## El dinero son centavos
 
-Todo importe vive como **centavos en un `Long`** ([`Dinero`](../app/src/main/java/mx/ollin/finanzas/domain/model/Dinero.kt)). Guardar dinero en punto flotante deja saldos como `999.999999999996` o `-6.25e-13` donde debería haber un cero exacto; con enteros el cero es cero y las conciliaciones cuadran. La conversión a decimal solo pasa al formatear en pantalla o al escribir una celda.
+Todo importe vive como **centavos en un `Long`** ([`Dinero`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/domain/model/Dinero.kt)). Guardar dinero en punto flotante deja saldos como `999.999999999996` o `-6.25e-13` donde debería haber un cero exacto; con enteros el cero es cero y las conciliaciones cuadran. La conversión a decimal solo pasa al formatear en pantalla o al escribir una celda.
 
 `Dinero.parsea` acepta lo que la gente teclea de verdad: `1,234.56`, `1234,56`, `$1 234.56`, el signo al frente y los paréntesis contables `(455.33)`. Cuando hay coma y punto, manda el último como separador decimal; con solo comas, es decimal si deja uno o dos dígitos a la derecha.
 
@@ -14,7 +14,7 @@ Todo importe vive como **centavos en un `Long`** ([`Dinero`](../app/src/main/jav
 
 ## Los seis tipos
 
-[`TipoMovimiento`](../app/src/main/java/mx/ollin/finanzas/domain/model/Enums.kt) son seis y solo seis: cualquier renglón cae en uno.
+[`TipoMovimiento`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/domain/model/Enums.kt) son seis y solo seis: cualquier renglón cae en uno.
 
 | Tipo | Signo esperado | Qué es |
 |---|---|---|
@@ -35,7 +35,7 @@ Al capturar un ajuste escribes **cuánto vale hoy** el bien, que es lo único qu
 
 ## La contraparte se deriva, no se captura
 
-[`Contraparte`](../app/src/main/java/mx/ollin/finanzas/domain/model/Enums.kt) dice si el movimiento ocurre entre cuentas tuyas (`1 - PROPIA`) o con alguien más (`2 - TERCERO`). No se pregunta: se deduce del tipo.
+[`Contraparte`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/domain/model/Enums.kt) dice si el movimiento ocurre entre cuentas tuyas (`1 - PROPIA`) o con alguien más (`2 - TERCERO`). No se pregunta: se deduce del tipo.
 
 ```
 transferencia o interno  →  PROPIA
@@ -70,7 +70,7 @@ Si la compra se registró como salida y no existe la cuenta espejo, la revisión
 
 ## Las cinco naturalezas de la captura
 
-[`NaturalezaCaptura`](../app/src/main/java/mx/ollin/finanzas/ui/screens/CapturaPantalla.kt) es lo que se elige en pantalla, y no coincide con `TipoMovimiento` porque *gasto* y *compra de patrimonio* terminan siendo cosas distintas en el modelo aunque las dos saquen dinero.
+[`NaturalezaCaptura`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/screens/CapturaPantalla.kt) es lo que se elige en pantalla, y no coincide con `TipoMovimiento` porque *gasto* y *compra de patrimonio* terminan siendo cosas distintas en el modelo aunque las dos saquen dinero.
 
 | Naturaleza | Qué se escribe |
 |---|---|
@@ -90,7 +90,7 @@ Reglas de la captura:
 
 ## Cuentas: liquidez, deuda y patrimonio no líquido
 
-[`TipoCuenta`](../app/src/main/java/mx/ollin/finanzas/domain/model/Enums.kt) decide cómo entra cada saldo al balance.
+[`TipoCuenta`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/domain/model/Enums.kt) decide cómo entra cada saldo al balance.
 
 | Tipo | Deuda | Líquida |
 |---|---|---|

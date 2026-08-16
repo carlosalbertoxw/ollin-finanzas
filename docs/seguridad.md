@@ -13,7 +13,7 @@ frase aleatoria de 32 bytes (hex)
 llave maestra en AndroidKeyStore  ──►  no sale del dispositivo, ni con root
 ```
 
-[`LlaveBase`](../app/src/main/java/mx/ollin/finanzas/data/seguridad/LlaveBase.kt) genera la frase una sola vez al azar y la guarda envuelta en `SharedPreferences` (`ollin_llave`). La app pide desenvolverla; nunca ve la llave maestra. Copiar el archivo `ollin.db` por adb o sacarlo de un respaldo no revela un solo importe.
+[`LlaveBase`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/seguridad/LlaveBase.kt) genera la frase una sola vez al azar y la guarda envuelta en `SharedPreferences` (`ollin_llave`). La app pide desenvolverla; nunca ve la llave maestra. Copiar el archivo `ollin.db` por adb o sacarlo de un respaldo no revela un solo importe.
 
 Tres detalles que no son evidentes:
 
@@ -25,7 +25,7 @@ La lectura de la frase es síncrona a propósito: Room construye el helper sin c
 
 ## Bloqueo de la app
 
-Tres modos ([`ModoBloqueo`](../app/src/main/java/mx/ollin/finanzas/data/prefs/Ajustes.kt)):
+Tres modos ([`ModoBloqueo`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/prefs/Ajustes.kt)):
 
 | Modo | Con qué se abre |
 |---|---|
@@ -33,7 +33,7 @@ Tres modos ([`ModoBloqueo`](../app/src/main/java/mx/ollin/finanzas/data/prefs/Aj
 | `SISTEMA` | Patrón, PIN, contraseña o huella del propio teléfono |
 | `PIN` | Un PIN exclusivo de Ollin Finanzas, de 4 dígitos en adelante |
 
-[`ControlBloqueo`](../app/src/main/java/mx/ollin/finanzas/data/seguridad/ControlBloqueo.kt) vive en el `Contenedor` y no en un ViewModel, porque debe sobrevivir a que la actividad se recree: si el estado se perdiera al girar el teléfono, girarlo sería la forma de saltarse el candado.
+[`ControlBloqueo`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/seguridad/ControlBloqueo.kt) vive en el `Contenedor` y no en un ViewModel, porque debe sobrevivir a que la actividad se recree: si el estado se perdiera al girar el teléfono, girarlo sería la forma de saltarse el candado.
 
 Detalles del comportamiento:
 
@@ -48,7 +48,7 @@ Las transiciones de bloqueo se escriben de golpe en DataStore. Si el modo y el P
 
 ### El PIN propio
 
-[`ClavePin`](../app/src/main/java/mx/ollin/finanzas/data/seguridad/ClavePin.kt) nunca guarda el PIN: guarda **PBKDF2-HMAC-SHA256, 120 000 iteraciones, 256 bits**, con sal aleatoria de 16 bytes distinta por teléfono.
+[`ClavePin`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/seguridad/ClavePin.kt) nunca guarda el PIN: guarda **PBKDF2-HMAC-SHA256, 120 000 iteraciones, 256 bits**, con sal aleatoria de 16 bytes distinta por teléfono.
 
 Un PIN de cuatro dígitos tiene diez mil combinaciones; sin un derivado lento bastaría un segundo para probarlas todas contra el archivo de preferencias. La derivación pesa cientos de milisegundos a propósito y corre fuera del hilo principal.
 
@@ -58,7 +58,7 @@ La comparación es en tiempo constante (`MessageDigest.isEqual`): un `==` normal
 
 ### La credencial del sistema
 
-[`CredencialDelSistema`](../app/src/main/java/mx/ollin/finanzas/ui/seguridad/CredencialDelSistema.kt) pide huella, patrón o PIN del teléfono. Desde Android 11 usa `BiometricPrompt` con `BIOMETRIC_WEAK or DEVICE_CREDENTIAL`; antes, el diálogo unificado no admite credencial del dispositivo, así que abre la pantalla de desbloqueo del sistema.
+[`CredencialDelSistema`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/seguridad/CredencialDelSistema.kt) pide huella, patrón o PIN del teléfono. Desde Android 11 usa `BiometricPrompt` con `BIOMETRIC_WEAK or DEVICE_CREDENTIAL`; antes, el diálogo unificado no admite credencial del dispositivo, así que abre la pantalla de desbloqueo del sistema.
 
 Se usa en dos lugares: para entrar, y en Ajustes para confirmar antes de cambiar o quitar el candado.
 

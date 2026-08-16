@@ -2,7 +2,7 @@
 
 Room sobre SQLite cifrado. Seis tablas, versión de esquema **2**, esquemas exportados en `app/schemas/`.
 
-Las entidades de Room son también el modelo de dominio: [`Entidades.kt`](../app/src/main/java/mx/ollin/finanzas/data/db/Entidades.kt).
+Las entidades de Room son también el modelo de dominio: [`Entidades.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/Entidades.kt).
 
 ## Tablas
 
@@ -40,7 +40,7 @@ Un solo nivel de anidamiento: padre e hija bastan para el análisis, y un árbol
 
 El tipo `PATRIMONIO` es lo que separa el consumo real de la compra de bienes. Ver [movimientos](movimientos.md#gasto-contra-patrimonio).
 
-Una instalación nueva arranca con seis cuentas y un catálogo de categorías deliberadamente genéricas ([`Semilla.kt`](../app/src/main/java/mx/ollin/finanzas/data/db/Semilla.kt)): describen la naturaleza del rubro, no un banco ni una persona concretos. Están para renombrarse.
+Una instalación nueva arranca con seis cuentas y un catálogo de categorías deliberadamente genéricas ([`Semilla.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/Semilla.kt)): describen la naturaleza del rubro, no un banco ni una persona concretos. Están para renombrarse.
 
 ### `movimiento`
 
@@ -99,15 +99,15 @@ El mapeo se alimenta de tres fuentes: cada categoría hoja se mapea a sí misma 
 
 ## El dinero y las fechas
 
-**Todo importe es un `Long` de centavos.** En punto flotante un saldo que debería ser cero queda en `999.999999999996`; con enteros el cero es cero y las conciliaciones cuadran. La conversión a decimal solo ocurre al formatear o al escribir la hoja de cálculo ([`Dinero`](../app/src/main/java/mx/ollin/finanzas/domain/model/Dinero.kt)).
+**Todo importe es un `Long` de centavos.** En punto flotante un saldo que debería ser cero queda en `999.999999999996`; con enteros el cero es cero y las conciliaciones cuadran. La conversión a decimal solo ocurre al formatear o al escribir la hoja de cálculo ([`Dinero`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/domain/model/Dinero.kt)).
 
-**La fecha se guarda como día epoch**, un entero ordenable y sin zona horaria de por medio ([`Convertidores.kt`](../app/src/main/java/mx/ollin/finanzas/data/db/Convertidores.kt)). Las consultas que agrupan por mes lo reconstruyen con `strftime('%Y-%m', fecha * 86400, 'unixepoch')`.
+**La fecha se guarda como día epoch**, un entero ordenable y sin zona horaria de por medio ([`Convertidores.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/Convertidores.kt)). Las consultas que agrupan por mes lo reconstruyen con `strftime('%Y-%m', fecha * 86400, 'unixepoch')`.
 
 Los enums viajan a SQLite por nombre, no por ordinal: reordenar el enum no debe cambiar el significado de lo ya guardado.
 
 ## Invariantes que impone el repositorio
 
-Toda escritura pasa por [`FinanzasRepositorio`](../app/src/main/java/mx/ollin/finanzas/data/repo/FinanzasRepositorio.kt):
+Toda escritura pasa por [`FinanzasRepositorio`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/repo/FinanzasRepositorio.kt):
 
 - **La contraparte siempre se deriva del tipo.** No se recibe de la interfaz.
 - **Una transferencia se captura una vez y produce sus dos patas** unidas por el mismo grupo. Al editarla no se actualizan: se borran y se vuelven a escribir dentro de una sola transacción, así el par siempre nace completo aunque lo que hubiera fuera una pata suelta.
@@ -118,7 +118,7 @@ Toda escritura pasa por [`FinanzasRepositorio`](../app/src/main/java/mx/ollin/fi
 
 ## Proyecciones
 
-[`Proyecciones.kt`](../app/src/main/java/mx/ollin/finanzas/data/db/Proyecciones.kt) declara lo que devuelven las consultas con join o agregación. Son de solo lectura: nadie las inserta ni las modifica.
+[`Proyecciones.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/Proyecciones.kt) declara lo que devuelven las consultas con join o agregación. Son de solo lectura: nadie las inserta ni las modifica.
 
 | Proyección | Para qué |
 |---|---|
@@ -134,8 +134,8 @@ Toda escritura pasa por [`FinanzasRepositorio`](../app/src/main/java/mx/ollin/fi
 |---|---|
 | 1 | Esquema inicial |
 
-**No hay ninguna migración, y es a propósito.** La app todavía no se ha publicado, así que no existe ni un teléfono con datos que preservar. Durante el desarrollo llegó a haber una versión 2 que retiraba la columna `tipo` de `compromiso`; al no haber usuarios, se plegó sobre la 1 en vez de arrastrar una migración que nadie iba a ejecutar. El esquema de `app/schemas/1.json` es el resultado, ya sin esa columna.
+**No hay ninguna migración: el esquema es el inicial.** Mientras la app no se publique tampoco hará falta ninguna, porque no existe un teléfono ajeno con datos que preservar: si el esquema cambia, se reescribe sobre la versión 1 y se reinstala. El esquema vigente es `app/schemas/1.json`.
 
-Esto deja de valer con la primera versión que instale alguien más. A partir de ahí, cada cambio de esquema necesita su migración: cambia las entidades, sube `version` en [`OllinDatabase`](../app/src/main/java/mx/ollin/finanzas/data/db/OllinDatabase.kt), escribe la `Migration`, regístrala con `addMigrations(...)` y versiona el nuevo `app/schemas/N.json` que genera KSP.
+Esto deja de valer con la primera versión que instale alguien más. A partir de ahí, cada cambio de esquema necesita su migración: cambia las entidades, sube `version` en [`OllinDatabase`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/OllinDatabase.kt), escribe la `Migration`, regístrala con `addMigrations(...)` y versiona el nuevo `app/schemas/N.json` que genera KSP.
 
-Y una advertencia mientras tanto: si tienes la app instalada de antes, su archivo quedó marcado como versión 2 y Room **no sabe bajar de versión**. Al abrir con la versión 1 truena. Desinstala o borra los datos de la app; la base está cifrada, así que tampoco hay forma de rescatarla a mano.
+Room **no sabe bajar de versión**: si durante el desarrollo se sube `version` y luego se vuelve atrás, la base que quedó en el teléfono ya no abre. Desinstala la app o borra sus datos; está cifrada, así que no hay forma de rescatarla a mano.

@@ -122,22 +122,22 @@ Hay dos suites: **94 pruebas unitarias** en la JVM y **10 pruebas de interfaz** 
 
 | Prueba | Qué cubre |
 |---|---|
-| [`DineroTest`](../app/src/test/java/mx/ollin/finanzas/DineroTest.kt) | `parsea` con coma de millares contra coma decimal, formato europeo, paréntesis contables y basura; redondeo HALF_UP; los tres tramos de `formateaCompacto` con signo |
-| [`EnumsYNormalizacionTest`](../app/src/test/java/mx/ollin/finanzas/EnumsYNormalizacionTest.kt) | `normalizaClave` (acentos, espacios, idempotencia) y el `desdeEtiqueta` de cada enum; el signo esperado de los seis tipos de movimiento |
-| [`ProyeccionesTest`](../app/src/test/java/mx/ollin/finanzas/ProyeccionesTest.kt) | Las guardas de división entre cero de `tasaAhorro` y `avance`, y que el presupuesto use el absoluto del gasto |
-| [`ClavePinTest`](../app/src/test/java/mx/ollin/finanzas/ClavePinTest.kt) | PIN correcto e incorrecto, hash o sal ausentes, Base64 corrupto, y que la derivación sea determinista por sal |
-| [`RevisaCalidadTest`](../app/src/test/java/mx/ollin/finanzas/RevisaCalidadTest.kt) | Los nueve detectores, uno por prueba, más el libro sano que no debe reportar nada |
-| [`ReparaDatosTest`](../app/src/test/java/mx/ollin/finanzas/ReparaDatosTest.kt) | Las tres reparaciones automáticas, y sobre todo que **ninguna toque el importe** |
-| [`ImportadorExcelTest`](../app/src/test/java/mx/ollin/finanzas/ImportadorExcelTest.kt) | Round trip exportar→importar, sinónimos de encabezado, renglones incompletos, emparejado de transferencias e inferencia de tipo de cuenta |
-| [`ImportadorHojasTest`](../app/src/test/java/mx/ollin/finanzas/ImportadorHojasTest.kt) | El regreso de Diccionarios, Presupuesto y Compromisos: naturaleza declarada, jerarquía de categorías, metas por mes, compromisos reconstruidos desde el próximo pago y el libro sin hoja de movimientos |
-| [`ExcelRoundTripTest`](../app/src/test/java/mx/ollin/finanzas/ExcelRoundTripTest.kt) | Serial de fechas, letras de columna, centavos sin error acumulado, escritura y relectura del libro en ambos esquemas, escapado de XML, exportación parcial y libro vacío |
-| [`ExportadorBordesTest`](../app/src/test/java/mx/ollin/finanzas/ExportadorBordesTest.kt) | Compromisos con datos, catálogos incompletos, nombres que obligan a entrecomillar, y tres años de movimientos diarios |
+| [`DineroTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/DineroTest.kt) | `parsea` con coma de millares contra coma decimal, formato europeo, paréntesis contables y basura; redondeo HALF_UP; los tres tramos de `formateaCompacto` con signo |
+| [`EnumsYNormalizacionTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EnumsYNormalizacionTest.kt) | `normalizaClave` (acentos, espacios, idempotencia) y el `desdeEtiqueta` de cada enum; el signo esperado de los seis tipos de movimiento |
+| [`ProyeccionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ProyeccionesTest.kt) | Las guardas de división entre cero de `tasaAhorro` y `avance`, y que el presupuesto use el absoluto del gasto |
+| [`ClavePinTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ClavePinTest.kt) | PIN correcto e incorrecto, hash o sal ausentes, Base64 corrupto, y que la derivación sea determinista por sal |
+| [`RevisaCalidadTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/RevisaCalidadTest.kt) | Los nueve detectores, uno por prueba, más el libro sano que no debe reportar nada |
+| [`ReparaDatosTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ReparaDatosTest.kt) | Las tres reparaciones automáticas, y sobre todo que **ninguna toque el importe** |
+| [`ImportadorExcelTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ImportadorExcelTest.kt) | Round trip exportar→importar, sinónimos de encabezado, renglones incompletos, emparejado de transferencias e inferencia de tipo de cuenta |
+| [`ImportadorHojasTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ImportadorHojasTest.kt) | El regreso de Diccionarios, Presupuesto y Compromisos: naturaleza declarada, jerarquía de categorías, metas por mes, compromisos reconstruidos desde el próximo pago y el libro sin hoja de movimientos |
+| [`ExcelRoundTripTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ExcelRoundTripTest.kt) | Serial de fechas, letras de columna, centavos sin error acumulado, escritura y relectura del libro en ambos esquemas, escapado de XML, exportación parcial y libro vacío |
+| [`ExportadorBordesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ExportadorBordesTest.kt) | Compromisos con datos, catálogos incompletos, nombres que obligan a entrecomillar, y tres años de movimientos diarios |
 
 Las pruebas de Excel escriben libros reales en `app/build/pruebas/`, útiles para abrirlos a mano y comprobar el resultado. El reporte HTML queda en `app/build/reports/tests/`.
 
 ### La base en memoria
 
-Las suites de calidad, reparación e importación heredan de [`BaseEnMemoria`](../app/src/test/java/mx/ollin/finanzas/BaseEnMemoria.kt), que abre `OllinDatabase` con `Room.inMemoryDatabaseBuilder` en vez de `OllinDatabase.obten`. Eso **se salta SQLCipher a propósito**: es una biblioteca nativa de Android y en la JVM no existe. Lo que se prueba ahí es el SQL y la lógica que cuelga de él; el cifrado solo se puede verificar en dispositivo.
+Las suites de calidad, reparación e importación heredan de [`BaseEnMemoria`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/BaseEnMemoria.kt), que abre `OllinDatabase` con `Room.inMemoryDatabaseBuilder` en vez de `OllinDatabase.obten`. Eso **se salta SQLCipher a propósito**: es una biblioteca nativa de Android y en la JVM no existe. Lo que se prueba ahí es el SQL y la lógica que cuelga de él; el cifrado solo se puede verificar en dispositivo.
 
 Dos detalles que se rompen solos si se tocan:
 
@@ -152,12 +152,12 @@ Las claves foráneas están activas, así que un movimiento necesita una cuenta 
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-Requieren un emulador o teléfono con **API 26 o superior**; no corren en la JVM. Lo que se instala es `mx.ollin.finanzas.debug`.
+Requieren un emulador o teléfono con **API 26 o superior**; no corren en la JVM. Lo que se instala es `com.carlosalbertoxw.ollin.finanzas.debug`.
 
 | Prueba | Qué cubre |
 |---|---|
-| [`ComponentesComunesTest`](../app/src/androidTest/java/mx/ollin/finanzas/ComponentesComunesTest.kt) | Los componentes de `ui/components` montados solos, sin actividad ni base: `TextoDinero`, `TarjetaCifra`, `TarjetaValor`, `EstadoVacio`, `SeccionTitulo` |
-| [`NavegacionTest`](../app/src/androidTest/java/mx/ollin/finanzas/NavegacionTest.kt) | Arranque sobre la app real, las cinco pestañas, ir y volver entre ellas, y que el botón de Capturar retire la barra de abajo |
+| [`ComponentesComunesTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/ComponentesComunesTest.kt) | Los componentes de `ui/components` montados solos, sin actividad ni base: `TextoDinero`, `TarjetaCifra`, `TarjetaValor`, `EstadoVacio`, `SeccionTitulo` |
+| [`NavegacionTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/NavegacionTest.kt) | Arranque sobre la app real, las cinco pestañas, ir y volver entre ellas, y que el botón de Capturar retire la barra de abajo |
 
 Cuatro cosas que hay que saber antes de escribir más:
 
@@ -187,13 +187,13 @@ El diálogo de huella y el de credencial del sistema son UI del sistema operativ
 ## Añadir una pantalla
 
 1. Crea el archivo en `ui/screens/` con su `ViewModel` y su composable.
-2. Declara la ruta en [`ui/nav/Destinos.kt`](../app/src/main/java/mx/ollin/finanzas/ui/nav/Destinos.kt) (`Destino` si es pestaña, `Rutas` si cuelga de una).
-3. Regístrala en el `NavHost` de [`ui/OllinRaiz.kt`](../app/src/main/java/mx/ollin/finanzas/ui/OllinRaiz.kt).
+2. Declara la ruta en [`ui/nav/Destinos.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/nav/Destinos.kt) (`Destino` si es pestaña, `Rutas` si cuelga de una).
+3. Regístrala en el `NavHost` de [`ui/OllinRaiz.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/OllinRaiz.kt).
 4. Si la ruta lleva argumentos, agrégalos con `navArgument` y su `defaultValue`; el patrón de la app es usar `0L` como "sin valor" y filtrarlo con `takeIf { it > 0L }`.
 
 ## Añadir un tutorial
 
-Agrega una entrada a `TUTORIALES` en [`ui/screens/TutorialesPantalla.kt`](../app/src/main/java/mx/ollin/finanzas/ui/screens/TutorialesPantalla.kt), con su clave, resumen, pasos y, si lo hay, el truco: lo que casi nadie descubre solo y evita el error más común del tema.
+Agrega una entrada a `TUTORIALES` en [`ui/screens/TutorialesPantalla.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/screens/TutorialesPantalla.kt), con su clave, resumen, pasos y, si lo hay, el truco: lo que casi nadie descubre solo y evita el error más común del tema.
 
 Los pasos son texto plano y no capturas de pantalla a propósito: una captura envejece con el primer cambio de la interfaz y después miente, mientras que el orden de los pasos sigue siendo cierto.
 

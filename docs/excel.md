@@ -8,7 +8,7 @@ Todo el paquete `data/excel/` es propio, **sin dependencias externas**. Apache P
 
 ### Hojas
 
-Se eligen desde la pantalla de Archivo ([`HojaExportable`](../app/src/main/java/mx/ollin/finanzas/data/excel/CatalogoHojas.kt)):
+Se eligen desde la pantalla de Archivo ([`HojaExportable`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/CatalogoHojas.kt)):
 
 | Hoja | Contenido |
 |---|---|
@@ -24,7 +24,7 @@ Las pestañas salen en orden de lectura natural: primero el análisis, luego el 
 
 ### Esquemas de columna
 
-[`EsquemaExportacion`](../app/src/main/java/mx/ollin/finanzas/data/excel/CatalogoHojas.kt) decide el ancho de la hoja Registros:
+[`EsquemaExportacion`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/CatalogoHojas.kt) decide el ancho de la hoja Registros:
 
 - **Extendido** — `Fecha, Cantidad, Cuenta, Categoria, Descripcion, Medio, Contraparte, Tipo, Mes, Anio, Nota, Compromiso`. Conserva todo.
 - **Compacto** — `Fecha, Cantidad, Cuenta, Descripcion, Medio, Contraparte, Tipo, Mes`, las ocho indispensables.
@@ -51,14 +51,14 @@ El libro incluye además anchos de columna, panel congelado en el encabezado, va
 
 | Archivo | Papel |
 |---|---|
-| [`ModeloHoja.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/ModeloHoja.kt) | `Celda` (texto, número, fecha, booleano, fórmula), `Hoja`, anchos, validaciones, tablas y los índices de estilo |
-| [`Ooxml.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/Ooxml.kt) | Seriales de fecha, letras de columna, escape de XML, saneo de nombres de hoja |
-| [`XlsxEscritor.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/XlsxEscritor.kt) | Serializa el paquete OOXML completo dentro de un ZIP |
-| [`XlsxLector.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/XlsxLector.kt) | Lee un `.xlsx` con el SAX del JDK |
-| [`DatosExportacion.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/DatosExportacion.kt) | Fotografía de los datos en el momento de exportar |
-| [`ExportadorExcel.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/ExportadorExcel.kt) | Arma las hojas |
-| [`ImportadorExcel.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/ImportadorExcel.kt) | Vuelca un libro en la base |
-| [`LectorCatalogos.kt`](../app/src/main/java/mx/ollin/finanzas/data/excel/LectorCatalogos.kt) | Interpreta Diccionarios, Presupuesto y Compromisos; no toca la base |
+| [`ModeloHoja.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/ModeloHoja.kt) | `Celda` (texto, número, fecha, booleano, fórmula), `Hoja`, anchos, validaciones, tablas y los índices de estilo |
+| [`Ooxml.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/Ooxml.kt) | Seriales de fecha, letras de columna, escape de XML, saneo de nombres de hoja |
+| [`XlsxEscritor.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/XlsxEscritor.kt) | Serializa el paquete OOXML completo dentro de un ZIP |
+| [`XlsxLector.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/XlsxLector.kt) | Lee un `.xlsx` con el SAX del JDK |
+| [`DatosExportacion.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/DatosExportacion.kt) | Fotografía de los datos en el momento de exportar |
+| [`ExportadorExcel.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/ExportadorExcel.kt) | Arma las hojas |
+| [`ImportadorExcel.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/ImportadorExcel.kt) | Vuelca un libro en la base |
+| [`LectorCatalogos.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/LectorCatalogos.kt) | Interpreta Diccionarios, Presupuesto y Compromisos; no toca la base |
 
 Los índices de estilo de `Estilo` deben coincidir en orden exacto con `cellXfs` en `XlsxEscritor.estilosXml()`.
 
@@ -151,9 +151,9 @@ El selector propone la carpeta Descargas como punto de partida. Es solo una suge
 
 ## Pruebas
 
-- [`ExcelRoundTripTest`](../app/src/test/java/mx/ollin/finanzas/ExcelRoundTripTest.kt) — el escritor y el lector reales: seriales de fecha, letras de columna, centavos sin error acumulado, encabezados exactos de cada esquema, escapado de comillas y acentos, exportar solo algunas pestañas y un libro vacío.
-- [`ExportadorBordesTest`](../app/src/test/java/mx/ollin/finanzas/ExportadorBordesTest.kt) — lo que el round trip no toca: compromisos con datos, catálogos incompletos (categoría cuyo padre no existe, cuenta con apóstrofo, movimientos que apuntan a ids inexistentes) y tres años de movimientos diarios.
-- [`ImportadorExcelTest`](../app/src/test/java/mx/ollin/finanzas/ImportadorExcelTest.kt) — el lado que decide cosas por ti: corrección de tipos, emparejado de transferencias, cuentas inventadas y contrapartes recalculadas.
-- [`ImportadorHojasTest`](../app/src/test/java/mx/ollin/finanzas/ImportadorHojasTest.kt) — el viaje de regreso de Diccionarios, Presupuesto y Compromisos, incluido el libro completo de ida y vuelta: si alguien mueve una columna del exportador, la prueba se entera.
+- [`ExcelRoundTripTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ExcelRoundTripTest.kt) — el escritor y el lector reales: seriales de fecha, letras de columna, centavos sin error acumulado, encabezados exactos de cada esquema, escapado de comillas y acentos, exportar solo algunas pestañas y un libro vacío.
+- [`ExportadorBordesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ExportadorBordesTest.kt) — lo que el round trip no toca: compromisos con datos, catálogos incompletos (categoría cuyo padre no existe, cuenta con apóstrofo, movimientos que apuntan a ids inexistentes) y tres años de movimientos diarios.
+- [`ImportadorExcelTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ImportadorExcelTest.kt) — el lado que decide cosas por ti: corrección de tipos, emparejado de transferencias, cuentas inventadas y contrapartes recalculadas.
+- [`ImportadorHojasTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ImportadorHojasTest.kt) — el viaje de regreso de Diccionarios, Presupuesto y Compromisos, incluido el libro completo de ida y vuelta: si alguien mueve una columna del exportador, la prueba se entera.
 
 Los libros quedan en `app/build/pruebas/` para poder abrirlos a mano y comprobar el resultado.

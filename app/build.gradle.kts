@@ -22,11 +22,11 @@ if (propiedadesFirma == null) {
 }
 
 android {
-    namespace = "mx.ollin.finanzas"
+    namespace = "com.carlosalbertoxw.ollin.finanzas"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "mx.ollin.finanzas"
+        applicationId = "com.carlosalbertoxw.ollin.finanzas"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

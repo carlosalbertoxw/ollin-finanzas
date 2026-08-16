@@ -61,9 +61,9 @@ depende del idioma de la suite.
 Un solo módulo, Kotlin + Jetpack Compose (Material 3).
 
 ```
-app/src/main/java/mx/ollin/finanzas/
+app/src/main/java/com/carlosalbertoxw/ollin/finanzas/
 ├── data/
-│   ├── db/          Room: entidades, DAOs, proyecciones, migraciones, catálogo semilla
+│   ├── db/          Room: entidades, DAOs, proyecciones, catálogo semilla
 │   ├── excel/       Lector y escritor de .xlsx propios, exportador e importador
 │   ├── notify/      Recordatorios de compromisos por vencer
 │   ├── prefs/       Preferencias en DataStore
@@ -98,7 +98,7 @@ Decisiones que no son las de default, y por qué:
 ## Documentación
 
 - [Arquitectura](docs/arquitectura.md) — capas, navegación, arranque y bloqueo, y por qué no hay framework de inyección.
-- [Modelo de datos](docs/modelo-de-datos.md) — las seis tablas, invariantes del repositorio, proyecciones y migraciones.
+- [Modelo de datos](docs/modelo-de-datos.md) — las seis tablas, invariantes del repositorio, proyecciones y versionado del esquema.
 - [El libro](docs/movimientos.md) — tipos, signos, transferencias, gasto contra patrimonio, presupuesto y compromisos.
 - [Salud de los datos](docs/calidad.md) — qué revisa la auditoría, qué se repara solo y qué no.
 - [Excel](docs/excel.md) — formato del libro exportado, fórmulas, reglas de importación.
