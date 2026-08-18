@@ -115,30 +115,81 @@ object XlsxLector {
     // ------------------------------------------------------------- parseo
 
     /**
-     * Prohibir el DOCTYPE es lo que corta de raiz las entidades XML: sin el, un
-     * libro puede traer una bomba de entidades que se expande en memoria hasta
-     * tumbar la app. El limite de [LIMITE_BYTES] no la ataja, porque cuenta lo
-     * que se lee del zip y no lo que el parser expande despues.
+     * Banderas de endurecimiento, por si el parser las reconoce.
      *
-     * Si el parser de la plataforma no acepta la bandera, se aborta en vez de
-     * seguir sin ella: leer el archivo indefenso es peor que no leerlo.
+     * En Android **ninguna** lo es: su SAXParserFactory esta hecha sobre Expat
+     * y solo admite las dos de namespaces; cualquier otra lanza
+     * SAXNotRecognizedException. Por eso se intentan una por una y sin ruido,
+     * y por eso la defensa de verdad no puede vivir aqui.
+     */
+    private val BANDERAS_SEGURAS = listOf(
+        "http://apache.org/xml/features/disallow-doctype-decl" to true,
+        "http://xml.org/sax/features/external-general-entities" to false,
+        "http://xml.org/sax/features/external-parameter-entities" to false
+    )
+
+    /**
+     * El DOCTYPE es lo que abre la puerta a las entidades XML: sin el no hay
+     * bomba que expandir. El limite de [LIMITE_BYTES] no la ataja, porque
+     * cuenta lo que se lee del zip y no lo que el parser expande despues.
+     *
+     * Se rechaza leyendo el prologo a mano en vez de pedirselo al parser,
+     * porque en Android el parser no sabe hacerlo. Una comprobacion propia
+     * sobre los bytes funciona igual en todas partes.
      */
     private fun parsea(bytes: ByteArray, handler: DefaultHandler) {
+        rechazaDoctype(bytes)
         val factory = SAXParserFactory.newInstance().apply {
             isNamespaceAware = false
-            isXIncludeAware = false
-            try {
-                setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-                setFeature("http://xml.org/sax/features/external-general-entities", false)
-                setFeature("http://xml.org/sax/features/external-parameter-entities", false)
-            } catch (e: Exception) {
-                throw ArchivoInvalido(
-                    "Este telefono no puede leer el archivo de forma segura. Abrelo en una computadora.",
-                    e
-                )
+            BANDERAS_SEGURAS.forEach { (nombre, valor) ->
+                runCatching { setFeature(nombre, valor) }
             }
         }
         factory.newSAXParser().parse(ByteArrayInputStream(bytes), handler)
+    }
+
+    /**
+     * Recorre el prologo —lo que va antes del elemento raiz— y aborta si
+     * encuentra un DOCTYPE. Solo mira ahi: mas adelante un `<` literal viaja
+     * escapado como `&lt;`, asi que la secuencia no puede aparecer en el texto
+     * de una celda y buscarla en todo el archivo daria falsos positivos.
+     */
+    private fun rechazaDoctype(bytes: ByteArray) {
+        var i = 0
+        while (i < bytes.size) {
+            val b = bytes[i].toInt().toChar()
+            if (b != '<') { i++; continue }
+            when {
+                // Declaracion XML o instruccion de proceso: <? ... ?>
+                coincide(bytes, i, "<?") -> i = tras(bytes, i, "?>") ?: return
+                // Comentario: <!-- ... -->
+                coincide(bytes, i, "<!--") -> i = tras(bytes, i, "-->") ?: return
+                coincide(bytes, i, "<!DOCTYPE") -> throw ArchivoInvalido(
+                    "El archivo declara un DOCTYPE, que Ollin Finanzas no acepta. " +
+                        "Vuelve a guardarlo como .xlsx desde tu hoja de calculo."
+                )
+                // Cualquier otra cosa ya es el elemento raiz: el prologo acabo.
+                else -> return
+            }
+        }
+    }
+
+    /** Compara sin distinguir mayusculas, sobre ASCII, sin crear cadenas. */
+    private fun coincide(bytes: ByteArray, desde: Int, texto: String): Boolean {
+        if (desde + texto.length > bytes.size) return false
+        return texto.indices.all { j ->
+            bytes[desde + j].toInt().toChar().uppercaseChar() == texto[j].uppercaseChar()
+        }
+    }
+
+    /** Indice justo despues de [cierre], o null si el archivo se acaba antes. */
+    private fun tras(bytes: ByteArray, desde: Int, cierre: String): Int? {
+        var i = desde
+        while (i < bytes.size) {
+            if (coincide(bytes, i, cierre)) return i + cierre.length
+            i++
+        }
+        return null
     }
 
     private fun leeSharedStrings(bytes: ByteArray): List<String> {

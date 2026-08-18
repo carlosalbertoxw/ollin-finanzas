@@ -166,6 +166,10 @@ El selector propone la carpeta Descargas como punto de partida. Es solo una suge
 - [`ImportadorExcelTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ImportadorExcelTest.kt) — el lado que decide cosas por ti: corrección de tipos, emparejado de transferencias, cuentas inventadas y contrapartes recalculadas.
 - [`ImportadorHojasTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ImportadorHojasTest.kt) — el viaje de regreso de Diccionarios, Presupuesto y Compromisos, incluido el libro completo de ida y vuelta: si alguien mueve una columna del exportador, la prueba se entera.
 
-El lector XML prohíbe el `DOCTYPE` y las entidades externas, y **aborta si el parser de la plataforma no acepta esas banderas** en vez de seguir sin ellas. Es lo que corta de raíz una bomba de entidades: el tope de 64 MB no la ataja, porque cuenta lo que se lee del zip y no lo que el parser expande después.
+El lector rechaza los archivos que declaran un `DOCTYPE`. Es lo que corta de raíz una bomba de entidades: sin `DOCTYPE` no hay entidades que expandir, y el tope de 64 MB no la ataja porque cuenta lo que se lee del zip y no lo que el parser expande después.
+
+**El rechazo se hace leyendo el prólogo a mano, no pidiéndoselo al parser.** El `SAXParserFactory` de Android está construido sobre Expat y solo reconoce las dos banderas de namespaces: `disallow-doctype-decl` y las de entidades externas lanzan `SAXNotRecognizedException`. Se siguen intentando por si la plataforma las admite, pero en silencio y como refuerzo — la defensa que sostiene es propia y se comporta igual en cualquier teléfono.
+
+Esto ya costó una regresión: convertir ese intento en un `throw` hizo que **toda** importación fallara en dispositivo, y las pruebas no lo vieron porque en la JVM el parser sí reconoce las banderas. Si vuelves a tocar esta zona, recuerda que las pruebas unitarias no pueden decirte cómo se comporta el parser de Android.
 
 Los libros quedan en `app/build/pruebas/` para poder abrirlos a mano y comprobar el resultado.
