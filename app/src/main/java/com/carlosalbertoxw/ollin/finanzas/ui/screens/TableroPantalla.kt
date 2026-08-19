@@ -1,7 +1,9 @@
 ﻿package com.carlosalbertoxw.ollin.finanzas.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,9 +25,15 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +65,7 @@ import com.carlosalbertoxw.ollin.finanzas.domain.usecase.RevisaCalidad
 import com.carlosalbertoxw.ollin.finanzas.ui.components.BarrasFlujo
 import com.carlosalbertoxw.ollin.finanzas.ui.components.LineaEvolucion
 import com.carlosalbertoxw.ollin.finanzas.ui.components.Punto
+import com.carlosalbertoxw.ollin.finanzas.ui.components.FilaDeslizable
 import com.carlosalbertoxw.ollin.finanzas.ui.components.SeccionTitulo
 import com.carlosalbertoxw.ollin.finanzas.ui.components.TarjetaCifra
 import com.carlosalbertoxw.ollin.finanzas.ui.components.TarjetaValor
@@ -139,6 +148,26 @@ class TableroVm(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EstadoTablero())
 
+    // Las mismas decisiones que ofrece la lista de Compromisos. Se repiten aqui
+    // porque el tablero es donde de verdad se ven los pagos que vienen, y
+    // mandar a la persona a otra pantalla para dos toques sobra.
+
+    fun cumple(id: Long) {
+        viewModelScope.launch { repo.avanzaCompromiso(id) }
+    }
+
+    fun deshaceCumplimiento(id: Long) {
+        viewModelScope.launch { repo.retrocedeCompromiso(id) }
+    }
+
+    fun descarta(id: Long) {
+        viewModelScope.launch { repo.descartaPagoCompromiso(id) }
+    }
+
+    fun deshaceDescarte(id: Long) {
+        viewModelScope.launch { repo.restauraPagoCompromiso(id) }
+    }
+
     /** Manda si el tablero enseña o no sus atajos de ayuda. */
     val muestraTutoriales: StateFlow<Boolean> = ajustes.ajustes
         .map { it.muestraTutoriales }
@@ -163,6 +192,7 @@ fun TableroPantalla(
     alAbrirCuentas: () -> Unit,
     alAbrirCalidad: () -> Unit,
     alAbrirCompromisos: () -> Unit,
+    alPagarCompromiso: (Long) -> Unit,
     alAbrirAjustes: () -> Unit,
     alAbrirTutoriales: () -> Unit
 ) {
@@ -171,6 +201,23 @@ fun TableroPantalla(
     val muestraTutoriales by vm.muestraTutoriales.collectAsStateWithLifecycle()
     val colores = LocalColoresOllin.current
 
+    val avisos = remember { SnackbarHostState() }
+    val alcance = rememberCoroutineScope()
+
+    /** Cumplir y descartar se deshacen: son decisiones de un toque sobre datos reales. */
+    fun avisa(texto: String, alDeshacer: () -> Unit) {
+        alcance.launch {
+            avisos.currentSnackbarData?.dismiss()
+            val respuesta = avisos.showSnackbar(
+                message = texto,
+                actionLabel = "Deshacer",
+                duration = SnackbarDuration.Short
+            )
+            if (respuesta == SnackbarResult.ActionPerformed) alDeshacer()
+        }
+    }
+
+    Box(Modifier.fillMaxSize()) {
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 16.dp, 16.dp, 96.dp),
@@ -363,23 +410,50 @@ fun TableroPantalla(
             // La clave lleva prefijo porque este LazyColumn mezcla secciones de
             // tablas distintas: el compromiso 1 y la cuenta 1 chocarian.
             items(estado.proximos.take(4), key = { "compromiso-${it.first.id}" }) { (compromiso, fecha) ->
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Los atrasados no se caen de la lista: siguen aqui, marcados,
-                    // hasta que en Compromisos se cumplan o se descarten.
-                    val vencido = fecha.isBefore(LocalDate.now())
-                    Column(Modifier.weight(1f)) {
-                        Text(compromiso.nombre, style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            (if (vencido) "Vencido el $fecha" else "$fecha") +
-                                "  ·  ${compromiso.periodicidad.etiqueta}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (vencido) colores.alerta else colores.textoTenue
-                        )
+                // Mismo gesto que en la lista de Compromisos: tocar abre la
+                // captura ya llena, deslizar descubre cumplir y descartar. Que
+                // signifique lo mismo en los dos lugares es la mitad del valor.
+                FilaDeslizable(
+                    habilitada = true,
+                    alCumplir = {
+                        vm.cumple(compromiso.id)
+                        avisa("${compromiso.nombre}: pago cumplido") {
+                            vm.deshaceCumplimiento(compromiso.id)
+                        }
+                    },
+                    alDescartar = {
+                        vm.descarta(compromiso.id)
+                        avisa("${compromiso.nombre}: pago descartado") {
+                            vm.deshaceDescarte(compromiso.id)
+                        }
                     }
-                    TextoDinero(-compromiso.montoCentavos)
+                ) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            // Fondo propio, aunque el tablero ya lo tenga: al
+                            // deslizarse, la fila viaja por encima del panel de
+                            // acciones, y sin el se transparentaria encima.
+                            .background(MaterialTheme.colorScheme.background)
+                            .clickable { alPagarCompromiso(compromiso.id) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Los atrasados no se caen de la lista: siguen aqui,
+                        // marcados, hasta que se cumplan o se descarten.
+                        val vencido = fecha.isBefore(LocalDate.now())
+                        Column(Modifier.weight(1f)) {
+                            Text(compromiso.nombre, style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                (if (vencido) "Vencido el ${Recordatorios.formateaFecha(fecha)}"
+                                else Recordatorios.formateaFecha(fecha)) +
+                                    "  ·  ${compromiso.periodicidad.etiqueta}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (vencido) colores.alerta else colores.textoTenue
+                            )
+                        }
+                        TextoDinero(-compromiso.montoCentavos)
+                    }
                 }
             }
         }
@@ -405,6 +479,14 @@ fun TableroPantalla(
                 TextoDinero(saldo.saldoCentavos, coloreado = saldo.saldoCentavos < 0)
             }
         }
+    }
+
+        // Sobre la barra de pestañas, no debajo: ahi es donde el aviso se ve y
+        // donde "Deshacer" queda al alcance del pulgar.
+        SnackbarHost(
+            avisos,
+            Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp)
+        )
     }
 }
 

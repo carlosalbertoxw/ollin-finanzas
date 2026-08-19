@@ -117,6 +117,7 @@ fun OllinRaiz(contenedor: Contenedor) {
                         alAbrirCuentas = { nav.navigate(Rutas.CUENTAS) },
                         alAbrirCalidad = { nav.navigate(Rutas.CALIDAD) },
                         alAbrirCompromisos = { nav.navigate(Rutas.COMPROMISOS) },
+                        alPagarCompromiso = { id -> nav.navigate(Rutas.capturaDeCompromiso(id)) },
                         alAbrirAjustes = { nav.navigate(Rutas.AJUSTES) },
                         alAbrirTutoriales = { nav.navigate(Rutas.TUTORIALES) }
                     )

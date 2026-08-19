@@ -1,22 +1,15 @@
 ﻿package com.carlosalbertoxw.ollin.finanzas.ui.screens
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,8 +19,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EventRepeat
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -52,7 +43,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,11 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -83,6 +69,7 @@ import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Periodicidad
 import com.carlosalbertoxw.ollin.finanzas.ui.components.EstadoVacio
+import com.carlosalbertoxw.ollin.finanzas.ui.components.FilaDeslizable
 import com.carlosalbertoxw.ollin.finanzas.ui.components.TarjetaCifra
 import com.carlosalbertoxw.ollin.finanzas.ui.components.TextoDinero
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
@@ -90,7 +77,6 @@ import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import kotlin.math.roundToInt
 
 class CompromisosVm(private val repo: FinanzasRepositorio) : ViewModel() {
 
@@ -336,114 +322,6 @@ fun CompromisosPantalla(
             alCancelar = { editando = null },
             alEliminar = if (c.id != 0L) ({ vm.elimina(c); editando = null }) else null
         )
-    }
-}
-
-/** Ancho de cada una de las dos decisiones que descubre el deslizamiento. */
-private val AnchoAccion = 88.dp
-
-/**
- * Tarjeta que al deslizarse a la derecha descubre sus dos decisiones. El pago
- * no se da por hecho ni se olvida solo: hay que cumplirlo o descartarlo a mano,
- * y mientras nadie decida, el compromiso sigue pendiente donde estaba.
- */
-@Composable
-private fun FilaDeslizable(
-    habilitada: Boolean,
-    modifier: Modifier = Modifier,
-    alCumplir: () -> Unit,
-    alDescartar: () -> Unit,
-    contenido: @Composable () -> Unit
-) {
-    val colores = LocalColoresOllin.current
-    val apertura = with(LocalDensity.current) { (AnchoAccion * 2).toPx() }
-    val desplazamiento = remember { Animatable(0f) }
-    val alcance = rememberCoroutineScope()
-    // Derivado para que arrastrar no recomponga la fila en cada cuadro: solo
-    // importa el momento en que el panel pasa de escondido a visible.
-    val abierto by remember { derivedStateOf { desplazamiento.value > 0f } }
-
-    fun cierra() {
-        alcance.launch { desplazamiento.animateTo(0f) }
-    }
-
-    // Un compromiso terminado ya no admite decisiones: se recoge el panel.
-    LaunchedEffect(habilitada) { if (!habilitada) desplazamiento.animateTo(0f) }
-
-    Box(modifier.fillMaxWidth()) {
-        if (abierto) {
-            Row(
-                Modifier
-                    .matchParentSize()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AccionDeslizada(Icons.Filled.Check, "Cumplir", colores.entrada) {
-                    cierra(); alCumplir()
-                }
-                AccionDeslizada(Icons.Filled.Close, "Descartar", colores.salida) {
-                    cierra(); alDescartar()
-                }
-            }
-        }
-
-        Box(
-            Modifier
-                .offset { IntOffset(desplazamiento.value.roundToInt(), 0) }
-                .draggable(
-                    state = rememberDraggableState { delta ->
-                        alcance.launch {
-                            desplazamiento.snapTo(
-                                (desplazamiento.value + delta).coerceIn(0f, apertura)
-                            )
-                        }
-                    },
-                    orientation = Orientation.Horizontal,
-                    enabled = habilitada,
-                    onDragStopped = { velocidad ->
-                        // Medio panel o un empujon claro bastan: pedir el recorrido
-                        // completo obliga a un gesto incomodo en pantallas angostas.
-                        val destino =
-                            if (desplazamiento.value > apertura / 2f || velocidad > 700f) apertura
-                            else 0f
-                        desplazamiento.animateTo(destino)
-                    }
-                )
-        ) {
-            contenido()
-            if (abierto) {
-                // Con el panel afuera, tocar la tarjeta lo recoge en vez de abrir
-                // la edicion: es la salida esperada de un gesto abierto sin querer.
-                Box(
-                    Modifier
-                        .matchParentSize()
-                        .pointerInput(Unit) { detectTapGestures { cierra() } }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AccionDeslizada(
-    icono: ImageVector,
-    etiqueta: String,
-    color: Color,
-    alTocar: () -> Unit
-) {
-    Column(
-        Modifier
-            .width(AnchoAccion)
-            .fillMaxHeight()
-            .clickable(onClick = alTocar)
-            .padding(vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(icono, contentDescription = etiqueta, tint = color)
-        Spacer(Modifier.height(4.dp))
-        Text(etiqueta, style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1)
     }
 }
 

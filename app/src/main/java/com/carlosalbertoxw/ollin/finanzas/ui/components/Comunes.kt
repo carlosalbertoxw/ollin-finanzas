@@ -1,6 +1,27 @@
 package com.carlosalbertoxw.ollin.finanzas.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -339,4 +360,121 @@ fun Marco(
             .border(1.dp, LocalColoresOllin.current.trazoSuave, RoundedCornerShape(16.dp))
             .padding(14.dp)
     ) { contenido() }
+}
+
+/** Ancho de cada una de las dos decisiones que descubre el deslizamiento. */
+private val AnchoAccion = 88.dp
+
+/**
+ * Fila que al deslizarse a la derecha descubre sus dos decisiones.
+ *
+ * Es el gesto con el que un compromiso se cumple o se descarta. El pago no se
+ * da por hecho ni se olvida solo: hay que decidirlo a mano, y mientras nadie
+ * decida, el compromiso sigue pendiente donde estaba.
+ *
+ * Vive aqui y no en una pantalla porque la usan dos: la lista de Compromisos y
+ * la seccion "Se viene" del tablero. El gesto tiene que significar lo mismo en
+ * las dos, y una copia se habria separado de la otra a la primera correccion.
+ *
+ * [contenido] debe ser opaco: viaja por encima del panel de acciones, asi que
+ * si es transparente el panel se le ve a traves al deslizar.
+ */
+@Composable
+fun FilaDeslizable(
+    habilitada: Boolean,
+    modifier: Modifier = Modifier,
+    alCumplir: () -> Unit,
+    alDescartar: () -> Unit,
+    contenido: @Composable () -> Unit
+) {
+    val colores = LocalColoresOllin.current
+    val apertura = with(LocalDensity.current) { (AnchoAccion * 2).toPx() }
+    val desplazamiento = remember { Animatable(0f) }
+    val alcance = rememberCoroutineScope()
+    // Derivado para que arrastrar no recomponga la fila en cada cuadro: solo
+    // importa el momento en que el panel pasa de escondido a visible.
+    val abierto by remember { derivedStateOf { desplazamiento.value > 0f } }
+
+    fun cierra() {
+        alcance.launch { desplazamiento.animateTo(0f) }
+    }
+
+    // Un compromiso terminado ya no admite decisiones: se recoge el panel.
+    LaunchedEffect(habilitada) { if (!habilitada) desplazamiento.animateTo(0f) }
+
+    Box(modifier.fillMaxWidth()) {
+        if (abierto) {
+            Row(
+                Modifier
+                    .matchParentSize()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AccionDeslizada(Icons.Filled.Check, "Cumplir", colores.entrada) {
+                    cierra(); alCumplir()
+                }
+                AccionDeslizada(Icons.Filled.Close, "Descartar", colores.salida) {
+                    cierra(); alDescartar()
+                }
+            }
+        }
+
+        Box(
+            Modifier
+                .offset { IntOffset(desplazamiento.value.roundToInt(), 0) }
+                .draggable(
+                    state = rememberDraggableState { delta ->
+                        alcance.launch {
+                            desplazamiento.snapTo(
+                                (desplazamiento.value + delta).coerceIn(0f, apertura)
+                            )
+                        }
+                    },
+                    orientation = Orientation.Horizontal,
+                    enabled = habilitada,
+                    onDragStopped = { velocidad ->
+                        // Medio panel o un empujon claro bastan: pedir el recorrido
+                        // completo obliga a un gesto incomodo en pantallas angostas.
+                        val destino =
+                            if (desplazamiento.value > apertura / 2f || velocidad > 700f) apertura
+                            else 0f
+                        desplazamiento.animateTo(destino)
+                    }
+                )
+        ) {
+            contenido()
+            if (abierto) {
+                // Con el panel afuera, tocar la tarjeta lo recoge en vez de abrir
+                // la edicion: es la salida esperada de un gesto abierto sin querer.
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .pointerInput(Unit) { detectTapGestures { cierra() } }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccionDeslizada(
+    icono: ImageVector,
+    etiqueta: String,
+    color: Color,
+    alTocar: () -> Unit
+) {
+    Column(
+        Modifier
+            .width(AnchoAccion)
+            .fillMaxHeight()
+            .clickable(onClick = alTocar)
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(icono, contentDescription = etiqueta, tint = color)
+        Spacer(Modifier.height(4.dp))
+        Text(etiqueta, style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1)
+    }
 }

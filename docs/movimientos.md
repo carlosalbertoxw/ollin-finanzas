@@ -143,4 +143,10 @@ Lo que ya está comprometido y aún no se paga: mensualidades MSI, suscripciones
 - **Mientras nadie decida, el pago sigue pendiente**, aunque ya se haya pasado de fecha: sale marcado como vencido en la lista y en el tablero, y el recordatorio diario lo sigue nombrando. Es a propósito: el cargo puede llegar por fuera de la app, rebotar o no cobrarse este periodo, y solo el dueño de la cuenta sabe cuál de las tres pasó.
 - Editar el pago de un compromiso no toca el plan: solo conserva el vínculo.
 
+### Las mismas decisiones desde el tablero
+
+La sección **Se viene** del tablero no es solo un recordatorio: cada compromiso se resuelve ahí mismo, sin pasar por la lista. Tocarlo abre la captura ya llena; deslizarlo a la derecha descubre **Cumplir** y **Descartar**, con el mismo deshacer.
+
+Es a propósito el mismo gesto que en la pantalla de Compromisos, y el mismo componente (`FilaDeslizable`): el tablero es donde de verdad se ven los pagos que vienen, así que mandar a la persona a otra pantalla para dos toques sobraba. Lo que no se repite es el vocabulario — si deslizar significara aquí algo distinto, el atajo costaría más de lo que ahorra.
+
 Una revisión diaria a las 9:00 avisa de lo que ya entró en su ventana (`avisarDiasAntes`, 3 por omisión) y de lo que se venció sin resolverse. El tablero usa la misma función con una ventana de 45 días para enseñar lo que viene. Ver [seguridad](seguridad.md#permisos).
