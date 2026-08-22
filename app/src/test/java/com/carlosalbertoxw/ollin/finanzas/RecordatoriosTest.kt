@@ -138,4 +138,76 @@ class RecordatoriosTest {
         assertTrue("No debe salir 2026-08-16, salio: $texto", texto.contains("16"))
         assertTrue("Debe nombrar el mes, salio: $texto", texto.contains("agosto"))
     }
+
+    // ------------------------------------------------------ la hora del aviso
+
+    /**
+     * La regresion que dejo el aviso diario sin dispararse durante toda la vida
+     * de la app: el disparo se calculaba como `now().plusDays(1)`, y como la
+     * revision se reprograma en cada arranque, abrir la app antes de las nueve
+     * corria la alarma al dia siguiente. Otra vez. Y otra.
+     */
+    @Test
+    fun `antes de las nueve el aviso es hoy mismo`() {
+        val aLasOcho = LocalDate.of(2026, 8, 21).atTime(8, 0)
+
+        assertEquals(
+            LocalDate.of(2026, 8, 21).atTime(9, 0),
+            Recordatorios.proximoDisparo(aLasOcho)
+        )
+    }
+
+    @Test
+    fun `pasadas las nueve el aviso es mañana`() {
+        val aLasDiez = LocalDate.of(2026, 8, 21).atTime(10, 0)
+
+        assertEquals(
+            LocalDate.of(2026, 8, 22).atTime(9, 0),
+            Recordatorios.proximoDisparo(aLasDiez)
+        )
+    }
+
+    /** A las nueve en punto el aviso del dia ya salio: el siguiente es mañana. */
+    @Test
+    fun `a las nueve en punto el aviso es mañana`() {
+        val enPunto = LocalDate.of(2026, 8, 21).atTime(9, 0)
+
+        assertEquals(
+            LocalDate.of(2026, 8, 22).atTime(9, 0),
+            Recordatorios.proximoDisparo(enPunto)
+        )
+    }
+
+    /** Un minuto antes todavia alcanza: es el borde del lado util. */
+    @Test
+    fun `un minuto antes de las nueve el aviso sigue siendo hoy`() {
+        val casi = LocalDate.of(2026, 8, 21).atTime(8, 59)
+
+        assertEquals(
+            LocalDate.of(2026, 8, 21).atTime(9, 0),
+            Recordatorios.proximoDisparo(casi)
+        )
+    }
+
+    /** Pasada la medianoche el aviso es de ese mismo dia, no del siguiente. */
+    @Test
+    fun `de madrugada el aviso es del dia que empieza`() {
+        val madrugada = LocalDate.of(2026, 8, 21).atTime(0, 30)
+
+        assertEquals(
+            LocalDate.of(2026, 8, 21).atTime(9, 0),
+            Recordatorios.proximoDisparo(madrugada)
+        )
+    }
+
+    /** El ultimo dia del mes no se sale del calendario. */
+    @Test
+    fun `pasadas las nueve del ultimo dia del mes cae en el primero del siguiente`() {
+        val fin = LocalDate.of(2026, 8, 31).atTime(21, 0)
+
+        assertEquals(
+            LocalDate.of(2026, 9, 1).atTime(9, 0),
+            Recordatorios.proximoDisparo(fin)
+        )
+    }
 }

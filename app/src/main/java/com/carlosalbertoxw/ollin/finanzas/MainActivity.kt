@@ -18,6 +18,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
 import com.carlosalbertoxw.ollin.finanzas.ui.OllinRaiz
+import com.carlosalbertoxw.ollin.finanzas.ui.PideAvisos
 import com.carlosalbertoxw.ollin.finanzas.ui.screens.BloqueoPantalla
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.TemaOllin
 
@@ -71,7 +72,12 @@ class MainActivity : FragmentActivity() {
                     // No hay candado puesto, pero el control aun no lo sabe.
                     bloqueado -> Telon()
 
-                    else -> OllinRaiz(contenedor)
+                    else -> {
+                        // Aqui y no en onCreate: el permiso se pide con la app
+                        // ya abierta, no sobre la pantalla del candado.
+                        PideAvisos()
+                        OllinRaiz(contenedor)
+                    }
                 }
             }
         }

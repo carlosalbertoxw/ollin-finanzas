@@ -22,6 +22,7 @@ import com.carlosalbertoxw.ollin.finanzas.R
 import com.carlosalbertoxw.ollin.finanzas.data.db.Compromiso
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -56,10 +57,33 @@ object Recordatorios {
         gestor.createNotificationChannel(canal)
     }
 
-    /** Programa una revision diaria a las 9:00. Se reprograma sola tras cada disparo. */
+    /** La hora del aviso diario. */
+    const val HORA_AVISO = 9
+
+    /**
+     * El proximo instante en que daran las [HORA_AVISO]: hoy si todavia no han
+     * dado, mañana si ya pasaron.
+     *
+     * Antes esto era siempre `now().plusDays(1)`, y ahi estaba el error: como
+     * la revision se reprograma en cada arranque, abrir la app un dia antes de
+     * las nueve corria la alarma al dia siguiente. Quien revisaba sus finanzas
+     * por la mañana no recibia el aviso nunca.
+     */
+    fun proximoDisparo(ahora: LocalDateTime): LocalDateTime {
+        val hoyALaHora = ahora.toLocalDate().atTime(HORA_AVISO, 0)
+        return if (ahora.isBefore(hoyALaHora)) hoyALaHora else hoyALaHora.plusDays(1)
+    }
+
+    /**
+     * Programa la revision diaria. Se reprograma sola tras cada disparo, asi
+     * que si ya hay una alarma en pie no se toca: volver a programarla en cada
+     * arranque era justo lo que la empujaba un dia mas alla cada vez.
+     */
     fun programaRevisionDiaria(contexto: Context) {
         val gestor = contexto.getSystemService(AlarmManager::class.java) ?: return
-        val disparo = LocalDate.now().plusDays(1).atTime(9, 0)
+        if (yaProgramada(contexto)) return
+
+        val disparo = proximoDisparo(LocalDateTime.now())
             .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
         // Inexacta a proposito: un recordatorio de finanzas no justifica gastar
@@ -71,6 +95,19 @@ object Recordatorios {
             intentPendiente(contexto)
         )
     }
+
+    /**
+     * FLAG_NO_CREATE devuelve null si no habia ninguna: es la forma de preguntar
+     * sin crearla de paso. Un reinicio las borra, y por eso [ArranqueReceiver]
+     * vuelve a programarla.
+     */
+    private fun yaProgramada(contexto: Context): Boolean =
+        PendingIntent.getBroadcast(
+            contexto,
+            CODIGO_DIARIO,
+            Intent(contexto, RecordatorioReceiver::class.java),
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        ) != null
 
     private fun intentPendiente(contexto: Context): PendingIntent =
         PendingIntent.getBroadcast(

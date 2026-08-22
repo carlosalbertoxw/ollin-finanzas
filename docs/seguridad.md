@@ -94,7 +94,11 @@ Solo tres, y ninguno da acceso a datos ajenos a la app:
 
 Los archivos se leen y se escriben por el **selector del sistema** (Storage Access Framework), así que no hace falta permiso de almacenamiento: la app solo ve el archivo que el usuario eligió.
 
-La alarma de los recordatorios es **inexacta** a propósito: un recordatorio de finanzas no justifica pedir el permiso de alarma exacta ni gastar batería. Si el permiso de notificaciones no está concedido, la app simplemente no notifica.
+La alarma de los recordatorios es **inexacta** a propósito: un recordatorio de finanzas no justifica pedir el permiso de alarma exacta ni gastar batería.
+
+`POST_NOTIFICATIONS` **se pide en tiempo de ejecución**, desde [`PideAvisos`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/PermisoAvisos.kt). Desde Android 13 nace denegado y declararlo en el manifiesto no basta: durante un tiempo la app no lo pedía nunca, así que el aviso diario se construía y se descartaba en silencio y la app parecía no tener recordatorios.
+
+Se pide con la app ya desbloqueada y no al arrancar: un diálogo del sistema encima de la pantalla del candado no se entiende, porque todavía no se ha visto de qué app viene. Si no se concede, la app simplemente no notifica — todo lo demás funciona igual.
 
 ## Manejo de errores
 

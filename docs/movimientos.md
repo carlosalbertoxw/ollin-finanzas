@@ -149,4 +149,6 @@ La sección **Se viene** del tablero no es solo un recordatorio: cada compromiso
 
 Es a propósito el mismo gesto que en la pantalla de Compromisos, y el mismo componente (`FilaDeslizable`): el tablero es donde de verdad se ven los pagos que vienen, así que mandar a la persona a otra pantalla para dos toques sobraba. Lo que no se repite es el vocabulario — si deslizar significara aquí algo distinto, el atajo costaría más de lo que ahorra.
 
-Una revisión diaria a las 9:00 avisa de lo que ya entró en su ventana (`avisarDiasAntes`, 3 por omisión) y de lo que se venció sin resolverse. El tablero usa la misma función con una ventana de 45 días para enseñar lo que viene. Ver [seguridad](seguridad.md#permisos).
+Una revisión diaria a las 9:00 avisa de lo que ya entró en su ventana (`avisarDiasAntes`, 3 por omisión) y de lo que se venció sin resolverse, con una notificación por compromiso. El tablero usa la misma función con una ventana de 45 días para enseñar lo que viene.
+
+La alarma se programa al **próximo** paso por las 9:00: hoy si todavía no han dado, mañana si ya pasaron. Antes se fijaba siempre en `now().plusDays(1)`, y como la revisión se reprograma en cada arranque, abrir la app antes de las nueve corría la alarma un día más allá — quien revisaba sus finanzas por la mañana no recibía el aviso nunca. Por lo mismo, ahora no se reprograma si ya hay una en pie. Ver [seguridad](seguridad.md#permisos).
