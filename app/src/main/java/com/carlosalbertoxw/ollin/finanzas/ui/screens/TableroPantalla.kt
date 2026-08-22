@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -65,6 +66,7 @@ import com.carlosalbertoxw.ollin.finanzas.domain.usecase.RevisaCalidad
 import com.carlosalbertoxw.ollin.finanzas.ui.components.BarrasFlujo
 import com.carlosalbertoxw.ollin.finanzas.ui.components.LineaEvolucion
 import com.carlosalbertoxw.ollin.finanzas.ui.components.Punto
+import com.carlosalbertoxw.ollin.finanzas.ui.components.AlturaMinimaDeslizable
 import com.carlosalbertoxw.ollin.finanzas.ui.components.FilaDeslizable
 import com.carlosalbertoxw.ollin.finanzas.ui.components.SeccionTitulo
 import com.carlosalbertoxw.ollin.finanzas.ui.components.TarjetaCifra
@@ -431,9 +433,11 @@ fun TableroPantalla(
                     Row(
                         Modifier
                             .fillMaxWidth()
-                            // Fondo propio, aunque el tablero ya lo tenga: al
-                            // deslizarse, la fila viaja por encima del panel de
-                            // acciones, y sin el se transparentaria encima.
+                            // Los dos requisitos de FilaDeslizable. El alto
+                            // minimo es para que "Cumplir" y "Descartar" quepan
+                            // con su texto: el panel hereda la altura de esta
+                            // fila, y mas bajo solo se veian los iconos.
+                            .heightIn(min = AlturaMinimaDeslizable)
                             .background(MaterialTheme.colorScheme.background)
                             .clickable { alPagarCompromiso(compromiso.id) }
                             .padding(vertical = 8.dp),

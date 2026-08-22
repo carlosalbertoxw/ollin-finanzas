@@ -41,6 +41,11 @@ Dos rutas se reescriben al vuelo en vez de apilarse:
 
 `FilaDeslizable` vive aquí y no en una pantalla porque la usan dos —la lista de Compromisos y la sección "Se viene" del tablero— y el gesto tiene que significar lo mismo en ambas. Una copia se habría separado de la otra a la primera corrección.
 
+Su contenido tiene dos requisitos, y los dos se descubrieron rompiéndolos al reusarla en el tablero:
+
+- **Opaco**, porque viaja por encima del panel de acciones y si no se le ve a través al deslizar.
+- **De `AlturaMinimaDeslizable` para arriba**, porque el panel se dibuja con `matchParentSize()` y hereda la altura del contenido. Más bajo, la etiqueta —que es el último hijo del `Column`— se recorta y "Cumplir" y "Descartar" quedan como dos símbolos sueltos. La constante lleva margen sobre la cuenta justa porque la etiqueta se mide en `sp` y crece con la letra del sistema.
+
 ### `domain/`
 
 Sin dependencias de Android. Contiene:

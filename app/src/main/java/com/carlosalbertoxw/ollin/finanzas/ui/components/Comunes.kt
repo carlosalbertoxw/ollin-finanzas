@@ -366,6 +366,18 @@ fun Marco(
 private val AnchoAccion = 88.dp
 
 /**
+ * Lo que mide una accion de arriba a abajo: icono, un respiro y la etiqueta.
+ * El panel se dibuja con [Modifier.matchParentSize], asi que hereda la altura
+ * del contenido; si el contenido es mas bajo que esto, la etiqueta —que es el
+ * ultimo hijo— se recorta y la accion queda como un simbolo suelto.
+ *
+ * Son 64 y no los ~52 que pide la cuenta justa porque la etiqueta se mide en
+ * sp: con la letra del sistema en grande crece, y el margen es lo que evita
+ * que el recorte vuelva en los telefonos donde ya costaba leer.
+ */
+val AlturaMinimaDeslizable = 64.dp
+
+/**
  * Fila que al deslizarse a la derecha descubre sus dos decisiones.
  *
  * Es el gesto con el que un compromiso se cumple o se descarta. El pago no se
@@ -376,8 +388,13 @@ private val AnchoAccion = 88.dp
  * la seccion "Se viene" del tablero. El gesto tiene que significar lo mismo en
  * las dos, y una copia se habria separado de la otra a la primera correccion.
  *
- * [contenido] debe ser opaco: viaja por encima del panel de acciones, asi que
- * si es transparente el panel se le ve a traves al deslizar.
+ * [contenido] tiene dos requisitos, y los dos se descubrieron rompiendolos:
+ *
+ * - **Opaco**: viaja por encima del panel de acciones, asi que si es
+ *   transparente el panel se le ve a traves al deslizar.
+ * - **De [AlturaMinimaDeslizable] para arriba**: el panel hereda su altura, y
+ *   mas bajo que eso las etiquetas "Cumplir" y "Descartar" se recortan y solo
+ *   quedan los iconos.
  */
 @Composable
 fun FilaDeslizable(
@@ -467,9 +484,11 @@ private fun AccionDeslizada(
     Column(
         Modifier
             .width(AnchoAccion)
+            // Alto completo para que el area tocable sea toda la franja, pero
+            // con poco relleno: lo que sobra se lo come la etiqueta.
             .fillMaxHeight()
             .clickable(onClick = alTocar)
-            .padding(vertical = 12.dp),
+            .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
