@@ -1,6 +1,7 @@
 # Publica una version: APK firmado, su suma SHA-256 y el lanzamiento en GitHub.
 #
-# Se dispara con un tag `vX.Y.Z`, que tiene que coincidir con version.properties.
+# Se dispara con un tag `vX.Y.Z`, que tiene que coincidir con version.properties,
+# y sus notas salen de la seccion de esa version en CHANGELOG.md.
 # El flujo de Pages escucha el final de este y reconstruye el sitio, asi que la
 # pagina y el aviso de actualizacion de la app quedan al dia solos.
 #
@@ -56,6 +57,15 @@ jobs:
           echo "codigo=$codigo" >> "$GITHUB_OUTPUT"
           echo "apk=ollin-finanzas-$nombre.apk" >> "$GITHUB_OUTPUT"
 
+      # Antes de compilar: una version sin notas se detiene aqui y no despues
+      # de haber firmado el APK.
+      - name: Notas de la version
+        run: |
+          set -euo pipefail
+          .github/scripts/notas-de-version.sh "${{ steps.version.outputs.nombre }}"             > "$RUNNER_TEMP/notas.md"
+          echo "Notas encontradas en CHANGELOG.md:"
+          cat "$RUNNER_TEMP/notas.md"
+
       - name: Los secretos de firma estan puestos
         env:
           ALMACEN: ${{ secrets.KEYSTORE_BASE64 }}
@@ -107,25 +117,36 @@ jobs:
         if: always()
         run: rm -f keystore.properties "$RUNNER_TEMP/ollin-release.jks"
 
+      # El cuerpo se arma aqui y no en el `with:` del action porque lleva un
+      # archivo de por medio: las notas vienen del CHANGELOG.
+      - name: Armar el cuerpo del lanzamiento
+        run: |
+          set -euo pipefail
+          {
+            echo "build ${{ steps.version.outputs.codigo }} · ${{ steps.apk.outputs.peso }} · Android 8.0 o superior"
+            echo
+            cat "$RUNNER_TEMP/notas.md"
+            echo
+            echo "## Instalar"
+            echo
+            echo "Descarga el \`.apk\` de aquí abajo y ábrelo en el teléfono. Android va a pedir"
+            echo "permiso para instalar desde tu navegador: es el aviso normal de cualquier app"
+            echo "que no viene de Google Play. Las instrucciones completas están en"
+            echo "<https://carlosalbertoxw.com/ollin-finanzas/>."
+            echo
+            echo "Para comprobar que el archivo llegó entero:"
+            echo
+            echo '```bash'
+            echo "sha256sum -c ${{ steps.version.outputs.apk }}.sha256"
+            echo '```'
+          } > "$RUNNER_TEMP/cuerpo.md"
+
       - name: Lanzamiento
         uses: softprops/action-gh-release@v2
         with:
           name: Ollin Finanzas ${{ steps.version.outputs.nombre }}
           draft: false
-          generate_release_notes: true
+          body_path: ${{ runner.temp }}/cuerpo.md
           files: |
             ${{ steps.version.outputs.apk }}
             ${{ steps.version.outputs.apk }}.sha256
-          body: |
-            **Ollin Finanzas ${{ steps.version.outputs.nombre }}**
-            build ${{ steps.version.outputs.codigo }} · ${{ steps.apk.outputs.peso }} · Android 8.0 o superior
-
-            Descarga el `.apk` de aquí abajo y ábrelo en el teléfono. Android va a pedir
-            permiso para instalar desde tu navegador: es el aviso normal de cualquier app
-            que no viene de Google Play.
-
-            Las instrucciones completas están en
-            https://carlosalbertoxw.com/ollin-finanzas/
-
-            Para comprobar que el archivo llegó entero:
-            `sha256sum -c ollin-finanzas-${{ steps.version.outputs.nombre }}.apk.sha256`

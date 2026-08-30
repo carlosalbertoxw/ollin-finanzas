@@ -40,7 +40,7 @@ Qué mover:
 | Flujo | Cuándo | Qué hace |
 |---|---|---|
 | [`ci.yml`](../.github/workflows/ci.yml) | push a `main`, cada PR | Pruebas unitarias, lint, APK de depuración y build del sitio |
-| [`release.yml`](../.github/workflows/release.yml) | tag `vX.Y.Z` | Verifica el tag, prueba, firma, y publica el APK con su SHA-256 |
+| [`release.yml`](../.github/workflows/release.yml) | tag `vX.Y.Z` | Verifica el tag y las notas, prueba, firma, y publica el APK con su SHA-256 |
 | [`pages.yml`](../.github/workflows/pages.yml) | `web/**`, `version.properties`, o al terminar un Release | Construye el sitio y lo publica en Pages |
 
 Los tres usan **JDK 21**: Kotlin 2.1.20 no arranca con 25 ni 26. Ver [desarrollo](desarrollo.md#el-jdk-de-gradle).
@@ -91,19 +91,31 @@ El de la app es el delicado: **queda horneado en cada APK que alguien instale**.
 ## Publicar una versión
 
 ```bash
-# 1. Sube el numero en version.properties y confirmalo.
-git add version.properties && git commit -m "Sube a 1.1.0"
+# 1. Sube el numero en version.properties.
+# 2. En CHANGELOG.md, convierte "Sin publicar" en la seccion de la version
+#    nueva con su fecha, y deja "Sin publicar" vacio arriba.
+git add version.properties CHANGELOG.md && git commit -m "Sube a 1.1.0"
 
-# 2. Etiqueta con la misma version, con v al frente.
+# 3. Etiqueta con la misma version, con v al frente.
 git tag v1.1.0 && git push origin main v1.1.0
 ```
 
-Y ya. El flujo de release compara el tag contra `version.properties` y **aborta si no coinciden**, corre las pruebas, firma, publica el lanzamiento con el APK y su suma, y despierta al flujo de Pages, que reconstruye el sitio con la versión nueva.
+Y ya. El flujo compara el tag contra `version.properties`, busca las notas en el changelog, corre las pruebas, firma, publica el lanzamiento con el APK y su suma, y despierta al flujo de Pages, que reconstruye el sitio con la versión nueva.
 
-Si el tag no coincide, el error lo dice con las dos versiones. Para rehacerlo:
+Las dos verificaciones van **antes** de compilar, así que un descuido cuesta veinte segundos y no seis minutos más una firma gastada. Si el tag no coincide con la versión, o si falta la sección del changelog, el error lo dice con nombre y apellido. Para rehacer un tag:
 
 ```bash
 git tag -d v1.1.0 && git push origin :refs/tags/v1.1.0
+```
+
+### Las notas salen del changelog
+
+El cuerpo del lanzamiento no es un volcado de commits: es lo que tú escribiste en [`CHANGELOG.md`](../CHANGELOG.md). [`notas-de-version.sh`](../.github/scripts/notas-de-version.sh) saca la sección `## [X.Y.Z]` —parándose en el encabezado siguiente y en el bloque de enlaces del pie— y el flujo le agrega arriba el peso y el build, y abajo las instrucciones de instalación y el `sha256sum`.
+
+Se puede probar antes de etiquetar, que es la gracia de tenerlo en un script y no enterrado en el YAML:
+
+```bash
+.github/scripts/notas-de-version.sh 1.1.0
 ```
 
 ## Cómo se entera la app

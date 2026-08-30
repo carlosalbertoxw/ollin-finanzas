@@ -128,6 +128,7 @@ Decisiones que no son las de default, y por qué:
 - [Seguridad y privacidad](docs/seguridad.md) — cifrado de la base, Keystore, PIN, bloqueo y respaldos.
 - [Desarrollo](docs/desarrollo.md) — entorno, comandos, pruebas, integración continua y convenciones del código.
 - [Publicación](docs/publicacion.md) — versionado, firma, release automatizado, el sitio y cómo se entera la app de una versión nueva.
+- [Registro de cambios](CHANGELOG.md) — qué trae cada versión. De aquí salen las notas de cada lanzamiento.
 
 ---
 
