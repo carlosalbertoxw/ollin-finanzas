@@ -62,6 +62,7 @@ Sin dependencias de Android. Contiene:
 - `prefs/` — preferencias en DataStore, expuestas como un `Flow<Ajustes>`.
 - `seguridad/` — llave de la base, derivación del PIN y control de bloqueo. Ver [seguridad](seguridad.md).
 - `notify/` — recordatorios de compromisos por vencer.
+- `actualizacion/` — la única salida a la red: preguntarle al sitio, una vez al día, si hay una versión más nueva. Ver [publicación](publicacion.md#cómo-se-entera-la-app).
 
 No hay excepciones a la regla del repositorio. `ReparaDatos` arma la lista de correcciones y la manda a `actualizaMovimientos`, que las aplica en una sola transacción; `ImportadorExcel` recibe la base entera justamente para poder abrir la suya.
 
@@ -74,6 +75,8 @@ Con un módulo y media docena de objetos compartidos, Hilt aportaría anotacione
 `OllinApp` además crea el canal de notificaciones, programa la revisión diaria de compromisos y siembra el catálogo inicial. Las dos últimas van en un `CoroutineScope` de IO porque las dos tocan disco: la hora del aviso vive en DataStore, y leerla en `onCreate()` bloquearía el arranque antes de la primera pantalla. El [sembrador](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/Sembrador.kt) es idempotente: si ya hay categorías, no toca nada.
 
 `ArranqueReceiver` hace lo mismo tras un reinicio, que borra las alarmas del sistema; por eso usa `goAsync()`, para poder leer la hora guardada antes de reprogramarla.
+
+En ese mismo arranque va la búsqueda de versiones nuevas, envuelta en `runCatching`: es de cortesía, y ni la falta de red ni un sitio caído tienen por qué asomar en la cara de nadie.
 
 ## Arranque y bloqueo
 

@@ -1,0 +1,131 @@
+# Publica una version: APK firmado, su suma SHA-256 y el lanzamiento en GitHub.
+#
+# Se dispara con un tag `vX.Y.Z`, que tiene que coincidir con version.properties.
+# El flujo de Pages escucha el final de este y reconstruye el sitio, asi que la
+# pagina y el aviso de actualizacion de la app quedan al dia solos.
+#
+# Secretos que hacen falta (Settings -> Secrets and variables -> Actions):
+#
+#   KEYSTORE_BASE64    el .jks en base64: base64 -w0 ollin-finanzas-release.jks
+#   KEYSTORE_PASSWORD  la del almacen
+#   KEY_ALIAS          el alias de la llave
+#   KEY_PASSWORD       la de la llave
+#
+# Sin ellos el flujo se detiene antes de compilar: un APK sin firmar no se
+# instala, y publicarlo seria peor que no publicar nada.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publica:
+    name: APK firmado y lanzamiento
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: La version del tag es la del repositorio
+        id: version
+        run: |
+          set -euo pipefail
+          nombre="$(./gradlew -q :app:imprimeVersion | grep '^versionName=' | cut -d= -f2)"
+          codigo="$(./gradlew -q :app:imprimeVersion | grep '^versionCode=' | cut -d= -f2)"
+          tag="${GITHUB_REF_NAME}"
+          if [ "$tag" != "v$nombre" ]; then
+            echo "::error::El tag $tag no coincide con version.properties ($nombre)." \
+                 "Corrige version.properties, o vuelve a etiquetar con v$nombre."
+            exit 1
+          fi
+          echo "nombre=$nombre" >> "$GITHUB_OUTPUT"
+          echo "codigo=$codigo" >> "$GITHUB_OUTPUT"
+          echo "apk=ollin-finanzas-$nombre.apk" >> "$GITHUB_OUTPUT"
+
+      - name: Los secretos de firma estan puestos
+        env:
+          ALMACEN: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "${ALMACEN:-}" ]; then
+            echo "::error::Falta el secreto KEYSTORE_BASE64. Ver docs/publicacion.md."
+            exit 1
+          fi
+
+      # Se prueba antes de firmar: no tiene caso gastar la llave en un APK que
+      # no pasa sus propias pruebas.
+      - name: Pruebas unitarias
+        run: ./gradlew :app:testDebugUnitTest
+
+      # El almacen vive en RUNNER_TEMP, fuera del arbol de trabajo: asi no puede
+      # colarse en el APK ni quedarse en un artefacto por descuido.
+      - name: Preparar la firma
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          almacen="$RUNNER_TEMP/ollin-release.jks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$almacen"
+          cat > keystore.properties <<PROPS
+          storeFile=$almacen
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          PROPS
+
+      - name: APK de release
+        run: ./gradlew :app:assembleRelease
+
+      - name: Nombrar y sumar
+        id: apk
+        run: |
+          set -euo pipefail
+          origen="app/build/outputs/apk/release/app-release.apk"
+          destino="${{ steps.version.outputs.apk }}"
+          mv "$origen" "$destino"
+          sha256sum "$destino" > "$destino.sha256"
+          echo "peso=$(du -h "$destino" | cut -f1)" >> "$GITHUB_OUTPUT"
+
+      # La llave no tiene nada que hacer en disco despues de firmar.
+      - name: Borrar la llave
+        if: always()
+        run: rm -f keystore.properties "$RUNNER_TEMP/ollin-release.jks"
+
+      - name: Lanzamiento
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Ollin Finanzas ${{ steps.version.outputs.nombre }}
+          draft: false
+          generate_release_notes: true
+          files: |
+            ${{ steps.version.outputs.apk }}
+            ${{ steps.version.outputs.apk }}.sha256
+          body: |
+            **Ollin Finanzas ${{ steps.version.outputs.nombre }}**
+            build ${{ steps.version.outputs.codigo }} · ${{ steps.apk.outputs.peso }} · Android 8.0 o superior
+
+            Descarga el `.apk` de aquí abajo y ábrelo en el teléfono. Android va a pedir
+            permiso para instalar desde tu navegador: es el aviso normal de cualquier app
+            que no viene de Google Play.
+
+            Las instrucciones completas están en
+            https://carlosalbertoxw.com/ollin-finanzas/
+
+            Para comprobar que el archivo llegó entero:
+            `sha256sum -c ollin-finanzas-${{ steps.version.outputs.nombre }}.apk.sha256`

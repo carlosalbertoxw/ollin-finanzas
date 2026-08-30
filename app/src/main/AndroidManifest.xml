@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+        La unica salida a la red: preguntarle al sitio del proyecto, una vez al
+        dia, si hay una version mas nueva. Es un GET a un archivo estatico que
+        no manda nada, y se apaga desde Ajustes. La app no se instala desde
+        Play, asi que sin esto nadie se entera de una actualizacion.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />

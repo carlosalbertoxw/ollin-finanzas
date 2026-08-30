@@ -1,6 +1,6 @@
 # Modelo de datos
 
-Room sobre SQLite cifrado. Seis tablas, versión de esquema **1** —la inicial, sin ninguna migración todavía— y esquemas exportados en `app/schemas/`.
+Room sobre SQLite cifrado. Seis tablas, versión de esquema **1** y esquemas exportados en `app/schemas/`, que se versionan en git.
 
 Las entidades de Room son también el modelo de dominio: [`Entidades.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/Entidades.kt).
 
@@ -139,12 +139,52 @@ Queda una limitación conocida de las cadencias en meses, anotada en el diálogo
 | `RenglonPresupuesto` | Meta contra realidad, con desviación y avance |
 | `UsoCategoria` | Cuántos movimientos cuelgan de cada categoría; decide si se puede borrar o solo archivar |
 
-## Versionado del esquema
+## Migraciones
 
-**El esquema es el inicial y no hay ninguna migración.** La app todavía no se publica, así que no existe un teléfono ajeno con datos que preservar: si el modelo cambia, se reescribe sobre la versión 1 y se reinstala. El esquema vigente es `app/schemas/1.json`, que KSP regenera en cada compilación y sí se versiona en git — es la foto contra la que se comparará el primer cambio real.
+Al otro lado de cada versión publicada hay un teléfono con un libro de finanzas dentro. Room se niega a abrir una base cuyo esquema no reconoce, así que **cambiar una entidad sin migración deja la app sin arrancar** en el teléfono de quien ya tenía datos — y esos datos están cifrados, de modo que no hay forma de rescatarlos a mano.
 
-Cambiar el esquema sin subir `version` tiene un precio local: la base que ya está en tu teléfono deja de abrir porque su `identityHash` no coincide. Desinstala la app y vuelve a instalarla. Está cifrada, así que no hay forma de rescatar a mano lo que tuviera dentro; exporta el `.xlsx` antes si te importa lo capturado.
+| Versión | Cambio |
+|---|---|
+| 1 | Esquema inicial |
 
-Esto vale hasta la primera versión que instale alguien más. A partir de ahí cada cambio de esquema necesita su migración: cambiar las entidades, subir `version` en [`OllinDatabase`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/OllinDatabase.kt), escribir la `Migration`, registrarla con `addMigrations(...)` y versionar el `app/schemas/N.json` nuevo.
+La versión vigente es la constante `VERSION_BASE` en [`OllinDatabase.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/OllinDatabase.kt). Vive fuera de la clase a propósito: así una prueba de la JVM puede leerla sin cargar Room ni Android.
 
-**Nunca uses `fallbackToDestructiveMigration()`.** Es la salida cómoda cuando Room reclama una migración que falta, y lo que hace es borrar la base entera y volver a crearla: en esta app eso es tirar el libro de finanzas del usuario, en silencio y sin posibilidad de deshacer. Mientras no haya nada publicado la reinstalación a mano hace ese trabajo y es una decisión consciente; después, lo que falta es la `Migration`. La prohibición está anotada también en el `databaseBuilder` de [`OllinDatabase`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/OllinDatabase.kt), que es donde daría la tentación.
+### Cómo se agrega una
+
+1. **Cambia las entidades.**
+2. **Sube `VERSION_BASE`** a N.
+3. **Compila.** KSP escribe `app/schemas/N.json`; agrégalo a git. Es el contrato de esa versión y la referencia contra la que se escribe la migración siguiente.
+4. **Escribe la migración** en [`Migraciones.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/Migraciones.kt), comparando el json nuevo contra el anterior para sacar el SQL exacto.
+
+```kotlin
+private val DE_1_A_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE compromiso ADD COLUMN diaDePago INTEGER")
+    }
+}
+
+val MIGRACIONES: Array<Migration> = arrayOf(DE_1_A_2)
+```
+
+El `databaseBuilder` ya las registra con `addMigrations(*MIGRACIONES)`: no hay que tocarlo.
+
+Sube también la **versión de la app** ([publicación](publicacion.md#el-número-de-versión)). Un cambio de esquema con migración es de los que mueven el número mayor.
+
+### Lo que vigila la suite
+
+[`EsquemaDeBaseTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EsquemaDeBaseTest.kt) corre en la JVM, en cada CI, y falla si:
+
+- falta el `N.json` de la versión vigente, o el que declara adentro no es esa versión;
+- alguna versión intermedia se quedó sin exportar;
+- la cadena de migraciones tiene un hueco entre 1 y N;
+- alguna migración va al revés o se sale del rango.
+
+Es barata y atrapa el olvido típico —subir la versión y no escribir la migración— en el mismo commit que lo comete. Lo que **no** puede decir es si el SQL de la migración hace lo correcto: eso pide una prueba instrumentada con `MigrationTestHelper`, que crea la base en la versión vieja, corre la migración de verdad y valida el esquema resultante. Va en `androidTest` porque necesita dispositivo, y con SQLCipher hay que pasarle la misma `SupportOpenHelperFactory` que usa [`OllinDatabase`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/OllinDatabase.kt). Esa prueba se escribe junto con la primera migración; antes no hay nada que ejecutar.
+
+### Nunca `fallbackToDestructiveMigration()`
+
+Es la salida cómoda cuando Room reclama una migración que falta, y lo que hace es borrar la base entera y volver a crearla: aquí eso es tirar el libro de finanzas de alguien, en silencio y sin posibilidad de deshacer. Si Room reclama, lo que falta es la `Migration`. La prohibición está anotada también en el `databaseBuilder`, que es donde daría la tentación.
+
+### Durante el desarrollo
+
+Cambiar el esquema sin subir la versión deja la base de **tu** teléfono sin abrir: su `identityHash` ya no coincide. Desinstala y vuelve a instalar. Room tampoco sabe bajar de versión, así que subirla y arrepentirse tiene el mismo precio. Exporta el `.xlsx` antes si te importa lo que tenías capturado.

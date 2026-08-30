@@ -1,5 +1,7 @@
 package com.carlosalbertoxw.ollin.finanzas.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,54 +16,108 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.R
+import com.carlosalbertoxw.ollin.finanzas.data.actualizacion.Actualizaciones
+import com.carlosalbertoxw.ollin.finanzas.data.actualizacion.BuscadorDeActualizaciones
+import com.carlosalbertoxw.ollin.finanzas.data.actualizacion.ResultadoBusqueda
+import com.carlosalbertoxw.ollin.finanzas.data.actualizacion.VersionInstalada
+import com.carlosalbertoxw.ollin.finanzas.data.prefs.Ajustes
+import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
+import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
 
+class AcercaDeVm(
+    private val prefs: AjustesRepositorio,
+    private val buscador: BuscadorDeActualizaciones,
+    val version: VersionInstalada
+) : ViewModel() {
+
+    val ajustes: StateFlow<Ajustes> = prefs.ajustes
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Ajustes())
+
+    private val _buscando = MutableStateFlow(false)
+    val buscando: StateFlow<Boolean> = _buscando
+
+    /** Lo que dejo la ultima busqueda pedida a mano. */
+    private val _aviso = MutableStateFlow<String?>(null)
+    val aviso: StateFlow<String?> = _aviso
+
+    /**
+     * La busqueda a peticion no mira el interruptor ni el intervalo: tocar un
+     * boton y que no ocurra nada se lee como una app rota. Lo que si respeta
+     * es el resto del trato -- un GET al archivo del sitio, sin mandar nada.
+     */
+    fun buscaAhora() {
+        if (_buscando.value) return
+        viewModelScope.launch {
+            _buscando.value = true
+            _aviso.value = null
+            val resultado = runCatching { buscador.busca(forzada = true) }
+                .getOrDefault(ResultadoBusqueda.SIN_RESPUESTA)
+            _buscando.value = false
+            _aviso.value = when (resultado) {
+                ResultadoBusqueda.HAY_NOVEDAD -> null   // lo dice la tarjeta, con su enlace
+                ResultadoBusqueda.AL_DIA -> "Ya tienes la version mas reciente."
+                else -> "No se pudo preguntar. Revisa tu conexion e intentalo otra vez."
+            }
+        }
+    }
+
+    fun cambiaBusquedaAutomatica(valor: Boolean) {
+        viewModelScope.launch { prefs.guardaBuscaActualizaciones(valor) }
+    }
+}
+
 /**
- * Quien es la app, de donde viene el nombre y como trata tus datos.
+ * Quien es la app, de donde viene el nombre, que version traes y como trata
+ * tus datos.
  *
- * Vive aparte de Ajustes a proposito: aqui no se cambia nada, solo se lee, y
- * mezclar lectura con interruptores alarga la pantalla que si se usa a diario.
+ * Vive aparte de Ajustes a proposito: lo de aqui se lee de corrido, y mezclarlo
+ * con los interruptores alargaria la pantalla que si se usa a diario. La unica
+ * excepcion es el interruptor de la busqueda de versiones, que va pegado a lo
+ * que enciende y apaga.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AcercaDePantalla(
+    ajustes: AjustesRepositorio,
+    buscador: BuscadorDeActualizaciones,
+    version: VersionInstalada,
     alAbrirTutoriales: () -> Unit,
     alCerrar: () -> Unit
 ) {
     val contexto = LocalContext.current
     val colores = LocalColoresOllin.current
-
-    // Se lee del paquete instalado y no de BuildConfig: asi la version que se
-    // muestra es la que el telefono tiene puesta, sin activar buildConfig.
-    val version = remember(contexto) {
-        runCatching {
-            contexto.packageManager.getPackageInfo(contexto.packageName, 0)
-        }.getOrNull()?.let { info ->
-            val nombre = info.versionName ?: "1.0"
-            val codigo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                info.longVersionCode
-            } else {
-                @Suppress("DEPRECATION") info.versionCode.toLong()
-            }
-            "Version $nombre  ·  build $codigo"
-        } ?: "Version desconocida"
-    }
+    val vm = recuerdaVm("acercaDe") { AcercaDeVm(ajustes, buscador, version) }
+    val preferencias by vm.ajustes.collectAsStateWithLifecycle()
+    val buscando by vm.buscando.collectAsStateWithLifecycle()
+    val aviso by vm.aviso.collectAsStateWithLifecycle()
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
@@ -98,12 +154,31 @@ fun AcercaDePantalla(
                         color = colores.textoTenue
                     )
                     Text(
-                        version,
+                        "Version $version",
                         style = MaterialTheme.typography.bodySmall,
                         color = colores.textoTenue
                     )
                 }
             }
+
+            HorizontalDivider()
+
+            SeccionVersion(
+                version = version,
+                ajustes = preferencias,
+                buscando = buscando,
+                aviso = aviso,
+                alBuscar = vm::buscaAhora,
+                alCambiarAutomatica = vm::cambiaBusquedaAutomatica,
+                alAbrirDescarga = { url ->
+                    runCatching {
+                        contexto.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
+                }
+            )
 
             HorizontalDivider()
 
@@ -142,9 +217,17 @@ fun AcercaDePantalla(
             Text("Tu privacidad", style = MaterialTheme.typography.titleMedium)
             Text(
                 "Todo vive en este telefono. No hay cuentas de usuario, ni servidor, ni " +
-                    "analitica, ni publicidad: nada sale de aqui salvo el .xlsx que tu " +
-                    "exportas a donde tu decides.",
+                    "analitica, ni publicidad: nada de lo que capturas sale de aqui, salvo " +
+                    "el .xlsx que tu exportas a donde tu decides.",
                 style = MaterialTheme.typography.bodyMedium,
+                color = colores.textoTenue
+            )
+            Text(
+                "La app hace una sola llamada a internet: preguntarle al sitio del proyecto " +
+                    "si hay una version mas nueva, una vez al dia. Es una peticion a un " +
+                    "archivo fijo que no manda ningun dato tuyo -- ni siquiera que version " +
+                    "traes -- y se apaga aqui mismo.",
+                style = MaterialTheme.typography.bodySmall,
                 color = colores.textoTenue
             )
             Text(
@@ -187,6 +270,76 @@ fun AcercaDePantalla(
             Spacer(Modifier.height(24.dp))
             TextButton(onClick = alCerrar, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
         }
+    }
+}
+
+/**
+ * Que version traes y si hay una mas nueva.
+ *
+ * Ollin Finanzas no se instala desde Play, asi que este es el unico lugar donde
+ * alguien puede enterarse de que salio una version: sin el, el APK que bajaste
+ * es el que te quedas para siempre.
+ */
+@Composable
+private fun SeccionVersion(
+    version: VersionInstalada,
+    ajustes: Ajustes,
+    buscando: Boolean,
+    aviso: String?,
+    alBuscar: () -> Unit,
+    alCambiarAutomatica: (Boolean) -> Unit,
+    alAbrirDescarga: (String) -> Unit
+) {
+    val colores = LocalColoresOllin.current
+    val hayNovedad = Actualizaciones.hayNovedad(ajustes.versionPublicada, version.codigo)
+
+    Text("Tu version", style = MaterialTheme.typography.titleMedium)
+
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(version.nombre, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                if (version.esConocida) "Build ${version.codigo}" else "No se pudo leer del sistema",
+                style = MaterialTheme.typography.bodySmall,
+                color = colores.textoTenue
+            )
+        }
+        TextButton(onClick = alBuscar, enabled = !buscando) {
+            if (buscando) {
+                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.size(8.dp))
+            }
+            Text("Buscar ahora")
+        }
+    }
+
+    if (hayNovedad) {
+        Text(
+            "Hay una version nueva: ${ajustes.nombreVersionPublicada ?: "mas reciente"}.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = colores.entrada
+        )
+        TextButton(
+            onClick = { alAbrirDescarga(ajustes.urlVersionPublicada ?: Actualizaciones.SITIO) },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Ir a la descarga") }
+    }
+
+    aviso?.let {
+        Text(it, style = MaterialTheme.typography.bodySmall, color = colores.textoTenue)
+    }
+
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Avisarme de versiones nuevas", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "Pregunta una vez al dia si salio una version. Apagado, la app no toca " +
+                    "internet en ningun momento.",
+                style = MaterialTheme.typography.bodySmall,
+                color = colores.textoTenue
+            )
+        }
+        Switch(checked = ajustes.buscaActualizaciones, onCheckedChange = alCambiarAutomatica)
     }
 }
 

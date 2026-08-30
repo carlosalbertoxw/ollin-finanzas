@@ -1,6 +1,9 @@
 package com.carlosalbertoxw.ollin.finanzas.di
 
 import android.content.Context
+import com.carlosalbertoxw.ollin.finanzas.data.actualizacion.BuscadorDeActualizaciones
+import com.carlosalbertoxw.ollin.finanzas.data.actualizacion.VersionInstalada
+import com.carlosalbertoxw.ollin.finanzas.data.actualizacion.versionInstalada
 import com.carlosalbertoxw.ollin.finanzas.data.db.OllinDatabase
 import com.carlosalbertoxw.ollin.finanzas.data.db.Sembrador
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
@@ -27,6 +30,16 @@ class Contenedor(contexto: Context) {
     }
 
     val ajustes: AjustesRepositorio by lazy { AjustesRepositorio(app) }
+
+    val version: VersionInstalada by lazy { versionInstalada(app) }
+
+    val buscadorDeActualizaciones: BuscadorDeActualizaciones by lazy {
+        BuscadorDeActualizaciones(
+            ajustes.ajustes,
+            ajustes::guardaVersionPublicada,
+            version.codigo
+        )
+    }
 
     val controlBloqueo: ControlBloqueo by lazy {
         ControlBloqueo(ajustes.ajustes, ajustes::guardaFallosDePin)

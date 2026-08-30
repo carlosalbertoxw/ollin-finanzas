@@ -13,6 +13,7 @@
 | JDK del proyecto | 17 (`sourceCompatibility`, `jvmTarget`) |
 | JDK para correr Gradle | **17 a 21** |
 | compileSdk / targetSdk / minSdk | 36 / 36 / 26 |
+| Node (solo para el sitio) | 22 |
 
 ### El JDK de Gradle
 
@@ -103,7 +104,8 @@ Si el archivo existe pero está incompleto, o apunta a un `.jks` inexistente, ah
 ## Configuración notable del build
 
 - **`resourceConfigurations += listOf("es")`** — la app está escrita en español; no se empaquetan los recursos de las bibliotecas en los otros ochenta idiomas.
-- **`room.schemaLocation`** — KSP escribe los esquemas en `app/schemas/`, que sí se versionan: hoy solo está el inicial, y es la foto contra la que se comparará el primer cambio de modelo.
+- **`room.schemaLocation`** — KSP escribe los esquemas en `app/schemas/`, que sí se versionan: son el contrato de cada versión de la base y la referencia contra la que se escribe la migración siguiente.
+- **`version.properties`** — el `versionName` y el `versionCode` salen de ahí, no del `build.gradle.kts`. Ver [publicación](publicacion.md#el-número-de-versión). Para leerlos: `./gradlew -q :app:imprimeVersion`.
 - **`androidx.fragment` fijado a mano** — `biometric` 1.1.0 arrastra `fragment` 1.2.5, anterior a la API de `ActivityResult`: su `FragmentActivity` rechaza los request codes de más de 16 bits que genera `activity` 1.10.1, y **cualquier** selector de archivos revienta al abrirse. Quitar esa línea de `libs.versions.toml` vuelve a romper importar y exportar.
 - **`testOptions.unitTests`** con `isIncludeAndroidResources` y `isReturnDefaultValues`, para que las pruebas en la JVM no tropiecen con las clases stub de Android.
 - **`release`** con `isMinifyEnabled` e `isShrinkResources`.
@@ -112,7 +114,7 @@ La pantalla de Acerca de lee la versión del **paquete instalado** (`PackageMana
 
 ## Pruebas
 
-Hay dos suites: **167 pruebas unitarias** en la JVM y **11 pruebas de interfaz** que necesitan dispositivo.
+Hay dos suites: **189 pruebas unitarias** en la JVM y **11 pruebas de interfaz** que necesitan dispositivo. Las unitarias y el lint corren en cada push y cada PR ([`ci.yml`](../.github/workflows/ci.yml)).
 
 ### Unitarias (JVM)
 
@@ -136,6 +138,9 @@ Hay dos suites: **167 pruebas unitarias** en la JVM y **11 pruebas de interfaz**
 | [`ExcelRoundTripTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ExcelRoundTripTest.kt) | Serial de fechas, letras de columna, centavos sin error acumulado, escritura y relectura del libro en ambos esquemas, escapado de XML, exportación parcial y libro vacío |
 | [`ExportadorBordesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ExportadorBordesTest.kt) | Compromisos con datos, catálogos incompletos, nombres que obligan a entrecomillar, y tres años de movimientos diarios |
 | [`XlsxLectorSeguridadTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/XlsxLectorSeguridadTest.kt) | Que el lector rechace un `DOCTYPE` —la bomba de entidades— y respete el tope de tamaño |
+| [`EsquemaDeBaseTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EsquemaDeBaseTest.kt) | La guardia de la base: cada versión con su json exportado y la cadena de migraciones sin huecos. Ver [modelo de datos](modelo-de-datos.md#migraciones) |
+| [`ActualizacionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ActualizacionesTest.kt) | Cuándo toca preguntar por una versión nueva, qué cuenta como novedad y qué se acepta del `version.json` — incluida la url ajena, que se descarta entera |
+| [`BuscadorDeActualizacionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/BuscadorDeActualizacionesTest.kt) | Que apagada no toque la red, que la pedida a mano ignore el interruptor y el intervalo, y que un día sin respuesta no gaste el turno |
 
 Las pruebas de Excel escriben libros reales en `app/build/pruebas/`, útiles para abrirlos a mano y comprobar el resultado. El reporte HTML queda en `app/build/reports/tests/`.
 
@@ -187,11 +192,43 @@ adb shell input keyevent KEYCODE_WAKEUP
 
 El diálogo de huella y el de credencial del sistema son UI del sistema operativo: Espresso y Compose no los alcanzan, y probarlos exige UI Automator.
 
+## Integración continua
+
+Tres flujos, todos con **JDK 21**, en [`.github/workflows/`](../.github/workflows):
+
+| Flujo | Cuándo | Qué corre |
+|---|---|---|
+| `ci.yml` | push a `main` y cada PR | `testDebugUnitTest`, `lintDebug`, `assembleDebug` y el build del sitio |
+| `release.yml` | tag `vX.Y.Z` | Verifica el tag contra `version.properties`, prueba, firma y publica el APK |
+| `pages.yml` | `web/**`, `version.properties` o al terminar un Release | Construye el sitio y lo publica en GitHub Pages |
+
+Cuando CI falla, el reporte HTML de pruebas y el de lint quedan como artefacto del run durante 14 días — se leen mucho mejor que el rastro de la consola.
+
+Lo mismo que corre allá corre aquí:
+
+```bash
+JAVA_HOME="$HOME/.jdks/jbr-21.0.11" ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+```
+
+El proceso completo de publicar una versión está en [publicación](publicacion.md).
+
+## El sitio
+
+En [`web/`](../web): Vite sin framework, cuatro archivos de fuente y ninguna dependencia en tiempo de ejecución.
+
+```bash
+npm --prefix web install
+npm --prefix web run dev      # http://localhost:5173/ollin-finanzas/
+npm --prefix web run build
+```
+
+`public/version.json` y `src/version.js` los genera el build desde `version.properties` y están en `.gitignore`: son derivados, no fuentes. Detalles en [publicación](publicacion.md#el-sitio).
+
 ## Convenciones del código
 
 - **Todo en español**: nombres de clases, funciones, variables y comentarios. Los nombres de prueba van en backticks y en prosa (`` `el modo compacto emite exactamente ocho columnas` ``) — salvo en `androidTest`, donde van en camelCase porque los espacios solo son legales desde la API 30.
 - **Los comentarios explican el porqué, no el qué.** Si una decisión tiene una alternativa obvia que se descartó, el comentario dice por qué se descartó.
-- **Sin acentos en los comentarios y literales del código** (la documentación de `docs/` sí los usa).
+- **Sin acentos en los comentarios y literales del código** (la documentación de `docs/` y el sitio de `web/` sí los usan).
 - **Una pantalla por archivo**, con su ViewModel arriba y los composables privados abajo.
 - **La escritura pasa por el repositorio.** Las pantallas no tocan los DAO.
 - **Los importes son centavos en `Long`**, nunca decimales flotantes.
@@ -212,4 +249,4 @@ Los pasos son texto plano y no capturas de pantalla a propósito: una captura en
 
 ## Cambiar el esquema de la base
 
-Mientras la app no se publique, un cambio de modelo se reescribe sobre la versión 1 y se reinstala: no hay migraciones que escribir. El precio es local —la base que tengas en el teléfono deja de abrir— y las reglas están al final de [modelo de datos](modelo-de-datos.md#versionado-del-esquema).
+Cuatro pasos —cambiar las entidades, subir `VERSION_BASE`, compilar para que KSP exporte el `N.json`, y escribir la migración— explicados con su ejemplo en [modelo de datos](modelo-de-datos.md#migraciones). `EsquemaDeBaseTest` falla en CI si falta cualquiera de los cuatro.

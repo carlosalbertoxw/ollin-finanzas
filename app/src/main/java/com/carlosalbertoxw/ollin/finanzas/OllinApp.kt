@@ -33,6 +33,10 @@ class OllinApp : Application() {
                 ajustes.minutoAviso
             )
             contenedor.sembrador.sembrarSiHaceFalta()
+
+            // De cortesia y sin prisa: si no hay red o no toca todavia, no
+            // pasa nada y se vuelve a intentar en el siguiente arranque.
+            runCatching { contenedor.buscadorDeActualizaciones.busca() }
         }
     }
 }

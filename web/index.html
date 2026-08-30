@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es-MX">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ollin Finanzas — El libro de tus movimientos</title>
+    <meta
+      name="description"
+      content="App Android de finanzas personales. Registra lo que entra y lo que sale, separa el patrimonio del consumo, y exporta todo a Excel. Sin cuentas, sin servidor, sin publicidad."
+    />
+    <meta name="theme-color" content="#12181B" />
+    <link rel="icon" href="glifo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/estilo.css" />
+  </head>
+  <body>
+    <header class="portada">
+      <div class="envoltura portada__contenido">
+        <img class="glifo" src="glifo.svg" alt="" width="96" height="96" />
+        <h1>Ollin Finanzas</h1>
+        <p class="lema">El libro de tus movimientos</p>
+        <p class="entrada">
+          Registra lo que entra y lo que sale, lo clasifica, y te dice en qué se te está yendo
+          el dinero. Todo vive en tu teléfono: sin cuentas, sin servidor y sin publicidad.
+        </p>
+
+        <div class="descarga">
+          <a class="boton" id="descarga" href="#instalar" download>
+            Descargar el APK
+            <span class="boton__nota" id="version">versión —</span>
+          </a>
+          <a class="enlace-suave" id="notas" href="#instalar">Ver todas las versiones</a>
+        </div>
+
+        <p class="requisitos">
+          Android 8.0 o superior · <span id="fecha">—</span> · se instala fuera de Google Play
+        </p>
+      </div>
+    </header>
+
+    <main>
+      <section class="envoltura">
+        <h2>Qué hace</h2>
+        <div class="rejilla">
+          <article class="tarjeta">
+            <h3>Movimientos con listas cerradas</h3>
+            <p>
+              Entradas, salidas, transferencias y saldos de apertura. Cuenta y categoría se
+              eligen, no se escriben: así «Súper» y «super » no acaban siendo dos rubros.
+            </p>
+          </article>
+          <article class="tarjeta">
+            <h3>Transferencias en una captura</h3>
+            <p>
+              Mueves dinero entre tus cuentas una vez y la app escribe los dos renglones
+              ligados. Borrar uno borra el otro: nunca queda media transferencia.
+            </p>
+          </article>
+          <article class="tarjeta">
+            <h3>Patrimonio aparte del gasto</h3>
+            <p>
+              Comprar un terreno o cripto es trasladar patrimonio, no gastarlo. Los tableros
+              lo cuentan aparte, así que tu tasa de ahorro no se desploma ese mes.
+            </p>
+          </article>
+          <article class="tarjeta">
+            <h3>Salud de los datos</h3>
+            <p>
+              Revisa en continuo tipos que contradicen al importe, transferencias sin pareja,
+              movimientos sin categoría y descripciones casi idénticas. Varios se reparan
+              con un botón.
+            </p>
+          </article>
+          <article class="tarjeta">
+            <h3>Compromisos que avisan</h3>
+            <p>
+              Mensualidades, suscripciones, la renta, el seguro anual. Cada uno con su
+              periodicidad y su próximo pago, y un aviso diario a la hora que tú elijas.
+            </p>
+          </article>
+          <article class="tarjeta">
+            <h3>Tu respaldo es un Excel</h3>
+            <p>
+              Exporta el libro completo a <code>.xlsx</code> con fórmulas vivas que se
+              recalculan solas en Excel, WPS, LibreOffice y Sheets. Y lo vuelve a importar.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="envoltura" id="instalar">
+        <h2>Cómo se instala</h2>
+        <p class="entrada">
+          Ollin Finanzas no está en Google Play, así que el APK se instala a mano. Android
+          pide permiso una vez y es normal: es el mismo aviso para cualquier app que no venga
+          de la tienda.
+        </p>
+        <ol class="pasos">
+          <li>Descarga el APK con el botón de arriba.</li>
+          <li>Ábrelo desde la notificación de descarga o desde tu gestor de archivos.</li>
+          <li>
+            Android preguntará si permites instalar desde esa app (tu navegador). Acepta y
+            vuelve a abrir el archivo.
+          </li>
+          <li>Listo. Al abrirla, la app siembra un catálogo de ejemplo que puedes renombrar.</li>
+        </ol>
+        <p class="nota">
+          Las versiones anteriores, con sus notas y su suma SHA-256, están en
+          <a id="lanzamientos" href="#">la página de lanzamientos</a>.
+        </p>
+      </section>
+
+      <section class="envoltura">
+        <h2>Privacidad</h2>
+        <p class="entrada">
+          Nada de lo que capturas sale de tu teléfono. No hay cuentas de usuario, ni servidor,
+          ni analítica, ni publicidad.
+        </p>
+        <ul class="lista">
+          <li>
+            La base de datos va cifrada con <strong>AES-256</strong> y su llave vive en el
+            Keystore del teléfono: copiar el archivo por USB no revela un solo importe.
+          </li>
+          <li>
+            Puedes ponerle candado con la huella, el patrón del teléfono o un PIN propio.
+          </li>
+          <li>
+            El respaldo automático de Android está <strong>desactivado</strong> para la base a
+            propósito: una llave del Keystore no se puede restaurar, así que la copia llegaría
+            ilegible. Tu respaldo real es el <code>.xlsx</code> que tú exportas.
+          </li>
+          <li>
+            La app hace <strong>una sola</strong> llamada a internet: preguntarle a este sitio,
+            una vez al día, si hay una versión más nueva. Es una petición a un archivo fijo que
+            no manda ningún dato tuyo, y se apaga desde <em>Acerca de</em>.
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="envoltura pie">
+      <p>
+        <em>Ollin</em> es «movimiento» en náhuatl, y es el glifo del calendario mexica que
+        representa el cambio — que es exactamente lo que registra un libro de finanzas.
+      </p>
+      <p class="nota">
+        <a id="repo" href="#">Código y documentación en GitHub</a>
+        · <span id="version-pie">versión —</span>
+      </p>
+    </footer>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

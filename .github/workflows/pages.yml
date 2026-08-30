@@ -1,0 +1,71 @@
+# Publica el sitio de descarga en GitHub Pages.
+#
+# Corre al tocar `web/` o la version, y tambien al terminar un Release: el sitio
+# sirve `version.json`, que es de donde la app saca si hay algo mas nuevo, asi
+# que despues de publicar tiene que reconstruirse sin que nadie se acuerde.
+#
+# Requiere activarlo una vez: Settings -> Pages -> Source: GitHub Actions.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'version.properties'
+      - '.github/workflows/pages.yml'
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Sin cancelar en curso: una publicacion a medias deja el sitio inservible.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  construye:
+    name: Construir
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Dependencias
+        run: npm ci
+        working-directory: web
+
+      # El build genera public/version.json y src/version.js desde
+      # version.properties: la pagina y la app leen siempre el mismo numero.
+      - name: Construir
+        run: npm run build
+        working-directory: web
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  publica:
+    name: Publicar
+    needs: construye
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v4

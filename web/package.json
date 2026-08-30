@@ -1,0 +1,16 @@
+{
+  "name": "ollin-finanzas-sitio",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Sitio de descarga de Ollin Finanzas. Se publica en GitHub Pages.",
+  "scripts": {
+    "version:genera": "node scripts/genera-version.mjs",
+    "dev": "npm run version:genera && vite",
+    "build": "npm run version:genera && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^8.2.2"
+  }
+}

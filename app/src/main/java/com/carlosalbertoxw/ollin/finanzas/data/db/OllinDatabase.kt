@@ -8,6 +8,15 @@ import androidx.room.TypeConverters
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.LlaveBase
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
+/**
+ * La version del esquema de la base.
+ *
+ * Vive fuera de la clase para que una prueba de la JVM pueda leerla sin cargar
+ * Room ni Android: es lo que permite vigilar la cadena de migraciones sin
+ * dispositivo.
+ */
+const val VERSION_BASE = 1
+
 @Database(
     entities = [
         Cuenta::class,
@@ -17,7 +26,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         Compromiso::class,
         MapeoDescripcion::class
     ],
-    version = 1,
+    version = VERSION_BASE,
     exportSchema = true
 )
 @TypeConverters(Convertidores::class)
@@ -56,9 +65,9 @@ abstract class OllinDatabase : RoomDatabase() {
                 .openHelperFactory(SupportOpenHelperFactory(frase.toByteArray(Charsets.UTF_8)))
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
                 // Nunca fallbackToDestructiveMigration: borraria el libro entero
-                // en silencio. El esquema es el inicial y no hay ninguna
-                // migracion todavia; la primera que haga falta se escribe a
-                // mano. Ver docs/modelo-de-datos.md.
+                // en silencio. Cada version del esquema lleva su Migration en
+                // [MIGRACIONES]. Ver docs/modelo-de-datos.md.
+                .addMigrations(*MIGRACIONES)
                 .build()
         }
     }

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+
+# Los genera scripts/genera-version.mjs desde version.properties. Versionarlos
+# seria tener la version en tres lugares y dos de ellos siempre atrasados.
+public/version.json
+src/version.js

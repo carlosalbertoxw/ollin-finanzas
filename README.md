@@ -1,11 +1,20 @@
 # Ollin Finanzas
 
+[![CI](https://github.com/carlosalbertoxw/ollin-finanzas/actions/workflows/ci.yml/badge.svg)](https://github.com/carlosalbertoxw/ollin-finanzas/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/carlosalbertoxw/ollin-finanzas?label=versi%C3%B3n)](https://github.com/carlosalbertoxw/ollin-finanzas/releases/latest)
+
 **El libro de tus movimientos.**
 
 App Android de finanzas personales: registra lo que entra y lo que sale, lo clasifica, y
 te dice en qué se te está yendo el dinero. *Ollin* es "movimiento" en náhuatl, y es el
 glifo del calendario mexica que representa el cambio — que es exactamente lo que registra
 un libro de finanzas.
+
+**[Descargar el APK →](https://carlosalbertoxw.com/ollin-finanzas/)**
+
+No está en Google Play: el APK se instala a mano, y el sitio explica cómo. La app
+comprueba una vez al día si salió una versión nueva y lo dice en *Acerca de*; se puede
+apagar ahí mismo.
 
 ---
 
@@ -65,6 +74,7 @@ app/src/main/java/com/carlosalbertoxw/ollin/finanzas/
 ├── data/
 │   ├── db/          Room: entidades, DAOs, proyecciones, catálogo semilla
 │   ├── excel/       Lector y escritor de .xlsx propios, exportador e importador
+│   ├── actualizacion/ Si hay una version nueva publicada
 │   ├── notify/      Recordatorios de compromisos por vencer
 │   ├── prefs/       Preferencias en DataStore
 │   ├── repo/        FinanzasRepositorio: toda la escritura pasa por aquí
@@ -74,6 +84,14 @@ app/src/main/java/com/carlosalbertoxw/ollin/finanzas/
 │   ├── model/       Enums, Dinero (centavos)
 │   └── usecase/     RevisaCalidad, ReparaDatos
 └── ui/              Compose: pantallas, navegación, tema, componentes
+```
+
+Y fuera de la app:
+
+```
+.github/workflows/   CI, release firmado y publicación del sitio
+web/                 El sitio de descarga (Vite), publicado en GitHub Pages
+version.properties   La versión, en un solo lugar
 ```
 
 Cada pantalla recibe sus dependencias concretas —el repositorio, los ajustes, el caso de
@@ -103,20 +121,27 @@ Decisiones que no son las de default, y por qué:
 ## Documentación
 
 - [Arquitectura](docs/arquitectura.md) — capas, navegación, arranque y bloqueo, y por qué no hay framework de inyección.
-- [Modelo de datos](docs/modelo-de-datos.md) — las seis tablas, invariantes del repositorio, proyecciones y el estado del esquema.
+- [Modelo de datos](docs/modelo-de-datos.md) — las seis tablas, invariantes del repositorio, proyecciones y cómo se migra el esquema.
 - [El libro](docs/movimientos.md) — tipos, signos, transferencias, gasto contra patrimonio, presupuesto y compromisos.
 - [Salud de los datos](docs/calidad.md) — qué revisa la auditoría, qué se repara solo y qué no.
 - [Excel](docs/excel.md) — formato del libro exportado, fórmulas, reglas de importación.
 - [Seguridad y privacidad](docs/seguridad.md) — cifrado de la base, Keystore, PIN, bloqueo y respaldos.
-- [Desarrollo](docs/desarrollo.md) — entorno, comandos, pruebas y convenciones del código.
+- [Desarrollo](docs/desarrollo.md) — entorno, comandos, pruebas, integración continua y convenciones del código.
+- [Publicación](docs/publicacion.md) — versionado, firma, release automatizado, el sitio y cómo se entera la app de una versión nueva.
 
 ---
 
 ## Privacidad
 
-Todo vive en el teléfono. No hay cuentas, ni servidor, ni analítica. El respaldo
-automático del sistema está **desactivado** para la base de datos a propósito: tu
+Nada de lo que capturas sale del teléfono. No hay cuentas, ni servidor, ni analítica. El
+respaldo automático del sistema está **desactivado** para la base de datos a propósito:
+una llave del Keystore no se puede restaurar, así que la copia llegaría ilegible. Tu
 respaldo es la exportación a `.xlsx`, que tú decides dónde guardar.
+
+La única llamada a internet es preguntarle al sitio del proyecto, una vez al día, si hay
+una versión más nueva: un `GET` a un archivo estático que no manda ningún dato tuyo, ni
+siquiera qué versión traes. Se apaga desde *Acerca de*, y apagada la app no toca la red
+en ningún momento.
 
 ---
 
@@ -144,6 +169,15 @@ JAVA_HOME="$HOME/.jdks/jbr-21.0.11" ./gradlew :app:testDebugUnitTest
 
 Las pruebas de `ExcelRoundTripTest` generan libros reales en `app/build/pruebas/`, útiles
 para abrirlos a mano y comprobar el resultado.
+
+La versión sale de `version.properties`, no del `build.gradle.kts`:
+
+```bash
+./gradlew -q :app:imprimeVersion
+```
+
+Publicar una versión es subir ese archivo y poner el tag `vX.Y.Z`; de ahí en adelante lo
+hacen los flujos de GitHub Actions. Ver [Publicación](docs/publicacion.md).
 
 - `minSdk` 26 · `targetSdk` 36 · Kotlin 2.1.20 · AGP 8.10.0 · Gradle 8.14.5
 

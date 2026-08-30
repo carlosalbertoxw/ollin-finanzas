@@ -1,0 +1,83 @@
+# Lo que tiene que estar en verde antes de fusionar nada.
+#
+# El JDK es 21 y no el mas nuevo a proposito: Kotlin 2.1.20 no sabe leer las
+# versiones 25 ni 26 y muere con un mensaje que es solo el numero de version.
+# Ver docs/desarrollo.md.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Empujar dos veces seguidas no deja dos builds compitiendo por el mismo cache.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: Pruebas y APK de depuracion
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Las pruebas incluyen la guardia del esquema: si alguien sube la version
+      # de la base sin escribir la migracion, se cae aqui y no en un telefono.
+      - name: Pruebas unitarias
+        run: ./gradlew :app:testDebugUnitTest
+
+      - name: Lint
+        run: ./gradlew :app:lintDebug
+
+      - name: APK de depuracion
+        run: ./gradlew :app:assembleDebug
+
+      # Un reporte HTML vale mas que el rastro de la consola cuando algo falla.
+      - name: Reportes
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reportes-${{ github.run_id }}
+          path: |
+            app/build/reports/tests/
+            app/build/reports/lint-results-debug.html
+          retention-days: 14
+
+  sitio:
+    name: Sitio
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Dependencias
+        run: npm ci
+        working-directory: web
+
+      # Construir aqui tambien, y no solo al publicar, es lo que evita enterarse
+      # de que el sitio no compila el dia que se corta una version.
+      - name: Construir
+        run: npm run build
+        working-directory: web

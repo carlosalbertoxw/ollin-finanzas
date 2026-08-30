@@ -1,0 +1,240 @@
+/*
+  La paleta es la misma de la app (ui/theme/Color.kt): obsidiana de fondo, jade
+  para lo que entra, grana para lo que sale, cempasuchil para lo que pide
+  atencion. Quien baje el APK debe reconocer la pantalla que va a abrir.
+*/
+
+:root {
+  --obsidiana: #12181b;
+  --obsidiana-suave: #1a2226;
+  --obsidiana-clara: #242e33;
+  --jade: #2f9e6e;
+  --jade-claro: #6fcfa1;
+  --grana: #c4453f;
+  --cempasuchil: #e9a13b;
+  --anil: #3d6db5;
+  --papel: #f7f5f0;
+  --papel-sombra: #e7e3da;
+  --tinta: #1a1a18;
+  --tinta-suave: #5b615e;
+
+  --fondo: var(--papel);
+  --fondo-elevado: #ffffff;
+  --texto: var(--tinta);
+  --texto-tenue: var(--tinta-suave);
+  --trazo: var(--papel-sombra);
+  --acento: var(--jade);
+
+  --ancho: 62rem;
+  --radio: 14px;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: var(--obsidiana);
+    --fondo-elevado: var(--obsidiana-suave);
+    --texto: var(--papel);
+    --texto-tenue: #9aa5a1;
+    --trazo: #2e3a3f;
+    --acento: var(--jade-claro);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.envoltura {
+  max-width: var(--ancho);
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+/* ------------------------------------------------------------- portada */
+
+.portada {
+  /* El degradado imita el cruce del glifo: jade que sube, grana que baja. */
+  background:
+    radial-gradient(80rem 32rem at 15% -20%, rgba(47, 158, 110, 0.18), transparent 60%),
+    radial-gradient(70rem 30rem at 85% -10%, rgba(196, 69, 63, 0.14), transparent 60%);
+  border-bottom: 1px solid var(--trazo);
+  padding: 4rem 0 3.5rem;
+  text-align: center;
+}
+
+.portada__contenido {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.glifo {
+  width: 96px;
+  height: 96px;
+}
+
+h1 {
+  font-size: clamp(2.2rem, 6vw, 3.2rem);
+  margin: 1rem 0 0.25rem;
+  letter-spacing: -0.02em;
+}
+
+.lema {
+  margin: 0;
+  color: var(--cempasuchil);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.entrada {
+  max-width: 44rem;
+  color: var(--texto-tenue);
+  font-size: 1.05rem;
+}
+
+/* ------------------------------------------------------------ descarga */
+
+.descarga {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.boton {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  background: var(--jade);
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 0.9rem 2.4rem;
+  border-radius: var(--radio);
+  box-shadow: 0 10px 24px rgba(47, 158, 110, 0.28);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.boton:hover,
+.boton:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(47, 158, 110, 0.36);
+}
+
+.boton__nota {
+  font-size: 0.8rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.enlace-suave,
+a {
+  color: var(--acento);
+}
+
+.enlace-suave {
+  font-size: 0.95rem;
+}
+
+.requisitos {
+  margin: 0.5rem 0 0;
+  color: var(--texto-tenue);
+  font-size: 0.9rem;
+}
+
+/* -------------------------------------------------------------- cuerpo */
+
+main section {
+  padding: 3rem 1.25rem 0;
+}
+
+h2 {
+  font-size: 1.6rem;
+  margin: 0 0 1rem;
+}
+
+h3 {
+  font-size: 1.05rem;
+  margin: 0 0 0.4rem;
+  color: var(--acento);
+}
+
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1rem;
+}
+
+.tarjeta {
+  background: var(--fondo-elevado);
+  border: 1px solid var(--trazo);
+  border-radius: var(--radio);
+  padding: 1.25rem;
+}
+
+.tarjeta p {
+  margin: 0;
+  color: var(--texto-tenue);
+  font-size: 0.95rem;
+}
+
+.pasos,
+.lista {
+  color: var(--texto-tenue);
+  padding-left: 1.2rem;
+  max-width: 48rem;
+}
+
+.pasos li,
+.lista li {
+  margin-bottom: 0.6rem;
+}
+
+.lista strong {
+  color: var(--texto);
+}
+
+code {
+  background: var(--fondo-elevado);
+  border: 1px solid var(--trazo);
+  border-radius: 5px;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.9em;
+}
+
+.nota {
+  color: var(--texto-tenue);
+  font-size: 0.9rem;
+}
+
+/* ----------------------------------------------------------------- pie */
+
+.pie {
+  margin-top: 3.5rem;
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+  border-top: 1px solid var(--trazo);
+  color: var(--texto-tenue);
+  font-size: 0.9rem;
+}
+
+.pie em {
+  color: var(--cempasuchil);
+  font-style: normal;
+  font-weight: 600;
+}

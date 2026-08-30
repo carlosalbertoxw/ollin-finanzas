@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108" role="img" aria-label="Glifo de Ollin">
+  <title>Ollin</title>
+  <!--
+    El mismo glifo que la app (res/drawable/ic_ollin_glyph.xml): dos listones
+    cruzados, jade para lo que entra y grana para lo que sale, con el saldo
+    en el centro en cempasuchil.
+  -->
+  <path fill="#2F9E6E" d="M54,54 C58,38 72,24 90,18 C84,36 70,50 54,54 Z" />
+  <path fill="#2F9E6E" d="M54,54 C50,70 36,84 18,90 C24,72 38,58 54,54 Z" />
+  <path fill="#C4453F" d="M54,54 C50,38 36,24 18,18 C24,36 38,50 54,54 Z" />
+  <path fill="#C4453F" d="M54,54 C58,70 72,84 90,90 C84,72 70,58 54,54 Z" />
+  <circle fill="#E9A13B" cx="54" cy="54" r="10" />
+</svg>

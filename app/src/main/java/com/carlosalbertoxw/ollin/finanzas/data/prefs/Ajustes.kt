@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -52,6 +53,19 @@ data class Ajustes(
      */
     val horaAviso: Int = HORA_AVISO_PREDETERMINADA,
     val minutoAviso: Int = MINUTO_AVISO_PREDETERMINADO,
+    /**
+     * Preguntarle al sitio, una vez al dia, si hay una version mas nueva.
+     *
+     * Encendido de fabrica porque la app no se instala desde Play y nadie mas
+     * avisa; apagarlo la deja sin ninguna salida a la red.
+     */
+    val buscaActualizaciones: Boolean = true,
+    /** Cuando se pregunto por ultima vez con respuesta. 0 = nunca. */
+    val ultimaBusquedaDeVersion: Long = 0L,
+    /** Lo ultimo que el sitio dijo tener. 0 = todavia no se sabe. */
+    val versionPublicada: Int = 0,
+    val nombreVersionPublicada: String? = null,
+    val urlVersionPublicada: String? = null,
     val modoBloqueo: ModoBloqueo = ModoBloqueo.NINGUNO,
     /** Del PIN solo se guarda su huella derivada; el PIN en claro no se escribe nunca. */
     val pinHash: String? = null,
@@ -76,6 +90,11 @@ class AjustesRepositorio(private val contexto: Context) {
         val ULTIMO_ARCHIVO = stringPreferencesKey("ultimo_archivo")
         val SALDO_INICIAL = booleanPreferencesKey("muestra_saldo_inicial")
         val TUTORIALES = booleanPreferencesKey("muestra_tutoriales")
+        val BUSCA_ACTUALIZACIONES = booleanPreferencesKey("busca_actualizaciones")
+        val ULTIMA_BUSQUEDA = longPreferencesKey("ultima_busqueda_version")
+        val VERSION_PUBLICADA = intPreferencesKey("version_publicada")
+        val NOMBRE_VERSION = stringPreferencesKey("nombre_version_publicada")
+        val URL_VERSION = stringPreferencesKey("url_version_publicada")
         val HORA_AVISO = intPreferencesKey("hora_aviso")
         val MINUTO_AVISO = intPreferencesKey("minuto_aviso")
         val BLOQUEO = stringPreferencesKey("modo_bloqueo")
@@ -106,6 +125,11 @@ class AjustesRepositorio(private val contexto: Context) {
         ultimoArchivo = p[Claves.ULTIMO_ARCHIVO],
         muestraSaldoInicial = p[Claves.SALDO_INICIAL] ?: true,
         muestraTutoriales = p[Claves.TUTORIALES] ?: true,
+        buscaActualizaciones = p[Claves.BUSCA_ACTUALIZACIONES] ?: true,
+        ultimaBusquedaDeVersion = p[Claves.ULTIMA_BUSQUEDA] ?: 0L,
+        versionPublicada = p[Claves.VERSION_PUBLICADA] ?: 0,
+        nombreVersionPublicada = p[Claves.NOMBRE_VERSION],
+        urlVersionPublicada = p[Claves.URL_VERSION],
         // Se recorta al leer y no solo al escribir: un valor imposible en
         // disco tiraria la alarma con un IllegalArgumentException al construir
         // la hora, y la app se quedaria sin avisos sin decir por que.
@@ -198,6 +222,24 @@ class AjustesRepositorio(private val contexto: Context) {
         contexto.almacen.edit {
             it[Claves.HORA_AVISO] = hora.coerceIn(0, 23)
             it[Claves.MINUTO_AVISO] = minuto.coerceIn(0, 59)
+        }
+    }
+
+    suspend fun guardaBuscaActualizaciones(valor: Boolean) {
+        contexto.almacen.edit { it[Claves.BUSCA_ACTUALIZACIONES] = valor }
+    }
+
+    /**
+     * Lo que el sitio contesto, de una sola escritura: la version, su nombre,
+     * su enlace y el momento. Por separado podria quedar un numero de version
+     * sin nombre que enseñar, o un "buscado hace un minuto" sin nada detras.
+     */
+    suspend fun guardaVersionPublicada(codigo: Int, nombre: String, url: String, momento: Long) {
+        contexto.almacen.edit {
+            it[Claves.VERSION_PUBLICADA] = codigo
+            it[Claves.NOMBRE_VERSION] = nombre
+            it[Claves.URL_VERSION] = url
+            it[Claves.ULTIMA_BUSQUEDA] = momento
         }
     }
 

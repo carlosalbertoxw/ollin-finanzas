@@ -1,6 +1,8 @@
 # Seguridad y privacidad
 
-Ollin Finanzas no manda nada a ningún servidor: no hay cuenta, no hay nube, no hay analítica y no hay publicidad.
+Ollin Finanzas no manda a ningún servidor nada de lo que capturas: no hay cuenta, no hay nube, no hay analítica y no hay publicidad.
+
+Hace **una** llamada a internet, y conviene decirla completa: le pregunta al sitio del proyecto, una vez al día, si existe una versión más nueva. Es un `GET` a un archivo estático que no lleva ningún dato tuyo —ni identificador, ni qué versión traes— y se apaga desde *Acerca de*. La app no se instala desde Google Play, así que sin eso nadie se enteraría nunca de una actualización. Los detalles están en [publicación](publicacion.md#cómo-se-entera-la-app).
 
 ## Cifrado de la base
 
@@ -84,10 +86,11 @@ La razón es física: una llave del Keystore no se puede restaurar ni transferir
 
 ## Permisos
 
-Solo tres, y ninguno da acceso a datos ajenos a la app:
+Solo cuatro, y ninguno da acceso a datos ajenos a la app:
 
 | Permiso | Para qué |
 |---|---|
+| `INTERNET` | Preguntar una vez al día si hay una versión nueva. Nada más pasa por aquí |
 | `USE_BIOMETRIC` | Desbloquear con huella o credencial del teléfono |
 | `POST_NOTIFICATIONS` | Avisar de compromisos por vencer |
 | `RECEIVE_BOOT_COMPLETED` | Reprogramar la revisión diaria tras reiniciar |
