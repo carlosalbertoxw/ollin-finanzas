@@ -200,9 +200,12 @@ fun CompromisosPantalla(
                 )
             } else {
                 val totalPendiente = compromisos.filter { it.activo }.sumOf { pendiente(it) }
+                // Todo lo que se repite al menos una vez al mes, llevado a lo
+                // que pesa en un mes: dejar fuera lo semanal y lo quincenal
+                // haria que la cifra subestimara justo la carga mas seguida.
                 val mensualFijo = compromisos
-                    .filter { it.activo && it.periodicidad == Periodicidad.MENSUAL }
-                    .sumOf { it.montoCentavos }
+                    .filter { it.activo && it.periodicidad.cabeEnUnMes }
+                    .sumOf { it.periodicidad.equivalenteMensual(it.montoCentavos) }
 
                 LazyColumn(
                     Modifier.fillMaxSize(),
@@ -393,9 +396,12 @@ private fun DialogoCompromiso(
                     label = { Text("Siguiente pago") },
                     readOnly = true,
                     supportingText = {
-                        val cada = if (periodicidad.meses == 1) "Cada mes"
-                        else "Cada ${periodicidad.meses} meses"
-                        Text("$cada el dia ${siguientePago.dayOfMonth}")
+                        // El dia del mes solo significa algo si el paso son
+                        // meses: un plan semanal cae en un dia distinto cada vez.
+                        Text(
+                            if (periodicidad.dias > 0) periodicidad.cada
+                            else "${periodicidad.cada} el dia ${siguientePago.dayOfMonth}"
+                        )
                     },
                     modifier = Modifier.fillMaxWidth(),
                     trailingIcon = {
@@ -426,16 +432,17 @@ private fun DialogoCompromiso(
                             // descartado. En un compromiso nuevo no hay nada que
                             // retroceder.
                             //
-                            // Limitacion conocida: si el dia elegido no existe en
-                            // el mes del ancla (un 31 retrocedido a febrero),
-                            // `minusMonths` lo recorta y el proximo pago cae unos
-                            // dias antes del elegido. No hay ancla que lo evite:
-                            // ninguna fecha de febrero mas un mes da un 31 de
-                            // marzo. Resolverlo pide guardar el dia de pago
-                            // aparte del ancla.
-                            fechaPrimerPago = siguientePago.minusMonths(
-                                (compromiso.pagosRealizados + compromiso.pagosDescartados).toLong() *
-                                    periodicidad.meses
+                            // Limitacion conocida de las cadencias en meses: si
+                            // el dia elegido no existe en el mes del ancla (un 31
+                            // retrocedido a febrero), retroceder lo recorta y el
+                            // proximo pago cae unos dias antes del elegido. No hay
+                            // ancla que lo evite: ninguna fecha de febrero mas un
+                            // mes da un 31 de marzo. Resolverlo pide guardar el dia
+                            // de pago aparte del ancla. Las cadencias en dias no
+                            // tienen el problema: restar dias es exacto.
+                            fechaPrimerPago = periodicidad.retrocede(
+                                siguientePago,
+                                (compromiso.pagosRealizados + compromiso.pagosDescartados).toLong()
                             ),
                             totalPagos = totalPagos.toIntOrNull(),
                             cuentaId = cuentaId,

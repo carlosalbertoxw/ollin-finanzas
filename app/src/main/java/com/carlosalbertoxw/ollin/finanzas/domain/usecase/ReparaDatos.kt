@@ -14,10 +14,10 @@ import com.carlosalbertoxw.ollin.finanzas.domain.model.normalizaClave
  * paso y de el dependen todos los saldos; lo que se corrige es la etiqueta
  * que lo describe mal.
  *
- * Escribe por [FinanzasRepositorio] y no por los DAOs. Antes iba directo a la
- * base, que era el unico punto de la app que se saltaba la puerta unica de
- * escritura; y ademas mandaba un UPDATE suelto por movimiento, asi que una
- * reparacion a medias dejaba el libro mitad corregido.
+ * Escribe por [FinanzasRepositorio] y no por los DAOs: no hay excepciones a la
+ * puerta unica de escritura. Manda la lista completa de corregidos de una sola
+ * vez, que se aplica dentro de una transaccion; un UPDATE suelto por movimiento
+ * dejaria el libro mitad corregido al primer tropiezo.
  */
 class ReparaDatos(private val repo: FinanzasRepositorio) {
 

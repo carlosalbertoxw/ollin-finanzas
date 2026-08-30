@@ -68,7 +68,7 @@ class RevisaCalidad(private val repo: FinanzasRepositorio) {
     /**
      * En [Dispatchers.Default] a proposito. Las consultas se van a IO por su
      * cuenta, pero el analisis posterior es CPU pura y crece con el cuadrado de
-     * las descripciones distintas; dejarlo en el hilo del llamador colgaba la
+     * las descripciones distintas; en el hilo del llamador colgaria la
      * interfaz, porque quien mas lo llama es el tablero al abrir la app.
      */
     suspend fun ejecuta(): List<Hallazgo> = withContext(Dispatchers.Default) {
@@ -274,9 +274,9 @@ class RevisaCalidad(private val repo: FinanzasRepositorio) {
     }
 
     /**
-     * Los saldos se acumulan en una sola pasada. Antes se recorria la lista
-     * entera de movimientos una vez por cuenta, que con un libro grande y una
-     * decena de cuentas era trabajo multiplicado por nada.
+     * Los saldos se acumulan en una sola pasada sobre los movimientos.
+     * Recorrer la lista entera una vez por cuenta daria lo mismo multiplicando
+     * el trabajo por el numero de cuentas.
      */
     private fun saldoNegativoEnCuentaDeActivo(
         movimientos: List<Movimiento>,

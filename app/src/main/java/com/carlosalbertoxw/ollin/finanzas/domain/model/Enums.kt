@@ -1,5 +1,7 @@
 package com.carlosalbertoxw.ollin.finanzas.domain.model
 
+import java.time.LocalDate
+
 /**
  * Tipo de movimiento. Son seis y solo seis: cualquier renglon del libro cae en
  * uno de ellos, y de ahi se derivan el signo esperado y la contraparte.
@@ -111,13 +113,58 @@ enum class TipoCategoria(val etiqueta: String) {
     }
 }
 
-/** Periodicidad de un compromiso recurrente. */
-enum class Periodicidad(val etiqueta: String, val meses: Int) {
-    MENSUAL("Mensual", 1),
-    BIMESTRAL("Bimestral", 2),
-    TRIMESTRAL("Trimestral", 3),
-    SEMESTRAL("Semestral", 6),
-    ANUAL("Anual", 12);
+/**
+ * Periodicidad de un compromiso recurrente.
+ *
+ * Dos cadencias distintas conviven aqui, y por eso hay dos campos: las cortas
+ * se miden en dias y las largas en meses. No se pueden unificar sin mentir.
+ * Sumar 30 dias no es sumar un mes -- el plan se recorreria un dia mas en cada
+ * febrero -- y "medio mes" no es una cantidad de meses que exista.
+ *
+ * Nadie deberia leer [meses] ni [dias] por su cuenta: se avanza con [avanza],
+ * se retrocede con [retrocede] y se lee con [cada].
+ */
+enum class Periodicidad(val etiqueta: String, val meses: Int = 0, val dias: Int = 0) {
+    SEMANAL("Semanal", dias = 7),
+    /** Cada quince dias, tal cual: no es "dos veces al mes" con dia fijo. */
+    QUINCENAL("Quincenal", dias = 15),
+    MENSUAL("Mensual", meses = 1),
+    BIMESTRAL("Bimestral", meses = 2),
+    TRIMESTRAL("Trimestral", meses = 3),
+    SEMESTRAL("Semestral", meses = 6),
+    ANUAL("Anual", meses = 12);
+
+    /** Cuantos pagos caen en un ano. Es lo que permite comparar cadencias distintas. */
+    val vecesPorAnio: Int
+        get() = if (dias > 0) 365 / dias else 12 / meses
+
+    /** Se repite al menos una vez al mes: es carga que se siente todos los meses. */
+    val cabeEnUnMes: Boolean
+        get() = vecesPorAnio >= 12
+
+    /** Lo que pesa al mes un pago de este tamano a esta cadencia. */
+    fun equivalenteMensual(montoCentavos: Long): Long = montoCentavos * vecesPorAnio / 12
+
+    /** Como se lee la cadencia en pantalla. */
+    val cada: String
+        get() = when {
+            dias == 7 -> "Cada semana"
+            dias > 0 -> "Cada $dias dias"
+            meses == 1 -> "Cada mes"
+            else -> "Cada $meses meses"
+        }
+
+    /**
+     * Avanza [pasos] periodos desde [ancla]. Siempre desde el ancla y nunca
+     * encadenando sobre el resultado anterior: `plusMonths` recorta el dia al
+     * ultimo valido del mes destino y no lo recuerda, asi que encadenar sumas
+     * arrastra el recorte para siempre. Ver [com.carlosalbertoxw.ollin.finanzas.data.db.Compromiso.proximoPago].
+     */
+    fun avanza(ancla: LocalDate, pasos: Long): LocalDate =
+        if (dias > 0) ancla.plusDays(pasos * dias) else ancla.plusMonths(pasos * meses)
+
+    /** El inverso de [avanza]: de una fecha del plan al ancla que la produce. */
+    fun retrocede(fecha: LocalDate, pasos: Long): LocalDate = avanza(fecha, -pasos)
 
     companion object {
         fun desdeEtiqueta(valor: String?): Periodicidad? {

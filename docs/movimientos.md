@@ -121,7 +121,7 @@ Las dos son `null` mientras no haya contra qué medirlas. Un "0.0 meses" o un "0
 
 Se carga **por páginas de 200**, y al final aparece cuántos faltan con un botón para traerlos. Cambiar el filtro vuelve a la primera página: pedir mil renglones de un filtro que ya no está en pantalla es trabajo tirado.
 
-El **total del filtro se suma en SQL**, no sobre la página cargada. Es la diferencia entre una calculadora y una cifra que miente: sumando lo cargado, un filtro con más renglones de los que caben daba un total parcial presentado como si fuera el del filtro completo. Por lo mismo, el contador de "restantes" sale de un `COUNT(*)` con el mismo `WHERE`, no de la lista en memoria.
+El **total del filtro se suma en SQL**, no sobre la página cargada. Es la diferencia entre una calculadora y una cifra que miente: sumar lo cargado daría, en cuanto el filtro tuviera más renglones de los que caben, un total parcial presentado como si fuera el del filtro completo. Por lo mismo, el contador de "restantes" sale de un `COUNT(*)` con el mismo `WHERE`, no de la lista en memoria.
 
 ## Presupuesto
 
@@ -131,9 +131,11 @@ Las metas de un mes se pueden copiar al siguiente, que es como se arma un presup
 
 ## Compromisos
 
-Lo que ya está comprometido y aún no se paga: mensualidades MSI, suscripciones, gastos anuales. Cada uno lleva cuenta, categoría, periodicidad, monto y fecha del primer pago.
+Lo que ya está comprometido y aún no se paga: mensualidades MSI, suscripciones, gastos anuales, la renta. Cada uno lleva cuenta, categoría, periodicidad, monto y fecha del primer pago.
 
-- El **próximo pago** se calcula: `fechaPrimerPago + (pagosRealizados + pagosDescartados) × meses`. La fecha del primer pago es un ancla que no se mueve nunca; lo que se mueven son los contadores. Es también lo que ordena la lista —activos primero, lo más atrasado hasta arriba—, y por eso el orden se arma en el ViewModel y no en SQL: no hay columna con esa fecha, así que ordenar por `fechaPrimerPago` dejaría la tarjeta recién cumplida en su lugar viejo.
+La periodicidad va de **semanal** a **anual**. Las dos cortas —semanal y quincenal— avanzan en días y el resto en meses, porque sumar 30 días no es sumar un mes y "medio mes" no existe como cantidad de meses. En la lista, el total "al mes" lleva todo lo que se repite al menos una vez al mes a lo que pesa en un mes: dejar fuera lo semanal subestimaría justo la carga más seguida.
+
+- El **próximo pago** se calcula: `fechaPrimerPago` más `(pagosRealizados + pagosDescartados)` periodos. La fecha del primer pago es un ancla que no se mueve nunca; lo que se mueven son los contadores. Es también lo que ordena la lista —activos primero, lo más atrasado hasta arriba—, y por eso el orden se arma en el ViewModel y no en SQL: no hay columna con esa fecha, así que ordenar por `fechaPrimerPago` dejaría la tarjeta recién cumplida en su lugar viejo.
 - Un compromiso con `totalPagos` termina solo: al llegar al último, se apaga.
 - **Registrar no da el pago por hecho.** Abre la captura ya llena —cuenta, categoría, monto, medio y naturaleza deducida del tipo de la categoría— para que corrijas lo que haya cambiado. Guardar escribe el movimiento y lo deja ligado al compromiso, pero no mueve el plan.
 - **El plan avanza a mano.** Se desliza la tarjeta a la derecha y aparecen dos decisiones:
@@ -149,6 +151,8 @@ La sección **Se viene** del tablero no es solo un recordatorio: cada compromiso
 
 Es a propósito el mismo gesto que en la pantalla de Compromisos, y el mismo componente (`FilaDeslizable`): el tablero es donde de verdad se ven los pagos que vienen, así que mandar a la persona a otra pantalla para dos toques sobraba. Lo que no se repite es el vocabulario — si deslizar significara aquí algo distinto, el atajo costaría más de lo que ahorra.
 
-Una revisión diaria a las 9:00 avisa de lo que ya entró en su ventana (`avisarDiasAntes`, 3 por omisión) y de lo que se venció sin resolverse, con una notificación por compromiso. El tablero usa la misma función con una ventana de 45 días para enseñar lo que viene.
+Una revisión diaria avisa de lo que ya entró en su ventana (`avisarDiasAntes`, 3 por omisión) y de lo que se venció sin resolverse, con una notificación por compromiso. El tablero usa la misma función con una ventana de 45 días para enseñar lo que viene.
 
-La alarma se programa al **próximo** paso por las 9:00: hoy si todavía no han dado, mañana si ya pasaron. Antes se fijaba siempre en `now().plusDays(1)`, y como la revisión se reprograma en cada arranque, abrir la app antes de las nueve corría la alarma un día más allá — quien revisaba sus finanzas por la mañana no recibía el aviso nunca. Por lo mismo, ahora no se reprograma si ya hay una en pie. Ver [seguridad](seguridad.md#permisos).
+**La hora se elige en Ajustes** y de fábrica son las 9:00. Es un ajuste y no una constante porque a quien se levanta a las cinco le llega tarde y a quien revisa sus cuentas de noche no le sirve. Cambiarla vuelve a poner la alarma en el momento: guardar la preferencia no mueve la que ya está en pie, y el cambio no se notaría hasta reiniciar el teléfono.
+
+La alarma se programa al **próximo** paso por esa hora: hoy si todavía no ha dado, mañana si ya pasó. Fijarla siempre a un día vista la correría una jornada más allá cada vez que la app se abriera por la mañana, y el aviso no llegaría nunca. Por lo mismo, el arranque no vuelve a ponerla si ya hay una: solo el cambio de hora la reemplaza. Ver [seguridad](seguridad.md#permisos).

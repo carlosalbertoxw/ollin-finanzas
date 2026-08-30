@@ -1,6 +1,6 @@
 # Modelo de datos
 
-Room sobre SQLite cifrado. Seis tablas, versión de esquema **2**, esquemas exportados en `app/schemas/`.
+Room sobre SQLite cifrado. Seis tablas, versión de esquema **1** —la inicial, sin ninguna migración todavía— y esquemas exportados en `app/schemas/`.
 
 Las entidades de Room son también el modelo de dominio: [`Entidades.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/Entidades.kt).
 
@@ -75,13 +75,15 @@ Lo que ya está comprometido y todavía no se paga.
 | `nombre` | |
 | `cuentaId`, `categoriaId` | Admiten nulo: un compromiso puede existir antes de decidirlos |
 | `montoCentavos` | Importe de cada pago, positivo |
-| `periodicidad` | `MENSUAL`, `BIMESTRAL`, `TRIMESTRAL`, `SEMESTRAL`, `ANUAL` |
+| `periodicidad` | `SEMANAL`, `QUINCENAL`, `MENSUAL`, `BIMESTRAL`, `TRIMESTRAL`, `SEMESTRAL`, `ANUAL` |
 | `fechaPrimerPago` | El próximo pago se calcula desde aquí, no se guarda |
 | `totalPagos` | `null` = indefinido (una suscripción). Un MSI sí tiene número de pagos |
-| `pagosRealizados` | |
+| `pagosRealizados`, `pagosDescartados` | Los dos contadores que mueven el plan |
 | `activo`, `avisarDiasAntes`, `notas` | |
 
-El próximo pago es `fechaPrimerPago + pagosRealizados × meses de la periodicidad`. Al derivarlo, avanzar el plan es incrementar un contador y no reescribir una fecha que podría quedar desfasada.
+El próximo pago es `fechaPrimerPago` más `(pagosRealizados + pagosDescartados)` periodos. Al derivarlo, avanzar el plan es incrementar un contador y no reescribir una fecha que podría quedar desfasada.
+
+**La periodicidad mide en días o en meses, nunca en los dos.** `SEMANAL` y `QUINCENAL` avanzan sumando días; de `MENSUAL` en adelante se suman meses. No se pueden unificar sin mentir: sumar 30 días no es sumar un mes —el plan se correría un día en cada febrero— y "medio mes" no es una cantidad de meses que exista. Nadie lee `dias` ni `meses` por su cuenta: se avanza con `Periodicidad.avanza`, se retrocede con `retrocede` y se lee con `cada`. `equivalenteMensual` es lo que permite sumar cadencias distintas en una sola cifra mensual.
 
 ### `mapeo_descripcion`
 
@@ -121,9 +123,9 @@ Toda escritura pasa por [`FinanzasRepositorio`](../app/src/main/java/com/carlosa
 
 `Compromiso` ancla en `fechaPrimerPago` —la fecha del pago número cero, que no se mueve nunca— y expone `proximoPago` sumando hacia adelante `(pagosRealizados + pagosDescartados)` periodicidades. Es la única fórmula: la usan los recordatorios, el tablero, la captura precargada y la hoja de Excel.
 
-El ancla es inmóvil por una razón concreta. `plusMonths` recorta el día al último válido del mes destino y no lo recuerda, así que **encadenar sumas sobre un valor ya recortado arrastra el error**. Antes, descartar un pago movía `fechaPrimerPago`: un plan del 31 de enero pasaba al 28 de febrero, y restaurarlo lo devolvía al 28 de enero en vez de al 31. El día se perdía para siempre y cada descarte volvía a recortarlo. Calculando siempre desde el ancla, el 31 reaparece en cada mes que lo tiene.
+El ancla es inmóvil por una razón concreta. `plusMonths` recorta el día al último válido del mes destino y no lo recuerda, así que **encadenar sumas sobre un valor ya recortado arrastra el error**. Si avanzar el plan moviera `fechaPrimerPago`, un plan del 31 de enero pasaría al 28 de febrero y deshacerlo lo devolvería al 28 de enero en vez de al 31: el día se perdería para siempre y cada paso volvería a recortarlo. Calculando siempre desde el ancla, el 31 reaparece en cada mes que lo tiene.
 
-Queda una limitación conocida, anotada en el diálogo de edición: si eliges un próximo pago cuyo día no existe en el mes del ancla (un 31 retrocedido a febrero), el día se recorta. No hay ancla que lo evite —ninguna fecha de febrero más un mes cae en un 31 de marzo—; resolverlo pediría guardar el día de pago aparte del ancla.
+Queda una limitación conocida de las cadencias en meses, anotada en el diálogo de edición: si eliges un próximo pago cuyo día no existe en el mes del ancla (un 31 retrocedido a febrero), el día se recorta. No hay ancla que lo evite —ninguna fecha de febrero más un mes cae en un 31 de marzo—; resolverlo pediría guardar el día de pago aparte del ancla. Las cadencias en días no tienen el problema: restar días es exacto.
 
 ## Proyecciones
 
@@ -137,18 +139,12 @@ Queda una limitación conocida, anotada en el diálogo de edición: si eliges un
 | `RenglonPresupuesto` | Meta contra realidad, con desviación y avance |
 | `UsoCategoria` | Cuántos movimientos cuelgan de cada categoría; decide si se puede borrar o solo archivar |
 
-## Migraciones
+## Versionado del esquema
 
-| Versión | Cambio |
-|---|---|
-| 1 | Esquema inicial |
+**El esquema es el inicial y no hay ninguna migración.** La app todavía no se publica, así que no existe un teléfono ajeno con datos que preservar: si el modelo cambia, se reescribe sobre la versión 1 y se reinstala. El esquema vigente es `app/schemas/1.json`, que KSP regenera en cada compilación y sí se versiona en git — es la foto contra la que se comparará el primer cambio real.
 
-**No hay ninguna migración: el esquema es el inicial.** Mientras la app no se publique tampoco hará falta ninguna, porque no existe un teléfono ajeno con datos que preservar: si el esquema cambia, se reescribe sobre la versión 1 y se reinstala. El esquema vigente es `app/schemas/1.json`.
+Cambiar el esquema sin subir `version` tiene un precio local: la base que ya está en tu teléfono deja de abrir porque su `identityHash` no coincide. Desinstala la app y vuelve a instalarla. Está cifrada, así que no hay forma de rescatar a mano lo que tuviera dentro; exporta el `.xlsx` antes si te importa lo capturado.
 
-Esto deja de valer con la primera versión que instale alguien más. A partir de ahí, cada cambio de esquema necesita su migración: cambia las entidades, sube `version` en [`OllinDatabase`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/OllinDatabase.kt), escribe la `Migration`, regístrala con `addMigrations(...)` y versiona el nuevo `app/schemas/N.json` que genera KSP.
+Esto vale hasta la primera versión que instale alguien más. A partir de ahí cada cambio de esquema necesita su migración: cambiar las entidades, subir `version` en [`OllinDatabase`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/OllinDatabase.kt), escribir la `Migration`, registrarla con `addMigrations(...)` y versionar el `app/schemas/N.json` nuevo.
 
-Room **no sabe bajar de versión**: si durante el desarrollo se sube `version` y luego se vuelve atrás, la base que quedó en el teléfono ya no abre. Desinstala la app o borra sus datos; está cifrada, así que no hay forma de rescatarla a mano.
-
-**Nunca uses `fallbackToDestructiveMigration()`.** Es la salida cómoda cuando Room reclama una migración que falta, y lo que hace es borrar la base entera y volver a crearla: en esta app eso es tirar el libro de finanzas del usuario, en silencio y sin posibilidad de deshacer. Si Room reclama, lo que falta es la `Migration`. La prohibición está anotada también en el `databaseBuilder` de [`OllinDatabase`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/OllinDatabase.kt), que es donde daría la tentación.
-
-Mientras la app siga sin publicar, cambiar el esquema sobre la versión 1 sí es válido, pero tiene un precio local: la base que ya está en tu teléfono deja de abrir porque su `identityHash` no coincide. Desinstala y vuelve a instalar.
+**Nunca uses `fallbackToDestructiveMigration()`.** Es la salida cómoda cuando Room reclama una migración que falta, y lo que hace es borrar la base entera y volver a crearla: en esta app eso es tirar el libro de finanzas del usuario, en silencio y sin posibilidad de deshacer. Mientras no haya nada publicado la reinstalación a mano hace ese trabajo y es una decisión consciente; después, lo que falta es la `Migration`. La prohibición está anotada también en el `databaseBuilder` de [`OllinDatabase`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/OllinDatabase.kt), que es donde daría la tentación.

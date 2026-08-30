@@ -70,7 +70,7 @@ El lector carga el paquete completo en memoria porque `sharedStrings.xml` puede 
 
 `Archivo → Importar` abre el selector del sistema. Es la única entrada: el archivo lo eliges tú, dentro de la app.
 
-Hubo un `intent-filter` de tipo `spreadsheetml.sheet` para aceptar "Abrir con Ollin Finanzas" desde un gestor de archivos o desde la nube, pero **nadie leía el `Intent` entrante**: elegir el archivo abría el tablero y lo ignoraba. Se retiró hasta que haya con qué atenderlo. Cuando se implemente, la URI llega de otra app —el filtro es `exported` y `BROWSABLE`— así que es entrada no confiable: hay que importarla solo tras confirmación explícita, nunca al vuelo, porque importar con Reemplazar borra el libro.
+No hay `intent-filter` de tipo `spreadsheetml.sheet` para aceptar "Abrir con Ollin Finanzas" desde un gestor de archivos o desde la nube: haría falta leer el `Intent` entrante, y sin eso elegir el archivo abriría el tablero ignorándolo. El día que se atienda, la URI llega de otra app —un filtro así es `exported` y `BROWSABLE`—, así que es entrada no confiable: hay que importarla solo tras confirmación explícita, nunca al vuelo, porque importar con Reemplazar borra el libro.
 
 ### Qué hojas se leen
 
@@ -141,7 +141,7 @@ Un renglón sin fecha, sin cantidad o sin cuenta se omite y se reporta con su n�
 
 **Importar es atómico.** La lectura del `.xlsx` va fuera de la transacción y toda la escritura dentro de un único `db.withTransaction`: movimientos, metas, compromisos y la purga de catálogo. Por eso [`ImportadorExcel`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/ImportadorExcel.kt) recibe la base entera y no sus DAO sueltos.
 
-No es un detalle de estilo. Con **Reemplazar** encendido —que es lo normal— la importación borra todos los movimientos antes de insertar los nuevos, y entre una cosa y otra todavía crea categorías. Suelto, cualquier tropiezo en ese tramo —disco lleno, una restricción, o que Android mate el proceso por memoria— dejaba el libro **sin nada y sin reemplazo**: la peor pérdida posible en una app cuyo valor entero es el registro, e irrecuperable salvo que conserves el `.xlsx`.
+No es un detalle de estilo. Con **Reemplazar** encendido —que es lo normal— la importación borra todos los movimientos antes de insertar los nuevos, y entre una cosa y otra todavía crea categorías. Suelto, cualquier tropiezo en ese tramo —disco lleno, una restricción, o que Android mate el proceso por memoria— dejaría el libro **sin nada y sin reemplazo**: la peor pérdida posible en una app cuyo valor entero es el registro, e irrecuperable salvo que conserves el `.xlsx`.
 
 Parsear fuera de la transacción también importa: es la parte que puede quedarse sin memoria con un archivo grande, y así revienta antes de haber borrado nada.
 
@@ -170,6 +170,6 @@ El lector rechaza los archivos que declaran un `DOCTYPE`. Es lo que corta de ra�
 
 **El rechazo se hace leyendo el prólogo a mano, no pidiéndoselo al parser.** El `SAXParserFactory` de Android está construido sobre Expat y solo reconoce las dos banderas de namespaces: `disallow-doctype-decl` y las de entidades externas lanzan `SAXNotRecognizedException`. Se siguen intentando por si la plataforma las admite, pero en silencio y como refuerzo — la defensa que sostiene es propia y se comporta igual en cualquier teléfono.
 
-Esto ya costó una regresión: convertir ese intento en un `throw` hizo que **toda** importación fallara en dispositivo, y las pruebas no lo vieron porque en la JVM el parser sí reconoce las banderas. Si vuelves a tocar esta zona, recuerda que las pruebas unitarias no pueden decirte cómo se comporta el parser de Android.
+Cuidado al tocar esta zona: convertir ese intento en un `throw` haría fallar **toda** importación en dispositivo, y las pruebas no lo verían, porque en la JVM el parser sí reconoce las banderas. Las pruebas unitarias no pueden decirte cómo se comporta el parser de Android.
 
 Los libros quedan en `app/build/pruebas/` para poder abrirlos a mano y comprobar el resultado.

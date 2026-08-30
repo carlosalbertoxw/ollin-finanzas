@@ -20,7 +20,7 @@ import java.time.LocalDate
  * El repositorio es la puerta unica de escritura, y por lo tanto el sitio donde
  * viven los invariantes que la interfaz no debe poder saltarse: una
  * transferencia nace y muere con sus dos patas, y la contraparte se deriva
- * siempre. Antes no habia una sola prueba sobre ellos.
+ * siempre. Aqui se prueban uno por uno.
  */
 class FinanzasRepositorioTest : BaseEnMemoria() {
 
@@ -226,10 +226,11 @@ class FinanzasRepositorioTest : BaseEnMemoria() {
     }
 
     /**
-     * La regresion de CAL-01. Antes esto se hacia moviendo `fechaPrimerPago` con
-     * `plusMonths`/`minusMonths`, que recortan el dia en los meses cortos y no lo
-     * recuerdan: un plan del 31 de enero se iba al 28 de febrero y al deshacerlo
-     * volvia al 28 de enero, perdiendo el 31 para siempre.
+     * Lo que protege el ancla inmovil. Si el plan avanzara moviendo
+     * `fechaPrimerPago` con `plusMonths`/`minusMonths` —que recortan el dia en
+     * los meses cortos y no lo recuerdan— un plan del 31 de enero se iria al 28
+     * de febrero y al deshacerlo volveria al 28 de enero, perdiendo el 31 para
+     * siempre.
      */
     @Test
     fun `descartar y restaurar devuelve el plan al mismo dia, aun en meses cortos`() = runTest {

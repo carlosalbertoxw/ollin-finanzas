@@ -20,7 +20,7 @@ un libro de finanzas.
 | **Contraparte derivada** | No se captura si el movimiento es entre tus cuentas o con un tercero: se deduce del tipo. Traspaso o saldo inicial → propia; entrada o salida → tercero. Un campo que se captura a mano es un campo que se deja de mantener. |
 | **Salud de los datos** | Una pantalla que revisa en continuo: tipos que contradicen al signo del importe, transferencias sin su pareja, movimientos sin categoría, medios incoherentes con la cuenta, y descripciones casi idénticas (Levenshtein ≤ 2). Varios hallazgos se reparan con un botón. |
 | **Presupuesto y analítica** | Meta contra realidad por categoría y tendencia mensual. |
-| **Compromisos** | Lo que ya está comprometido y aún no se paga: mensualidades, suscripciones, gastos anuales. Cada uno lleva su cuenta, su categoría, su periodicidad y la fecha del siguiente pago, y avisa antes de vencer. **Registrar** abre la captura ya llena para que corrijas el monto si cambió. El plan nunca avanza solo: se desliza la tarjeta a la derecha y se elige **Cumplir** o **Descartar**, y las dos se deshacen devolviendo el plan justo a donde estaba, incluso uno que cae en día 31. Mientras nadie decida, el pago sigue pendiente aunque se pase de fecha. Todo esto —registrar, cumplir, descartar— se hace igual desde el tablero, sin entrar a la lista. |
+| **Compromisos** | Lo que ya está comprometido y aún no se paga: mensualidades, suscripciones, la renta, gastos anuales. Cada uno lleva su cuenta, su categoría, su periodicidad —de semanal a anual— y la fecha del siguiente pago, y avisa antes de vencer a la hora que elijas en Ajustes. **Registrar** abre la captura ya llena para que corrijas el monto si cambió. El plan nunca avanza solo: se desliza la tarjeta a la derecha y se elige **Cumplir** o **Descartar**, y las dos se deshacen devolviendo el plan justo a donde estaba, incluso uno que cae en día 31. Mientras nadie decida, el pago sigue pendiente aunque se pase de fecha. Todo esto —registrar, cumplir, descartar— se hace igual desde el tablero, sin entrar a la lista. |
 | **Importar y exportar .xlsx** | Tu respaldo es un libro de Excel que tú decides dónde guardar. |
 
 Todos los importes viven como **centavos en un `Long`**. Nunca como decimal flotante: así
@@ -92,7 +92,7 @@ Decisiones que no son las de default, y por qué:
   sin ganancia a esta escala.
 - **Importes en centavos (`Long`).** Ver arriba.
 - **Alarma inexacta** para los recordatorios: no justifica pedir permiso de alarma exacta
-  ni gastar batería.
+  ni gastar batería. La hora del aviso es un ajuste, no una constante.
 - **`androidx.fragment` declarado a mano.** `biometric:1.1.0` arrastra `fragment:1.2.5`,
   anterior a la API de ActivityResult: su `FragmentActivity` rechaza los request codes de
   más de 16 bits que genera `activity:1.10.1`, y **cualquier** selector de archivos revienta
@@ -103,7 +103,7 @@ Decisiones que no son las de default, y por qué:
 ## Documentación
 
 - [Arquitectura](docs/arquitectura.md) — capas, navegación, arranque y bloqueo, y por qué no hay framework de inyección.
-- [Modelo de datos](docs/modelo-de-datos.md) — las seis tablas, invariantes del repositorio, proyecciones y versionado del esquema.
+- [Modelo de datos](docs/modelo-de-datos.md) — las seis tablas, invariantes del repositorio, proyecciones y el estado del esquema.
 - [El libro](docs/movimientos.md) — tipos, signos, transferencias, gasto contra patrimonio, presupuesto y compromisos.
 - [Salud de los datos](docs/calidad.md) — qué revisa la auditoría, qué se repara solo y qué no.
 - [Excel](docs/excel.md) — formato del libro exportado, fórmulas, reglas de importación.

@@ -12,6 +12,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDate
 
 /**
  * normalizaClave sostiene todo el emparejamiento por texto de la app: los
@@ -137,14 +138,70 @@ class EnumsYNormalizacionTest {
     }
 
     @Test
-    fun `Periodicidad resuelve desde su etiqueta y sus meses son coherentes`() {
+    fun `Periodicidad resuelve desde su etiqueta y sus pasos son coherentes`() {
         assertEquals(Periodicidad.TRIMESTRAL, Periodicidad.desdeEtiqueta("Trimestral"))
         assertEquals(3, Periodicidad.desdeEtiqueta("Trimestral")?.meses)
         assertEquals(12, Periodicidad.ANUAL.meses)
-        // Doce meses tienen que ser divisibles por cada periodicidad, o la
-        // proyeccion anual de un compromiso deja de cuadrar.
+        assertEquals(Periodicidad.SEMANAL, Periodicidad.desdeEtiqueta("Semanal"))
+        assertEquals(7, Periodicidad.SEMANAL.dias)
+        assertEquals(Periodicidad.QUINCENAL, Periodicidad.desdeEtiqueta("QUINCENAL"))
+
         Periodicidad.entries.forEach { p ->
-            assertEquals("$p no divide el ano", 0, 12 % p.meses)
+            // Una cadencia es de dias o de meses, nunca de las dos ni de
+            // ninguna: si lo fuera, [avanza] no sabria que paso dar.
+            assertTrue("$p no define un paso unico", (p.dias > 0) != (p.meses > 0))
+            // Y las que van en meses tienen que dividir el ano, o la proyeccion
+            // anual de un compromiso deja de cuadrar.
+            if (p.meses > 0) assertEquals("$p no divide el ano", 0, 12 % p.meses)
+            assertTrue("$p no cae nunca en un ano", p.vecesPorAnio > 0)
         }
+    }
+
+    @Test
+    fun `Periodicidad avanza en dias o en meses segun su cadencia`() {
+        val ancla = LocalDate.of(2026, 1, 31)
+
+        // En meses se cuenta desde el ancla, asi que el 31 se recupera en cada
+        // mes que lo tiene en vez de quedarse recortado en 28 para siempre.
+        assertEquals(LocalDate.of(2026, 2, 28), Periodicidad.MENSUAL.avanza(ancla, 1))
+        assertEquals(LocalDate.of(2026, 3, 31), Periodicidad.MENSUAL.avanza(ancla, 2))
+
+        // En dias el paso es exacto y no hay nada que recortar.
+        assertEquals(LocalDate.of(2026, 2, 7), Periodicidad.SEMANAL.avanza(ancla, 1))
+        assertEquals(LocalDate.of(2026, 2, 15), Periodicidad.QUINCENAL.avanza(ancla, 1))
+
+        // Retroceder deshace lo que avanzo, que es lo que usa el editor para
+        // volver de la fecha elegida al ancla del plan. Se prueba en un dia que
+        // existe en todos los meses: es la unica ida y vuelta que se puede
+        // garantizar (ver abajo).
+        val diaSeguro = LocalDate.of(2026, 1, 15)
+        Periodicidad.entries.forEach { p ->
+            assertEquals(
+                "$p no deshace su propio avance",
+                diaSeguro,
+                p.retrocede(p.avanza(diaSeguro, 3), 3)
+            )
+        }
+
+        // Limitacion conocida y aceptada de las cadencias en meses: un 31 que
+        // pasa por un mes corto se recorta y ya no vuelve. Queda fijada aqui
+        // para que se note si alguien cambia el modelo de ancla.
+        assertEquals(
+            LocalDate.of(2026, 1, 30),
+            Periodicidad.MENSUAL.retrocede(Periodicidad.MENSUAL.avanza(ancla, 3), 3)
+        )
+        // En dias no pasa: restar dias es exacto en cualquier fecha.
+        assertEquals(ancla, Periodicidad.QUINCENAL.retrocede(Periodicidad.QUINCENAL.avanza(ancla, 3), 3))
+    }
+
+    @Test
+    fun `Periodicidad lleva cualquier cadencia a lo que pesa al mes`() {
+        // Quincenal son dos pagos al mes; mensual es el mismo importe.
+        assertEquals(20_000L, Periodicidad.QUINCENAL.equivalenteMensual(10_000L))
+        assertEquals(10_000L, Periodicidad.MENSUAL.equivalenteMensual(10_000L))
+        // Anual no se siente cada mes, y por eso no entra en la carga fija.
+        assertFalse(Periodicidad.ANUAL.cabeEnUnMes)
+        assertTrue(Periodicidad.SEMANAL.cabeEnUnMes)
+        assertTrue(Periodicidad.MENSUAL.cabeEnUnMes)
     }
 }

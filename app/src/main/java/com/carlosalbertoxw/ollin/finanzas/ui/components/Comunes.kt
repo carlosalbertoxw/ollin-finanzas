@@ -388,7 +388,7 @@ val AlturaMinimaDeslizable = 64.dp
  * la seccion "Se viene" del tablero. El gesto tiene que significar lo mismo en
  * las dos, y una copia se habria separado de la otra a la primera correccion.
  *
- * [contenido] tiene dos requisitos, y los dos se descubrieron rompiendolos:
+ * [contenido] tiene dos requisitos, y romper cualquiera de los dos se ve:
  *
  * - **Opaco**: viaja por encima del panel de acciones, asi que si es
  *   transparente el panel se le ve a traves al deslizar.

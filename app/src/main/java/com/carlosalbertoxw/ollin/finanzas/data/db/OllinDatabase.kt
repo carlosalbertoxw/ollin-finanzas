@@ -56,8 +56,9 @@ abstract class OllinDatabase : RoomDatabase() {
                 .openHelperFactory(SupportOpenHelperFactory(frase.toByteArray(Charsets.UTF_8)))
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
                 // Nunca fallbackToDestructiveMigration: borraria el libro entero
-                // en silencio. Cada version nueva lleva su Migration. Ver
-                // docs/modelo-de-datos.md.
+                // en silencio. El esquema es el inicial y no hay ninguna
+                // migracion todavia; la primera que haga falta se escribe a
+                // mano. Ver docs/modelo-de-datos.md.
                 .build()
         }
     }

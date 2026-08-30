@@ -234,9 +234,9 @@ fun MovimientosPantalla(
                 }
             }
 
-            // Lo que falta por cargar se dice y se puede pedir. Antes la lista
-            // se cortaba en seco y los movimientos viejos simplemente no
-            // existian para quien mirara esta pantalla.
+            // Lo que falta por cargar se dice y se puede pedir. Sin este
+            // renglon la lista se cortaria en seco y los movimientos viejos no
+            // existirian para quien mira esta pantalla.
             if (movimientos.size < totalDelFiltro) {
                 item(key = "cargar-mas") {
                     TextButton(

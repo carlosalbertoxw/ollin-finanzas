@@ -22,12 +22,12 @@
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.Ollin">
             <!--
-                Solo el lanzador. Hubo aqui un filtro ACTION_VIEW para "Abrir con
-                Ollin Finanzas" desde un gestor de archivos, pero nadie leia el
-                Intent entrante: elegir el archivo abria el tablero y lo ignoraba.
-                Se retira hasta que haya con que atenderlo. Cuando se implemente,
-                la URI llega de otra app y hay que tratarla como no confiable:
-                importar solo tras confirmacion explicita, nunca al vuelo.
+                Solo el lanzador. No hay filtro ACTION_VIEW para "Abrir con Ollin
+                Finanzas" desde un gestor de archivos porque nadie leeria el Intent
+                entrante: elegir el archivo abriria el tablero y lo ignoraria. El
+                dia que se atienda, la URI llega de otra app y hay que tratarla como
+                no confiable: importar solo tras confirmacion explicita, nunca al
+                vuelo.
             -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

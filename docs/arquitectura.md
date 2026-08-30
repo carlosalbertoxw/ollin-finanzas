@@ -41,7 +41,7 @@ Dos rutas se reescriben al vuelo en vez de apilarse:
 
 `FilaDeslizable` vive aquí y no en una pantalla porque la usan dos —la lista de Compromisos y la sección "Se viene" del tablero— y el gesto tiene que significar lo mismo en ambas. Una copia se habría separado de la otra a la primera corrección.
 
-Su contenido tiene dos requisitos, y los dos se descubrieron rompiéndolos al reusarla en el tablero:
+Su contenido tiene dos requisitos, y romper cualquiera de los dos se ve en pantalla:
 
 - **Opaco**, porque viaja por encima del panel de acciones y si no se le ve a través al deslizar.
 - **De `AlturaMinimaDeslizable` para arriba**, porque el panel se dibuja con `matchParentSize()` y hereda la altura del contenido. Más bajo, la etiqueta —que es el último hijo del `Column`— se recorta y "Cumplir" y "Descartar" quedan como dos símbolos sueltos. La constante lleva margen sobre la cuenta justa porque la etiqueta se mide en `sp` y crece con la letra del sistema.
@@ -71,7 +71,9 @@ Manual, en [`Contenedor`](../app/src/main/java/com/carlosalbertoxw/ollin/finanza
 
 Con un módulo y media docena de objetos compartidos, Hilt aportaría anotaciones y tiempo de compilación sin resolver ningún problema real.
 
-`OllinApp` además crea el canal de notificaciones, programa la revisión diaria de compromisos y siembra el catálogo inicial en un `CoroutineScope` de IO. El [sembrador](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/Sembrador.kt) es idempotente: si ya hay categorías, no toca nada.
+`OllinApp` además crea el canal de notificaciones, programa la revisión diaria de compromisos y siembra el catálogo inicial. Las dos últimas van en un `CoroutineScope` de IO porque las dos tocan disco: la hora del aviso vive en DataStore, y leerla en `onCreate()` bloquearía el arranque antes de la primera pantalla. El [sembrador](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/Sembrador.kt) es idempotente: si ya hay categorías, no toca nada.
+
+`ArranqueReceiver` hace lo mismo tras un reinicio, que borra las alarmas del sistema; por eso usa `goAsync()`, para poder leer la hora guardada antes de reprogramarla.
 
 ## Arranque y bloqueo
 

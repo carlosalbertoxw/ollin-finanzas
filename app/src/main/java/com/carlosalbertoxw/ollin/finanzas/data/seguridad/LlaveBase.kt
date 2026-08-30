@@ -18,11 +18,11 @@ import javax.crypto.spec.GCMParameterSpec
  * una llave AES que vive en el Keystore de Android, de donde no se puede
  * extraer ni con root. La app pide desenvolverla; nunca ve la llave maestra.
  *
- * La frase se representa en hexadecimal a proposito. SQLCipher recibe la misma
- * frase por dos caminos distintos —Room la pasa como bytes, la migracion la
- * pega dentro de un ATTACH ... KEY— y con texto imprimible los dos caminos
- * derivan exactamente la misma llave. Con bytes crudos no coincidirian y la
- * base migrada quedaria ilegible.
+ * Los 32 bytes al azar se representan en hexadecimal a proposito. La frase
+ * viaja como texto —se guarda en SharedPreferences y se le entrega a SQLCipher
+ * como cadena—, y en bytes crudos el resultado dependeria de por donde pase:
+ * cualquier codificacion de por medio los alteraria y la base no volveria a
+ * abrir.
  */
 object LlaveBase {
 

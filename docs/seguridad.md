@@ -17,7 +17,7 @@ llave maestra en AndroidKeyStore  ──►  no sale del dispositivo, ni con roo
 
 Tres detalles que no son evidentes:
 
-- **La frase se representa en hexadecimal a propósito.** SQLCipher puede recibirla por más de un camino —Room la pasa como bytes, un `ATTACH ... KEY` la pega dentro del SQL— y con texto imprimible los dos derivan exactamente la misma llave. Con bytes crudos no coincidirían.
+- **Los 32 bytes al azar se representan en hexadecimal a propósito.** La frase viaja como texto: se guarda en `SharedPreferences` y se le entrega a SQLCipher como cadena. En bytes crudos el resultado dependería de por dónde pase —cualquier codificación de por medio los alteraría— y la base no volvería a abrir.
 - **La llave del Keystore no exige desbloqueo del usuario** (`setUserAuthenticationRequired(false)`): la base se abre antes de que puedas autenticarte, y exigirlo dejaría la app sin arrancar.
 - **La frase nueva se escribe con `commit()` y no `apply()`**: si el proceso muriera antes de persistirla, la base quedaría cifrada con una frase que ya nadie conoce.
 
@@ -94,9 +94,9 @@ Solo tres, y ninguno da acceso a datos ajenos a la app:
 
 Los archivos se leen y se escriben por el **selector del sistema** (Storage Access Framework), así que no hace falta permiso de almacenamiento: la app solo ve el archivo que el usuario eligió.
 
-La alarma de los recordatorios es **inexacta** a propósito: un recordatorio de finanzas no justifica pedir el permiso de alarma exacta ni gastar batería.
+La alarma de los recordatorios es **inexacta** a propósito: un recordatorio de finanzas no justifica pedir el permiso de alarma exacta ni gastar batería. El sistema puede correrla unos minutos, y la pantalla de Ajustes lo dice donde se elige la hora — es una hora aproximada, no un despertador.
 
-`POST_NOTIFICATIONS` **se pide en tiempo de ejecución**, desde [`PideAvisos`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/PermisoAvisos.kt). Desde Android 13 nace denegado y declararlo en el manifiesto no basta: durante un tiempo la app no lo pedía nunca, así que el aviso diario se construía y se descartaba en silencio y la app parecía no tener recordatorios.
+`POST_NOTIFICATIONS` **se pide en tiempo de ejecución**, desde [`PideAvisos`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/PermisoAvisos.kt). Desde Android 13 nace denegado y declararlo en el manifiesto no basta: sin pedirlo, el aviso diario se construiría y se descartaría en silencio, y la app parecería no tener recordatorios sin que nada lo delatara desde dentro.
 
 Se pide con la app ya desbloqueada y no al arrancar: un diálogo del sistema encima de la pantalla del candado no se entiende, porque todavía no se ha visto de qué app viene. Si no se concede, la app simplemente no notifica — todo lo demás funciona igual.
 

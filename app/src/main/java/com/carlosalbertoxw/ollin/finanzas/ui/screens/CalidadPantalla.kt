@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -57,27 +59,66 @@ class CalidadVm(
     private val _cargando = MutableStateFlow(true)
     val cargando: StateFlow<Boolean> = _cargando
 
-    private val _ultimaReparacion = MutableStateFlow<String?>(null)
-    val ultimaReparacion: StateFlow<String?> = _ultimaReparacion
+    /** Lo ultimo que paso por decision del usuario: una reparacion o una revision a mano. */
+    private val _aviso = MutableStateFlow<String?>(null)
+    val aviso: StateFlow<String?> = _aviso
 
-    /** Se vuelve a correr cada vez que la pantalla queda al frente, no solo al crearla. */
+    /** Corre mientras el boton de la barra esta trabajando, para que se vea que trabaja. */
+    private val _revisando = MutableStateFlow(false)
+    val revisando: StateFlow<Boolean> = _revisando
+
+    /**
+     * Se vuelve a correr cada vez que la pantalla queda al frente, no solo al
+     * crearla. El aviso se limpia aqui: pertenece a la accion que lo produjo, y
+     * volver de otra pantalla ya no es esa accion.
+     */
     fun revisa() {
         viewModelScope.launch {
-            _hallazgos.value = runCatching { revisaCalidad.ejecuta() }.getOrDefault(emptyList())
-            _cargando.value = false
+            _aviso.value = null
+            audita()
         }
+    }
+
+    /**
+     * El boton "Revisar" de la barra.
+     *
+     * La auditoria ya corre sola al entrar, asi que volver a correrla casi
+     * siempre devuelve exactamente lo mismo y la pantalla no se mueve un pixel.
+     * Sin anunciarla, el boton pareceria roto: por eso lleva indicador mientras
+     * trabaja y deja una linea con el resultado, para que se distinga "no cambio
+     * nada" de "no hizo nada".
+     */
+    fun revisaAPeticion() {
+        if (_revisando.value) return
+        viewModelScope.launch {
+            _revisando.value = true
+            val encontrados = audita()
+            _revisando.value = false
+            _aviso.value = when (encontrados.size) {
+                0 -> "Revisado: ya no queda nada por revisar."
+                1 -> "Revisado: queda 1 cosa por revisar."
+                else -> "Revisado: quedan ${encontrados.size} cosas por revisar."
+            }
+        }
+    }
+
+    private suspend fun audita(): List<Hallazgo> {
+        val encontrados = runCatching { revisaCalidad.ejecuta() }.getOrDefault(emptyList())
+        _hallazgos.value = encontrados
+        _cargando.value = false
+        return encontrados
     }
 
     fun repara(hallazgo: Hallazgo) {
         viewModelScope.launch {
             val n = runCatching { reparaDatos.repara(hallazgo.clave) }.getOrDefault(0)
-            _ultimaReparacion.value = when {
+            _aviso.value = when {
                 n > 0 -> "Se corrigieron $n movimientos."
                 hallazgo.idsMovimiento.isNotEmpty() ->
                     "Ninguno se podia corregir solo. Abrelos uno por uno para resolverlos a mano."
                 else -> "No hubo nada que corregir."
             }
-            revisa()
+            audita()
         }
     }
 }
@@ -93,7 +134,8 @@ fun CalidadPantalla(
     val vm = recuerdaVm("calidad") { CalidadVm(revisaCalidad, reparaDatos) }
     val hallazgos by vm.hallazgos.collectAsStateWithLifecycle()
     val cargando by vm.cargando.collectAsStateWithLifecycle()
-    val reparacion by vm.ultimaReparacion.collectAsStateWithLifecycle()
+    val aviso by vm.aviso.collectAsStateWithLifecycle()
+    val revisando by vm.revisando.collectAsStateWithLifecycle()
     val colores = LocalColoresOllin.current
 
     // Al volver de revisar movimientos la foto ya cambio: se vuelve a auditar.
@@ -107,7 +149,18 @@ fun CalidadPantalla(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                 }
             },
-            actions = { TextButton(onClick = vm::revisa) { Text("Revisar") } }
+            actions = {
+                TextButton(onClick = vm::revisaAPeticion, enabled = !revisando) {
+                    if (revisando) {
+                        CircularProgressIndicator(
+                            Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text("Revisar")
+                }
+            }
         )
 
         when {
@@ -120,8 +173,10 @@ fun CalidadPantalla(
             hallazgos.isEmpty() -> EstadoVacio(
                 icono = Icons.Filled.CheckCircle,
                 titulo = "Todo cuadra",
-                detalle = "No encontre contradicciones entre tipos e importes, transferencias " +
-                    "a medias ni movimientos sin clasificar.",
+                // El aviso manda cuando lo hay: si acabas de corregir el ultimo
+                // hallazgo, lo que quieres leer es que se corrigio.
+                detalle = aviso ?: "No encontre contradicciones entre tipos e importes, " +
+                    "transferencias a medias ni movimientos sin clasificar.",
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -139,7 +194,7 @@ fun CalidadPantalla(
                     )
                 }
 
-                reparacion?.let {
+                aviso?.let {
                     item {
                         Text(it, style = MaterialTheme.typography.bodyMedium, color = colores.entrada)
                     }

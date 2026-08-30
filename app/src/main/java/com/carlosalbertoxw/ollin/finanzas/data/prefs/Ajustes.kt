@@ -24,7 +24,11 @@ enum class ModoBloqueo(val etiqueta: String) {
     PIN("PIN propio")
 }
 
-/** Preferencias de exportacion, apariencia y bloqueo. */
+/** La hora del aviso diario mientras nadie la mueva. */
+const val HORA_AVISO_PREDETERMINADA = 9
+const val MINUTO_AVISO_PREDETERMINADO = 0
+
+/** Preferencias de exportacion, apariencia, avisos y bloqueo. */
 data class Ajustes(
     val esquema: EsquemaExportacion = EsquemaExportacion.EXTENDIDO,
     val hojas: Set<HojaExportable> = HojaExportable.PREDETERMINADAS,
@@ -41,6 +45,13 @@ data class Ajustes(
      * pudiendo abrir desde Ajustes, para que apagarlos no sea un camino sin regreso.
      */
     val muestraTutoriales: Boolean = true,
+    /**
+     * Hora y minuto del aviso diario de compromisos. Las nueve de la mañana son
+     * un punto de partida, no una ley: a quien se levanta a las cinco le llega
+     * tarde y a quien revisa sus cuentas de noche no le sirve.
+     */
+    val horaAviso: Int = HORA_AVISO_PREDETERMINADA,
+    val minutoAviso: Int = MINUTO_AVISO_PREDETERMINADO,
     val modoBloqueo: ModoBloqueo = ModoBloqueo.NINGUNO,
     /** Del PIN solo se guarda su huella derivada; el PIN en claro no se escribe nunca. */
     val pinHash: String? = null,
@@ -65,6 +76,8 @@ class AjustesRepositorio(private val contexto: Context) {
         val ULTIMO_ARCHIVO = stringPreferencesKey("ultimo_archivo")
         val SALDO_INICIAL = booleanPreferencesKey("muestra_saldo_inicial")
         val TUTORIALES = booleanPreferencesKey("muestra_tutoriales")
+        val HORA_AVISO = intPreferencesKey("hora_aviso")
+        val MINUTO_AVISO = intPreferencesKey("minuto_aviso")
         val BLOQUEO = stringPreferencesKey("modo_bloqueo")
         val PIN_HASH = stringPreferencesKey("pin_hash")
         val PIN_SAL = stringPreferencesKey("pin_sal")
@@ -93,6 +106,11 @@ class AjustesRepositorio(private val contexto: Context) {
         ultimoArchivo = p[Claves.ULTIMO_ARCHIVO],
         muestraSaldoInicial = p[Claves.SALDO_INICIAL] ?: true,
         muestraTutoriales = p[Claves.TUTORIALES] ?: true,
+        // Se recorta al leer y no solo al escribir: un valor imposible en
+        // disco tiraria la alarma con un IllegalArgumentException al construir
+        // la hora, y la app se quedaria sin avisos sin decir por que.
+        horaAviso = (p[Claves.HORA_AVISO] ?: HORA_AVISO_PREDETERMINADA).coerceIn(0, 23),
+        minutoAviso = (p[Claves.MINUTO_AVISO] ?: MINUTO_AVISO_PREDETERMINADO).coerceIn(0, 59),
         modoBloqueo = p[Claves.BLOQUEO]
             ?.let { runCatching { ModoBloqueo.valueOf(it) }.getOrNull() }
             ?: ModoBloqueo.NINGUNO,
@@ -174,6 +192,13 @@ class AjustesRepositorio(private val contexto: Context) {
 
     suspend fun guardaMuestraTutoriales(valor: Boolean) {
         contexto.almacen.edit { it[Claves.TUTORIALES] = valor }
+    }
+
+    suspend fun guardaHoraDeAviso(hora: Int, minuto: Int) {
+        contexto.almacen.edit {
+            it[Claves.HORA_AVISO] = hora.coerceIn(0, 23)
+            it[Claves.MINUTO_AVISO] = minuto.coerceIn(0, 59)
+        }
     }
 
     suspend fun guardaUltimoArchivo(uri: String?) {

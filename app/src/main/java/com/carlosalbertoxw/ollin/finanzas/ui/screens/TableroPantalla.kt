@@ -316,7 +316,8 @@ fun TableroPantalla(
                         Icon(Icons.Filled.HealthAndSafety, contentDescription = null)
                         Column(Modifier.weight(1f)) {
                             Text(
-                                "${estado.hallazgos.size} cosas que revisar",
+                                if (estado.hallazgos.size == 1) "1 cosa que revisar"
+                                else "${estado.hallazgos.size} cosas que revisar",
                                 style = MaterialTheme.typography.titleSmall
                             )
                             Text(

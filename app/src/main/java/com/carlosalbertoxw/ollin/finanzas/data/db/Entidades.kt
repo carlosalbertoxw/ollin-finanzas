@@ -167,16 +167,17 @@ data class Compromiso(
     /**
      * Cuando toca el siguiente pago.
      *
-     * Siempre se suma sobre [fechaPrimerPago] y nunca sobre el resultado
+     * Siempre se cuenta sobre [fechaPrimerPago] y nunca sobre el resultado
      * anterior. `plusMonths` recorta el dia al ultimo valido del mes destino y
      * no lo recuerda, asi que encadenar sumas sobre un valor ya recortado
      * arrastra el error: un plan del 31 de enero se volvia del 28 y se quedaba
      * ahi para siempre. Desde el ancla, el 31 se recupera en cada mes que lo
-     * tiene.
+     * tiene. Quien decide si el paso son dias o meses es la periodicidad.
      */
     val proximoPago: LocalDate
-        get() = fechaPrimerPago.plusMonths(
-            (pagosRealizados + pagosDescartados).toLong() * periodicidad.meses
+        get() = periodicidad.avanza(
+            fechaPrimerPago,
+            (pagosRealizados + pagosDescartados).toLong()
         )
 
     /** null = plan indefinido. */

@@ -4,7 +4,7 @@ Un libro de finanzas se degrada con el uso: se captura de prisa, se importa un a
 
 [`RevisaCalidad`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/domain/usecase/RevisaCalidad.kt) corre cada vez que se abre el tablero o la pantalla de Salud, no una sola vez al importar.
 
-Corre en `Dispatchers.Default`. Las consultas se van a IO por su cuenta, pero el análisis posterior es CPU pura y una de las revisiones crece con el **cuadrado** de las descripciones distintas: en el hilo del llamador colgaba la interfaz justo al abrir la app, que es cuando el tablero la dispara.
+Corre en `Dispatchers.Default`. Las consultas se van a IO por su cuenta, pero el análisis posterior es CPU pura y una de las revisiones crece con el **cuadrado** de las descripciones distintas: en el hilo del llamador colgaría la interfaz justo al abrir la app, que es cuando el tablero la dispara.
 
 ## Los hallazgos
 
@@ -42,7 +42,7 @@ Lo único que vale para cualquier cuenta es que **el dinero de una cartera se mu
 
 **Regla de oro: nunca se toca el importe.** El importe es lo que realmente pasó y de él dependen todos los saldos; lo que se corrige es la etiqueta que lo describe mal.
 
-**Una reparación es todo o nada.** No escribe renglón por renglón: arma la lista completa de movimientos corregidos y la manda a `FinanzasRepositorio.actualizaMovimientos`, que la aplica dentro de una sola transacción. Antes mandaba un `UPDATE` suelto por movimiento contra los DAO, así que un tropiezo a media reparación dejaba el libro mitad corregido —y era el único punto de la app que se saltaba la puerta única de escritura.
+**Una reparación es todo o nada.** No escribe renglón por renglón: arma la lista completa de movimientos corregidos y la manda a `FinanzasRepositorio.actualizaMovimientos`, que la aplica dentro de una sola transacción. Un `UPDATE` suelto por movimiento contra los DAO dejaría el libro mitad corregido al primer tropiezo, y de paso sería el único punto de la app que se salta la puerta única de escritura.
 
 | Clave | Qué hace |
 |---|---|
@@ -59,3 +59,9 @@ Desde Salud de los datos, cada hallazgo abre `revision/{clave}` con **la lista c
 - Cuando lo único que falta es la categoría, se elige desde la misma lista sin abrir el movimiento. Solo se ofrecen las categorías hoja que corresponden al signo del importe: gasto y patrimonio si sale dinero, ingreso si entra.
 - El resto abre la captura del movimiento.
 - La revisión se repite al volver (`ON_RESUME`) sin apagar la lista, así lo corregido desaparece solo.
+
+## El botón "Revisar"
+
+La auditoría ya corre sola al entrar y cada vez que la pantalla vuelve al frente, así que pedirla a mano casi siempre devuelve exactamente lo mismo y la pantalla no se mueve un píxel. Sin anunciarla, el botón parecería roto.
+
+Por eso la revisión a petición se ve: indicador mientras trabaja y una línea con el resultado —"Revisado: ya no queda nada por revisar", "quedan 3 cosas por revisar"—. Es lo que distingue *no cambió nada* de *no hizo nada*. Esa línea es la misma que informa de una reparación, y se limpia al volver de otra pantalla: pertenece a la acción que la produjo.

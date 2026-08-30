@@ -142,10 +142,9 @@ class RecordatoriosTest {
     // ------------------------------------------------------ la hora del aviso
 
     /**
-     * La regresion que dejo el aviso diario sin dispararse durante toda la vida
-     * de la app: el disparo se calculaba como `now().plusDays(1)`, y como la
-     * revision se reprograma en cada arranque, abrir la app antes de las nueve
-     * corria la alarma al dia siguiente. Otra vez. Y otra.
+     * El borde del que depende que el aviso llegue: calculada como
+     * `now().plusDays(1)`, la alarma se correria al dia siguiente cada vez que
+     * la app se abriera antes de la hora. Otra vez. Y otra.
      */
     @Test
     fun `antes de las nueve el aviso es hoy mismo`() {
@@ -209,5 +208,50 @@ class RecordatoriosTest {
             LocalDate.of(2026, 9, 1).atTime(9, 0),
             Recordatorios.proximoDisparo(fin)
         )
+    }
+
+    // -------------------------------------------- la hora la elige la persona
+
+    @Test
+    fun `con la hora movida el disparo la respeta`() {
+        val tarde = LocalDate.of(2026, 8, 21).atTime(19, 45)
+
+        assertEquals(
+            LocalDate.of(2026, 8, 21).atTime(21, 30),
+            Recordatorios.proximoDisparo(tarde, hora = 21, minuto = 30)
+        )
+    }
+
+    /** Pasada la hora elegida, el siguiente aviso es el de mañana a esa hora. */
+    @Test
+    fun `con la hora movida y ya pasada el disparo es mañana a esa hora`() {
+        val tarde = LocalDate.of(2026, 8, 21).atTime(22, 0)
+
+        assertEquals(
+            LocalDate.of(2026, 8, 22).atTime(21, 30),
+            Recordatorios.proximoDisparo(tarde, hora = 21, minuto = 30)
+        )
+    }
+
+    /**
+     * Una hora imposible no puede tumbar la alarma. `atTime(25, 0)` lanza, y
+     * eso dejaria a la app sin avisos por un valor guardado a destiempo.
+     */
+    @Test
+    fun `una hora fuera de rango se recorta en vez de reventar`() {
+        val ahora = LocalDate.of(2026, 8, 21).atTime(10, 0)
+
+        assertEquals(
+            LocalDate.of(2026, 8, 21).atTime(23, 59),
+            Recordatorios.proximoDisparo(ahora, hora = 99, minuto = 99)
+        )
+    }
+
+    @Test
+    fun `la hora se enseña como la trae el reloj del telefono`() {
+        assertEquals("21:30", Recordatorios.formateaHora(21, 30, de24Horas = true))
+
+        val doce = Recordatorios.formateaHora(21, 30, de24Horas = false)
+        assertTrue("Debe salir en formato de 12 horas, salio: $doce", doce.startsWith("9:30"))
     }
 }

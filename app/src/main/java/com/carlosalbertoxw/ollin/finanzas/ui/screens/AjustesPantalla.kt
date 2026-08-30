@@ -1,6 +1,7 @@
 package com.carlosalbertoxw.ollin.finanzas.ui.screens
 
 import android.os.Build
+import android.text.format.DateFormat
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,7 +29,9 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +53,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.carlosalbertoxw.ollin.finanzas.data.notify.Recordatorios
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.Ajustes
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ClavePin
@@ -85,6 +89,10 @@ class AjustesVm(
 
     fun cambiaMuestraTutoriales(valor: Boolean) {
         viewModelScope.launch { prefs.guardaMuestraTutoriales(valor) }
+    }
+
+    fun cambiaHoraDeAviso(hora: Int, minuto: Int) {
+        viewModelScope.launch { prefs.guardaHoraDeAviso(hora, minuto) }
     }
 
     fun quitaBloqueo() {
@@ -194,6 +202,13 @@ fun AjustesPantalla(
 
             HorizontalDivider()
 
+            SeccionAvisos(
+                ajustes = ajustes,
+                alCambiarHora = vm::cambiaHoraDeAviso
+            )
+
+            HorizontalDivider()
+
             SeccionBloqueo(
                 ajustes = ajustes,
                 alQuitar = vm::quitaBloqueo,
@@ -266,6 +281,104 @@ fun AjustesPantalla(
             TextButton(onClick = alCerrar, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
         }
     }
+}
+
+/**
+ * La hora del aviso diario de compromisos.
+ *
+ * Estaba clavada en las nueve de la mañana, que a quien se levanta a las cinco
+ * le llega tarde y a quien revisa sus cuentas de noche no le sirve. Moverla es
+ * un ajuste, no una recompilacion.
+ */
+@Composable
+private fun SeccionAvisos(
+    ajustes: Ajustes,
+    alCambiarHora: (Int, Int) -> Unit
+) {
+    val contexto = LocalContext.current
+    val colores = LocalColoresOllin.current
+    val de24Horas = remember(contexto) { DateFormat.is24HourFormat(contexto) }
+    var eligiendoHora by remember { mutableStateOf(false) }
+
+    Text("Avisos", style = MaterialTheme.typography.titleMedium)
+    Text(
+        "Una vez al dia Ollin Finanzas revisa tus compromisos y te avisa de los que " +
+            "entraron en su ventana de aviso o ya se pasaron de fecha. Cada compromiso " +
+            "decide con cuantos dias de anticipacion quiere sonar; aqui se elige a que " +
+            "hora se hace esa revision.",
+        style = MaterialTheme.typography.bodySmall,
+        color = colores.textoTenue
+    )
+
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Hora del aviso", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                Recordatorios.formateaHora(ajustes.horaAviso, ajustes.minutoAviso, de24Horas),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colores.textoTenue
+            )
+        }
+        TextButton(onClick = { eligiendoHora = true }) { Text("Cambiar") }
+    }
+
+    Text(
+        "El sistema puede correrlo unos minutos para ahorrar bateria: es una hora " +
+            "aproximada, no una alarma de despertador.",
+        style = MaterialTheme.typography.bodySmall,
+        color = colores.textoTenue
+    )
+
+    if (eligiendoHora) {
+        DialogoHoraDeAviso(
+            hora = ajustes.horaAviso,
+            minuto = ajustes.minutoAviso,
+            de24Horas = de24Horas,
+            alGuardar = { hora, minuto ->
+                eligiendoHora = false
+                alCambiarHora(hora, minuto)
+                // La alarma en pie sigue apuntando a la hora vieja. Guardar la
+                // preferencia no la mueve: hay que volver a ponerla aqui mismo,
+                // o el cambio no se notaria hasta reiniciar el telefono.
+                Recordatorios.reprogramaRevisionDiaria(contexto, hora, minuto)
+            },
+            alCancelar = { eligiendoHora = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DialogoHoraDeAviso(
+    hora: Int,
+    minuto: Int,
+    de24Horas: Boolean,
+    alGuardar: (Int, Int) -> Unit,
+    alCancelar: () -> Unit
+) {
+    val estado = rememberTimePickerState(
+        initialHour = hora,
+        initialMinute = minuto,
+        is24Hour = de24Horas
+    )
+
+    AlertDialog(
+        onDismissRequest = alCancelar,
+        title = { Text("Hora del aviso") },
+        text = {
+            // El reloj es alto y en pantallas cortas no cabe entero.
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                TimePicker(state = estado)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { alGuardar(estado.hour, estado.minute) }) { Text("Guardar") }
+        },
+        dismissButton = { TextButton(onClick = alCancelar) { Text("Cancelar") } }
+    )
 }
 
 @Composable
