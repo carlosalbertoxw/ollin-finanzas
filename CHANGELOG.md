@@ -16,6 +16,17 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ## [Sin publicar]
 
+## [1.0.2] - 2026-08-31
+
+### Arreglado
+
+- **La app se cerraba al abrirla, después de actualizar a la 1.0.1.** La 1.0.0 guardaba la versión disponible como entero bajo la clave `version_publicada` y la 1.0.1 pidió ese mismo nombre como texto. DataStore guarda el tipo junto al valor, así que la lectura lanzaba `ClassCastException` dentro del flujo que alimenta el arranque, y eso cierra el proceso. Solo pasaba al instalar encima de la versión anterior: una instalación nueva no tiene nada guardado y por eso ni las pruebas ni un teléfono limpio lo veían. **No se pierde nada de lo capturado**: la 1.0.2 lee lo que dejó la 1.0.0 y sigue adelante.
+
+### Cambiado
+
+- Las lecturas de preferencias comprueban el tipo en tiempo de ejecución y tratan como ausente lo que no cuadre, así que un valor heredado no puede volver a cerrar la app. La regla —una clave no cambia de tipo nunca— y su prueba de actualización quedan en [modelo de datos](https://github.com/carlosalbertoxw/ollin-finanzas/blob/main/docs/modelo-de-datos.md).
+- El trabajo de arranque —sembrar el catálogo, programar el aviso, buscar versión nueva— ya no puede tumbar la app: falla, se anota en el log y la app abre igual.
+
 ## [1.0.1] - 2026-08-31
 
 ### Cambiado
@@ -42,6 +53,7 @@ Primera versión pública.
 - **Aviso de actualizaciones.** Ollin consulta una vez al día si hay una versión más nueva publicada y lo enseña en *Acerca de*. Se apaga en Ajustes. Ver [seguridad y privacidad](https://github.com/carlosalbertoxw/ollin-finanzas/blob/main/docs/seguridad.md).
 - **Sitio de descarga** en GitHub Pages, con el APK firmado, su huella y las instrucciones de instalación fuera de la tienda.
 
-[Sin publicar]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.1...HEAD
+[Sin publicar]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/carlosalbertoxw/ollin-finanzas/releases/tag/v1.0.0

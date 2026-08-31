@@ -1,6 +1,8 @@
 package com.carlosalbertoxw.ollin.finanzas
 
 import android.app.Application
+import android.util.Log
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,7 +16,24 @@ class OllinApp : Application() {
     lateinit var contenedor: Contenedor
         private set
 
-    private val alcance = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /**
+     * Lo de arranque que no puede tumbar la app.
+     *
+     * Un `SupervisorJob` aisla a los hijos entre si, pero **no** se traga lo
+     * que revienta: sin este manejador la excepcion sube al handler por
+     * omision y cierra el proceso. Aqui dentro solo hay trabajo accesorio
+     * --sembrar el catalogo, poner la alarma, preguntar por una version nueva--
+     * y ninguno de los tres justifica que la app no abra. La app sin catalogo
+     * sembrado se puede usar; la app que se cierra al abrirse, no.
+     *
+     * Va a logcat para que quede rastro: tragarselo en silencio esconderia un
+     * fallo real, y lo que se quiere es que no sea mortal, no que no se sepa.
+     */
+    private val alcance = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, error ->
+            Log.e("OllinApp", "Fallo el trabajo de arranque", error)
+        }
+    )
 
     override fun onCreate() {
         super.onCreate()

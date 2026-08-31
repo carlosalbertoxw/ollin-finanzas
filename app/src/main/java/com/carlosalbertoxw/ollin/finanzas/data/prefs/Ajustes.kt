@@ -92,7 +92,12 @@ class AjustesRepositorio(private val contexto: Context) {
         val TUTORIALES = booleanPreferencesKey("muestra_tutoriales")
         val BUSCAR_ACTUALIZACIONES = booleanPreferencesKey("buscar_actualizaciones")
         val ULTIMA_COMPROBACION = longPreferencesKey("ultima_comprobacion")
-        val VERSION_PUBLICADA = stringPreferencesKey("version_publicada")
+        /**
+         * Nombre nuevo a proposito. La 1.0.0 escribio un entero bajo
+         * `version_publicada`, y DataStore guarda el tipo junto al valor:
+         * pedirlo como texto lanza ClassCastException. Ver [DE_LA_1_0_0].
+         */
+        val VERSION_PUBLICADA = stringPreferencesKey("version_publicada_nombre")
         val URL_DESCARGA = stringPreferencesKey("url_descarga")
         val NOTAS_VERSION = stringPreferencesKey("notas_version")
         val HORA_AVISO = intPreferencesKey("hora_aviso")
@@ -101,46 +106,71 @@ class AjustesRepositorio(private val contexto: Context) {
         val PIN_HASH = stringPreferencesKey("pin_hash")
         val PIN_SAL = stringPreferencesKey("pin_sal")
         val PIN_FALLOS = intPreferencesKey("pin_fallos")
+
+        /**
+         * Lo que escribio la 1.0.0 y ya nadie lee. Se barre en la primera
+         * escritura para no dejarlo ocupando el archivo.
+         *
+         * `version_publicada` es la importante: guardaba un entero, y ese
+         * nombre queda quemado para siempre porque cualquier lectura con otro
+         * tipo revienta.
+         */
+        val DE_LA_1_0_0 = listOf(
+            intPreferencesKey("version_publicada"),
+            stringPreferencesKey("nombre_version_publicada"),
+            stringPreferencesKey("url_version_publicada"),
+            longPreferencesKey("ultima_busqueda_version"),
+            booleanPreferencesKey("busca_actualizaciones")
+        )
     }
 
-    val ajustes: Flow<Ajustes> = contexto.almacen.data.map(::mapea)
+    val ajustes: Flow<Ajustes> = contexto.almacen.data.map(::interpreta)
 
-    private fun mapea(p: Preferences): Ajustes = Ajustes(
-        esquema = p[Claves.ESQUEMA]
+    /**
+     * Traduce lo que hay en disco.
+     *
+     * `internal` para poder probarla con unas preferencias escritas a mano,
+     * incluidas las que dejo una version anterior: es donde se descubrio que
+     * las de la 1.0.0 cerraban la 1.0.1 al arrancar.
+     */
+    internal fun interpreta(p: Preferences): Ajustes = conLoGuardado(p.asMap())
+
+    private fun conLoGuardado(p: Map<Preferences.Key<*>, Any>): Ajustes = Ajustes(
+        esquema = p.lee(Claves.ESQUEMA)
             ?.let { runCatching { EsquemaExportacion.valueOf(it) }.getOrNull() }
             ?: EsquemaExportacion.EXTENDIDO,
-        hojas = p[Claves.HOJAS]
+        hojas = p.lee(Claves.HOJAS)
             ?.mapNotNull { runCatching { HojaExportable.valueOf(it) }.getOrNull() }
             ?.toSet()
             ?.takeIf { it.isNotEmpty() }
             ?: HojaExportable.PREDETERMINADAS,
-        corregirAlImportar = p[Claves.CORREGIR] ?: true,
-        reemplazarAlImportar = p[Claves.REEMPLAZAR] ?: true,
-        temaOscuro = when (p[Claves.TEMA]) {
+        corregirAlImportar = p.lee(Claves.CORREGIR) ?: true,
+        reemplazarAlImportar = p.lee(Claves.REEMPLAZAR) ?: true,
+        temaOscuro = when (p.lee(Claves.TEMA)) {
             "oscuro" -> true
             "claro" -> false
             else -> null
         },
-        colorDinamico = p[Claves.DINAMICO] ?: false,
-        ultimoArchivo = p[Claves.ULTIMO_ARCHIVO],
-        muestraSaldoInicial = p[Claves.SALDO_INICIAL] ?: true,
-        muestraTutoriales = p[Claves.TUTORIALES] ?: true,
-        buscarActualizaciones = p[Claves.BUSCAR_ACTUALIZACIONES] ?: true,
-        ultimaComprobacion = p[Claves.ULTIMA_COMPROBACION] ?: 0L,
-        versionPublicada = p[Claves.VERSION_PUBLICADA],
-        urlDeDescarga = p[Claves.URL_DESCARGA],
-        notasDeVersion = p[Claves.NOTAS_VERSION],
+        colorDinamico = p.lee(Claves.DINAMICO) ?: false,
+        ultimoArchivo = p.lee(Claves.ULTIMO_ARCHIVO),
+        muestraSaldoInicial = p.lee(Claves.SALDO_INICIAL) ?: true,
+        muestraTutoriales = p.lee(Claves.TUTORIALES) ?: true,
+        buscarActualizaciones = p.lee(Claves.BUSCAR_ACTUALIZACIONES) ?: true,
+        ultimaComprobacion = p.lee(Claves.ULTIMA_COMPROBACION) ?: 0L,
+        versionPublicada = p.lee(Claves.VERSION_PUBLICADA),
+        urlDeDescarga = p.lee(Claves.URL_DESCARGA),
+        notasDeVersion = p.lee(Claves.NOTAS_VERSION),
         // Se recorta al leer y no solo al escribir: un valor imposible en
         // disco tiraria la alarma con un IllegalArgumentException al construir
         // la hora, y la app se quedaria sin avisos sin decir por que.
-        horaAviso = (p[Claves.HORA_AVISO] ?: HORA_AVISO_PREDETERMINADA).coerceIn(0, 23),
-        minutoAviso = (p[Claves.MINUTO_AVISO] ?: MINUTO_AVISO_PREDETERMINADO).coerceIn(0, 59),
-        modoBloqueo = p[Claves.BLOQUEO]
+        horaAviso = (p.lee(Claves.HORA_AVISO) ?: HORA_AVISO_PREDETERMINADA).coerceIn(0, 23),
+        minutoAviso = (p.lee(Claves.MINUTO_AVISO) ?: MINUTO_AVISO_PREDETERMINADO).coerceIn(0, 59),
+        modoBloqueo = p.lee(Claves.BLOQUEO)
             ?.let { runCatching { ModoBloqueo.valueOf(it) }.getOrNull() }
             ?: ModoBloqueo.NINGUNO,
-        pinHash = p[Claves.PIN_HASH],
-        pinSal = p[Claves.PIN_SAL],
-        pinFallos = p[Claves.PIN_FALLOS] ?: 0
+        pinHash = p.lee(Claves.PIN_HASH),
+        pinSal = p.lee(Claves.PIN_SAL),
+        pinFallos = p.lee(Claves.PIN_FALLOS) ?: 0
     )
 
     suspend fun guardaFallosDePin(fallos: Int) {
@@ -250,6 +280,11 @@ class AjustesRepositorio(private val contexto: Context) {
      */
     suspend fun guardaComprobacion(cuando: Long, version: String, url: String, notas: String?) {
         contexto.almacen.edit {
+            // `remove` pide una clave de tipo concreto y estas son de tipos
+            // distintos entre si. Da igual: la igualdad de una clave es su
+            // nombre, que es lo unico que hace falta para borrarla.
+            @Suppress("UNCHECKED_CAST")
+            Claves.DE_LA_1_0_0.forEach { vieja -> it.remove(vieja as Preferences.Key<Any>) }
             it[Claves.ULTIMA_COMPROBACION] = cuando
             it[Claves.VERSION_PUBLICADA] = version
             it[Claves.URL_DESCARGA] = url
@@ -263,3 +298,27 @@ class AjustesRepositorio(private val contexto: Context) {
         }
     }
 }
+
+/**
+ * Lee una clave comprobando su tipo, no confiando en el.
+ *
+ * DataStore guarda el tipo junto al valor, asi que pedir como texto algo que
+ * una version anterior escribio como entero revienta. Y revienta lejos: con
+ * los genericos borrados, el `checkcast` no queda dentro de esta funcion sino
+ * en el punto donde se usa el valor, asi que envolverla en un `runCatching` no
+ * atrapa nada --se probo, y no sirvio--. La unica forma de comprobarlo de
+ * verdad es preguntar por el tipo en tiempo de ejecucion, que es lo que hace
+ * `as?` con un parametro `reified`.
+ *
+ * Importa porque esto corre dentro del Flow que alimenta el arranque y todas
+ * las pantallas: una excepcion aqui no se queda en una preferencia perdida,
+ * cierra la app en el telefono de quien actualiza. Un valor que no cuadra se
+ * trata como ausente y se cae al de fabrica.
+ *
+ * La regla que evita llegar hasta aqui: **una clave no cambia de tipo nunca**.
+ * Si el dato cambia de forma se estrena nombre, y el viejo se barre. Esto es la
+ * red de abajo, para que el dia que se olvide no cueste una version.
+ */
+private inline fun <reified T> Map<Preferences.Key<*>, Any>.lee(
+    clave: Preferences.Key<T>
+): T? = this[clave] as? T

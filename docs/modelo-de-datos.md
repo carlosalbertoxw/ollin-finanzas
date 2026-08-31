@@ -127,6 +127,18 @@ El ancla es inmóvil por una razón concreta. `plusMonths` recorta el día al ú
 
 Queda una limitación conocida de las cadencias en meses, anotada en el diálogo de edición: si eliges un próximo pago cuyo día no existe en el mes del ancla (un 31 retrocedido a febrero), el día se recorta. No hay ancla que lo evite —ninguna fecha de febrero más un mes cae en un 31 de marzo—; resolverlo pediría guardar el día de pago aparte del ancla. Las cadencias en días no tienen el problema: restar días es exacto.
 
+## Las preferencias también son datos guardados
+
+La base tiene migraciones, versión de esquema y una prueba que vigila la cadena. DataStore no tiene nada de eso, y es igual de persistente: lo que la app escribió ayer sigue ahí cuando se instala la versión de mañana encima.
+
+**Una clave nunca cambia de tipo.** DataStore guarda el tipo junto al valor, así que pedir como texto algo que se escribió como entero lanza `ClassCastException`. Y no es una preferencia perdida: la lectura ocurre dentro del `Flow` que alimenta el arranque y todas las pantallas, así que la excepción cierra la app — en el teléfono de quien actualiza, nunca en una instalación nueva.
+
+Si el dato cambia de forma, **se estrena nombre** y el viejo se agrega a `Claves.DE_LA_1_0_0` (o a la lista que corresponda) para barrerlo en la siguiente escritura. El nombre viejo queda quemado para siempre.
+
+Por debajo hay una red: las lecturas pasan por `lee()`, que comprueba el tipo en tiempo de ejecución con `as?` y trata como ausente lo que no cuadre. Ojo con la forma de escribirla — envolver la lectura en un `runCatching` **no** funciona: con los genéricos borrados, el `checkcast` no queda dentro de la función sino en el punto donde se usa el valor. Hace falta un parámetro `reified` y un `as?` de verdad.
+
+[`PreferenciasHeredadasTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/PreferenciasHeredadasTest.kt) es la prueba que faltaba: construye las preferencias tal como las dejó una versión anterior y comprueba que se leen sin reventar. Al agregar una clave, agrega también su caso ahí.
+
 ## Proyecciones
 
 [`Proyecciones.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/db/Proyecciones.kt) declara lo que devuelven las consultas con join o agregación. Son de solo lectura: nadie las inserta ni las modifica.
