@@ -185,6 +185,24 @@ Cuatro cosas que hay que saber antes de escribir más:
 - **Todo se busca con `useUnmergedTree = true`.** `NavigationBarItem` y el botón flotante marcan `mergeDescendants`, así que en el árbol fusionado sus textos dejan de ser nodos propios y se hunden en el del contenedor: cualquier selector por descendiente encuentra cero. Compose lo dice en el propio error — *"the unmerged tree contains 1 node that matches"*—, pero cuesta un rato leerlo.
 - **No hay `testTag` en la interfaz.** Se selecciona por texto visible, que en una app monolingüe es estable. Para las pestañas se apunta al contenedor `isSelectable()` y no al texto suelto, porque el título también puede aparecer dentro de la pantalla.
 
+### La prueba de actualización
+
+La otra mitad de `pruebas-instrumentadas.yml`, y la única que mira lo que le pasa a alguien que **ya tenía la app instalada**.
+
+Compila dos APK de depuración desde git —el de la última etiqueta y el de esta rama—, instala el primero, lo abre para que escriba sus preferencias, instala el segundo encima sin desinstalar, y comprueba que sigue abriéndose. La lógica vive en [`actualiza-y-abre.sh`](../.github/scripts/actualiza-y-abre.sh) y se puede correr contra un teléfono conectado:
+
+```bash
+RUNNER_TEMP=/tmp .github/scripts/actualiza-y-abre.sh
+```
+
+Tres decisiones que la sostienen:
+
+- **Los dos APK se compilan aquí, no se descarga la release publicada.** La llave de depuración la genera el propio runner, así que las dos versiones quedan firmadas igual y una se puede instalar sobre la otra; con firmas distintas Android lo rechaza. De paso, el flujo no necesita los secretos de firma.
+- **Se afirma poco a propósito**: que el proceso siga vivo y que no haya excepción mortal. No mira la pantalla, porque un fallo de arranque se manifiesta como el proceso que desaparece y eso se ve sin depender de animaciones.
+- **La versión anterior tiene que llegar a escribir**: es lo que da sentido a todo. El fallo que motivó esta prueba estaba en *leer* lo que la versión vieja dejó, no en instalar por instalar.
+
+Existe porque la 1.0.1 se cerraba al abrirse en los teléfonos que venían de la 1.0.0, y las 190 pruebas de entonces no podían verlo: todas empiezan con el disco vacío. Ver [modelo de datos](modelo-de-datos.md#las-preferencias-también-son-datos-guardados).
+
 Si la suite tarda unos minutos, el teléfono puede dormirse a medio camino y la siguiente prueba falla con `No compose hierarchies found in the app`: la actividad nunca llegó a primer plano. No es un fallo real. Despierta la pantalla antes de correrlas:
 
 ```bash
@@ -200,7 +218,7 @@ Cuatro flujos, todos con **JDK 21**, en [`.github/workflows/`](../.github/workfl
 | Flujo | Cuándo | Qué corre |
 |---|---|---|
 | `pruebas.yml` | push a `main` y cada PR | `testDebugUnitTest`, `lintDebug`, `assembleDebugAndroidTest`, `assembleRelease` y el build del sitio |
-| `pruebas-instrumentadas.yml` | lunes, y a mano | La suite de interfaz sobre un emulador |
+| `pruebas-instrumentadas.yml` | lunes, y a mano | La suite de interfaz y la prueba de actualización, sobre un emulador |
 | `publicacion.yml` | tag `vX.Y.Z` | Comprueba la etiqueta contra el CHANGELOG, invoca `pruebas.yml`, firma y publica el APK |
 | `sitio.yml` | `web/**`, `CHANGELOG.md`, o al terminar una publicación | Construye el sitio y lo publica en GitHub Pages |
 

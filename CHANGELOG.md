@@ -16,6 +16,10 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ## [Sin publicar]
 
+### Añadido
+
+- Una prueba de actualización sobre emulador: instala la versión de la última etiqueta, la abre para que escriba sus preferencias, instala la nueva encima sin desinstalar y comprueba que sigue abriéndose. Es la que habría atrapado el fallo de la 1.0.1. Corre en `pruebas-instrumentadas.yml`, los lunes y a mano.
+
 ## [1.0.2] - 2026-08-31
 
 ### Arreglado
