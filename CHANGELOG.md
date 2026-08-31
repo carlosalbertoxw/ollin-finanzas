@@ -16,6 +16,8 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ## [Sin publicar]
 
+## [1.0.1] - 2026-08-31
+
 ### Cambiado
 
 - **La app consulta `github.io` y no el dominio propio.** La dirección queda compilada dentro de cada APK y no se puede corregir en los que ya están instalados: `carlosalbertoxw.github.io` dura lo que el repositorio, mientras que un dominio se renueva cada año y se puede perder. El comprobador sigue **un** salto de redirección, y solo si el destino también es `https`.
@@ -40,5 +42,6 @@ Primera versión pública.
 - **Aviso de actualizaciones.** Ollin consulta una vez al día si hay una versión más nueva publicada y lo enseña en *Acerca de*. Se apaga en Ajustes. Ver [seguridad y privacidad](https://github.com/carlosalbertoxw/ollin-finanzas/blob/main/docs/seguridad.md).
 - **Sitio de descarga** en GitHub Pages, con el APK firmado, su huella y las instrucciones de instalación fuera de la tienda.
 
-[Sin publicar]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.0...HEAD
+[Sin publicar]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/carlosalbertoxw/ollin-finanzas/releases/tag/v1.0.0
