@@ -1,9 +1,9 @@
 package com.carlosalbertoxw.ollin.finanzas.di
 
 import android.content.Context
-import com.carlosalbertoxw.ollin.finanzas.data.actualizacion.BuscadorDeActualizaciones
-import com.carlosalbertoxw.ollin.finanzas.data.actualizacion.VersionInstalada
-import com.carlosalbertoxw.ollin.finanzas.data.actualizacion.versionInstalada
+import com.carlosalbertoxw.ollin.finanzas.BuildConfig
+import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.ComprobadorActualizaciones
+import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.Version
 import com.carlosalbertoxw.ollin.finanzas.data.db.OllinDatabase
 import com.carlosalbertoxw.ollin.finanzas.data.db.Sembrador
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
@@ -31,13 +31,18 @@ class Contenedor(contexto: Context) {
 
     val ajustes: AjustesRepositorio by lazy { AjustesRepositorio(app) }
 
-    val version: VersionInstalada by lazy { versionInstalada(app) }
+    /**
+     * La version que corre, de `BuildConfig` y no del `PackageManager`: sale del
+     * CHANGELOG al compilar, asi que es la misma que anuncia el sitio y no hay
+     * un segundo lugar del que pudiera diferir.
+     */
+    val version: Version? by lazy { Version.de(BuildConfig.VERSION_NAME) }
 
-    val buscadorDeActualizaciones: BuscadorDeActualizaciones by lazy {
-        BuscadorDeActualizaciones(
-            ajustes.ajustes,
-            ajustes::guardaVersionPublicada,
-            version.codigo
+    val comprobadorActualizaciones: ComprobadorActualizaciones by lazy {
+        ComprobadorActualizaciones(
+            ajustes = ajustes,
+            instalada = version,
+            url = BuildConfig.URL_ACTUALIZACIONES
         )
     }
 

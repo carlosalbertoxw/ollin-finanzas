@@ -1,6 +1,6 @@
 # Ollin Finanzas
 
-[![CI](https://github.com/carlosalbertoxw/ollin-finanzas/actions/workflows/ci.yml/badge.svg)](https://github.com/carlosalbertoxw/ollin-finanzas/actions/workflows/ci.yml)
+[![Pruebas](https://github.com/carlosalbertoxw/ollin-finanzas/actions/workflows/pruebas.yml/badge.svg)](https://github.com/carlosalbertoxw/ollin-finanzas/actions/workflows/pruebas.yml)
 [![Release](https://img.shields.io/github/v/release/carlosalbertoxw/ollin-finanzas?label=versi%C3%B3n)](https://github.com/carlosalbertoxw/ollin-finanzas/releases/latest)
 
 **El libro de tus movimientos.**
@@ -14,7 +14,7 @@ un libro de finanzas.
 
 No está en Google Play: el APK se instala a mano, y el sitio explica cómo. La app
 comprueba una vez al día si salió una versión nueva y lo dice en *Acerca de*; se puede
-apagar ahí mismo.
+apagar en Ajustes.
 
 ---
 
@@ -74,7 +74,7 @@ app/src/main/java/com/carlosalbertoxw/ollin/finanzas/
 ├── data/
 │   ├── db/          Room: entidades, DAOs, proyecciones, catálogo semilla
 │   ├── excel/       Lector y escritor de .xlsx propios, exportador e importador
-│   ├── actualizacion/ Si hay una version nueva publicada
+│   ├── actualizaciones/ Si hay una versión nueva publicada
 │   ├── notify/      Recordatorios de compromisos por vencer
 │   ├── prefs/       Preferencias en DataStore
 │   ├── repo/        FinanzasRepositorio: toda la escritura pasa por aquí
@@ -89,9 +89,9 @@ app/src/main/java/com/carlosalbertoxw/ollin/finanzas/
 Y fuera de la app:
 
 ```
-.github/workflows/   CI, release firmado y publicación del sitio
+.github/workflows/   Pruebas, release firmado y publicación del sitio
 web/                 El sitio de descarga (Vite), publicado en GitHub Pages
-version.properties   La versión, en un solo lugar
+CHANGELOG.md         La versión y las notas, en un solo lugar
 ```
 
 Cada pantalla recibe sus dependencias concretas —el repositorio, los ajustes, el caso de
@@ -111,6 +111,11 @@ Decisiones que no son las de default, y por qué:
 - **Importes en centavos (`Long`).** Ver arriba.
 - **Alarma inexacta** para los recordatorios: no justifica pedir permiso de alarma exacta
   ni gastar batería. La hora del aviso es un ajuste, no una constante.
+- **Sin `fallbackToDestructiveMigration`, nunca.** La base va cifrada con una llave del
+  Keystore que no se respalda: borrarla no es un inconveniente, es perder el libro entero.
+  Si falta un paso, Room se niega a abrir, y eso se arregla con una actualización.
+- **La versión sale del `CHANGELOG.md`.** Un número escrito a mano en el build se olvida, y
+  quien instala el APK acaba viendo una versión que no corresponde a las notas que leyó.
 - **`androidx.fragment` declarado a mano.** `biometric:1.1.0` arrastra `fragment:1.2.5`,
   anterior a la API de ActivityResult: su `FragmentActivity` rechaza los request codes de
   más de 16 bits que genera `activity:1.10.1`, y **cualquier** selector de archivos revienta
@@ -127,8 +132,10 @@ Decisiones que no son las de default, y por qué:
 - [Excel](docs/excel.md) — formato del libro exportado, fórmulas, reglas de importación.
 - [Seguridad y privacidad](docs/seguridad.md) — cifrado de la base, Keystore, PIN, bloqueo y respaldos.
 - [Desarrollo](docs/desarrollo.md) — entorno, comandos, pruebas, integración continua y convenciones del código.
-- [Publicación](docs/publicacion.md) — versionado, firma, release automatizado, el sitio y cómo se entera la app de una versión nueva.
-- [Registro de cambios](CHANGELOG.md) — qué trae cada versión. De aquí salen las notas de cada lanzamiento.
+- [Actualizaciones](docs/actualizaciones.md) — qué se consulta, qué no sale del teléfono y el contrato del `version.json`.
+- [Publicación](docs/publicacion.md) — versionado, firma, release automatizado y cómo se entera la app de una versión nueva.
+- [El sitio](docs/sitio.md) — la página de descarga con Vite, GitHub Pages y de dónde salen sus datos.
+- [Registro de cambios](CHANGELOG.md) — qué trae cada versión. De aquí salen la versión del APK y las notas de cada lanzamiento.
 
 ---
 
@@ -141,8 +148,9 @@ respaldo es la exportación a `.xlsx`, que tú decides dónde guardar.
 
 La única llamada a internet es preguntarle al sitio del proyecto, una vez al día, si hay
 una versión más nueva: un `GET` a un archivo estático que no manda ningún dato tuyo, ni
-siquiera qué versión traes. Se apaga desde *Acerca de*, y apagada la app no toca la red
-en ningún momento.
+siquiera qué versión traes — la comparación ocurre en el teléfono. Se apaga en *Ajustes*, y
+apagada la app no toca la red en ningún momento. Nunca descarga ni instala nada por su
+cuenta: cuando hay versión nueva, *Acerca de* enseña un botón que abre el sitio.
 
 ---
 
@@ -171,14 +179,16 @@ JAVA_HOME="$HOME/.jdks/jbr-21.0.11" ./gradlew :app:testDebugUnitTest
 Las pruebas de `ExcelRoundTripTest` generan libros reales en `app/build/pruebas/`, útiles
 para abrirlos a mano y comprobar el resultado.
 
-La versión sale de `version.properties`, no del `build.gradle.kts`:
+La versión sale de `CHANGELOG.md`, no del `build.gradle.kts`: se lee el primer encabezado
+`## [x.y.z]` y de ahí salen el `versionName` y el `versionCode`. Publicar una versión es
+renombrar la sección `[Sin publicar]` y poner el tag `vX.Y.Z`; de ahí en adelante lo hacen
+los flujos de GitHub Actions. Ver [Publicación](docs/publicacion.md).
+
+El sitio es un proyecto aparte y no pasa por Gradle:
 
 ```bash
-./gradlew -q :app:imprimeVersion
+cd web && npm install && npm run dev
 ```
-
-Publicar una versión es subir ese archivo y poner el tag `vX.Y.Z`; de ahí en adelante lo
-hacen los flujos de GitHub Actions. Ver [Publicación](docs/publicacion.md).
 
 - `minSdk` 26 · `targetSdk` 36 · Kotlin 2.1.20 · AGP 8.10.0 · Gradle 8.14.5
 

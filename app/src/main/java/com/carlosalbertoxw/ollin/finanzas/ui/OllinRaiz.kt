@@ -252,9 +252,9 @@ fun OllinRaiz(contenedor: Contenedor) {
 
                 composable(Rutas.ACERCA_DE) {
                     AcercaDePantalla(
+                        comprobador = contenedor.comprobadorActualizaciones,
                         ajustes = ajustes,
-                        buscador = contenedor.buscadorDeActualizaciones,
-                        version = contenedor.version,
+                        instalada = contenedor.version,
                         // Sin launchSingleTop se apilarian Acerca de y Tutoriales una y
                         // otra vez al ir y venir entre las dos.
                         alAbrirTutoriales = {

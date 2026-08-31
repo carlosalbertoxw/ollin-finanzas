@@ -1,0 +1,142 @@
+# Publica el sitio en GitHub Pages.
+#
+# Es autosuficiente: no recibe nada por parametro, sino que le pregunta a
+# GitHub cual es la ultima release y descarga su APK para medirlo y sacarle la
+# huella. Asi se puede volver a lanzar a mano en cualquier momento —tras
+# retocar un texto, tras borrar una release equivocada— y siempre publica datos
+# que corresponden con la realidad, en vez de con lo que alguien le paso hace
+# tres semanas.
+name: Sitio
+
+# Sin `workflow_call`: el flujo de publicacion lo lanza con `gh workflow run`
+# sobre main, no lo invoca desde el ref de la etiqueta. Ver publicacion.yml.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'CHANGELOG.md'
+      - '.github/workflows/sitio.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un solo despliegue a la vez y sin cancelar el que corre: interrumpir a medias
+# deja Pages sirviendo una version a medio subir.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    name: Compilar y desplegar
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Antes de compilar: de aqui sale la direccion publica del sitio, que el
+      # version.json anuncia a la app y la pagina usa para resolver sus assets.
+      - name: Preparar Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      # Se normalizan aqui y no en la plantilla de `env` porque un sitio de
+      # usuario (usuario.github.io) tiene `base_path` igual a "/", y pegarle
+      # otra barra daria "//": Vite resolveria los assets contra la raiz del
+      # dominio y la pagina saldria sin estilos.
+      - name: Direcciones del sitio
+        id: donde
+        env:
+          BASE_URL: ${{ steps.pages.outputs.base_url }}
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+        run: |
+          set -euo pipefail
+          # Se quita la barra final y se pone una: asi "/repo", "/repo/" y "/"
+          # acaban los tres en algo que termina en exactamente una barra.
+          echo "sitio=${BASE_URL%/}/" >> "$GITHUB_OUTPUT"
+          echo "base=${BASE_PATH%/}/" >> "$GITHUB_OUTPUT"
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # Si todavia no hay ninguna release, el paso no falla: deja las variables
+      # vacias y genera-version.mjs se apoya en el CHANGELOG. El sitio sale con el
+      # boton apuntando a la direccion que *tendra* la descarga, que es lo mejor
+      # que se puede decir antes de publicar la primera.
+      - name: Averiguar cual es la ultima version publicada
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if ! gh release view --json tagName,publishedAt,assets > release.json 2>/dev/null; then
+            echo "Todavia no hay ninguna release publicada; el sitio saldra con los datos del CHANGELOG."
+            exit 0
+          fi
+
+          etiqueta=$(jq -r '.tagName' release.json)
+          publicada=$(jq -r '.publishedAt | split("T")[0]' release.json)
+          apk=$(jq -r '[.assets[] | select(.name | endswith(".apk"))][0]' release.json)
+
+          if [ "$apk" = "null" ]; then
+            echo "::warning::La release $etiqueta no trae ningun .apk adjunto."
+            exit 0
+          fi
+
+          url=$(echo "$apk" | jq -r '.browser_download_url // .url')
+          bytes=$(echo "$apk" | jq -r '.size')
+
+          # La huella se calcula sobre el archivo que la gente va a descargar,
+          # no sobre el que salio de la compilacion: es la unica forma de que
+          # comprobarla signifique algo para quien la comprueba.
+          curl --fail --silent --show-error --location "$url" --output descarga.apk
+          huella=$(sha256sum descarga.apk | cut -d' ' -f1)
+          rm -f descarga.apk
+
+          {
+            echo "version=${etiqueta#v}"
+            echo "apk_url=$url"
+            echo "apk_bytes=$bytes"
+            echo "apk_sha256=$huella"
+            echo "publicada=$publicada"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Instalar
+        working-directory: web
+        run: npm ci
+
+      - name: Compilar
+        working-directory: web
+        env:
+          OLLIN_REPO: ${{ github.repository }}
+          OLLIN_SITIO: ${{ steps.donde.outputs.sitio }}
+          OLLIN_BASE: ${{ steps.donde.outputs.base }}
+          OLLIN_VERSION: ${{ steps.release.outputs.version }}
+          OLLIN_APK_URL: ${{ steps.release.outputs.apk_url }}
+          OLLIN_APK_BYTES: ${{ steps.release.outputs.apk_bytes }}
+          OLLIN_APK_SHA256: ${{ steps.release.outputs.apk_sha256 }}
+          OLLIN_PUBLICADA: ${{ steps.release.outputs.publicada }}
+        run: npm run build
+
+      - name: Subir el sitio
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+      - name: Desplegar
+        id: despliegue
+        uses: actions/deploy-pages@v4

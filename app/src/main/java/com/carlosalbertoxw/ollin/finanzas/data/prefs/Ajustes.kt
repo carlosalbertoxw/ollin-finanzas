@@ -59,13 +59,13 @@ data class Ajustes(
      * Encendido de fabrica porque la app no se instala desde Play y nadie mas
      * avisa; apagarlo la deja sin ninguna salida a la red.
      */
-    val buscaActualizaciones: Boolean = true,
-    /** Cuando se pregunto por ultima vez con respuesta. 0 = nunca. */
-    val ultimaBusquedaDeVersion: Long = 0L,
-    /** Lo ultimo que el sitio dijo tener. 0 = todavia no se sabe. */
-    val versionPublicada: Int = 0,
-    val nombreVersionPublicada: String? = null,
-    val urlVersionPublicada: String? = null,
+    val buscarActualizaciones: Boolean = true,
+    /** Cuando se pregunto por ultima vez, con respuesta. 0 = nunca. */
+    val ultimaComprobacion: Long = 0L,
+    /** Lo ultimo que el sitio dijo tener, y a donde manda por ello. */
+    val versionPublicada: String? = null,
+    val urlDeDescarga: String? = null,
+    val notasDeVersion: String? = null,
     val modoBloqueo: ModoBloqueo = ModoBloqueo.NINGUNO,
     /** Del PIN solo se guarda su huella derivada; el PIN en claro no se escribe nunca. */
     val pinHash: String? = null,
@@ -90,11 +90,11 @@ class AjustesRepositorio(private val contexto: Context) {
         val ULTIMO_ARCHIVO = stringPreferencesKey("ultimo_archivo")
         val SALDO_INICIAL = booleanPreferencesKey("muestra_saldo_inicial")
         val TUTORIALES = booleanPreferencesKey("muestra_tutoriales")
-        val BUSCA_ACTUALIZACIONES = booleanPreferencesKey("busca_actualizaciones")
-        val ULTIMA_BUSQUEDA = longPreferencesKey("ultima_busqueda_version")
-        val VERSION_PUBLICADA = intPreferencesKey("version_publicada")
-        val NOMBRE_VERSION = stringPreferencesKey("nombre_version_publicada")
-        val URL_VERSION = stringPreferencesKey("url_version_publicada")
+        val BUSCAR_ACTUALIZACIONES = booleanPreferencesKey("buscar_actualizaciones")
+        val ULTIMA_COMPROBACION = longPreferencesKey("ultima_comprobacion")
+        val VERSION_PUBLICADA = stringPreferencesKey("version_publicada")
+        val URL_DESCARGA = stringPreferencesKey("url_descarga")
+        val NOTAS_VERSION = stringPreferencesKey("notas_version")
         val HORA_AVISO = intPreferencesKey("hora_aviso")
         val MINUTO_AVISO = intPreferencesKey("minuto_aviso")
         val BLOQUEO = stringPreferencesKey("modo_bloqueo")
@@ -125,11 +125,11 @@ class AjustesRepositorio(private val contexto: Context) {
         ultimoArchivo = p[Claves.ULTIMO_ARCHIVO],
         muestraSaldoInicial = p[Claves.SALDO_INICIAL] ?: true,
         muestraTutoriales = p[Claves.TUTORIALES] ?: true,
-        buscaActualizaciones = p[Claves.BUSCA_ACTUALIZACIONES] ?: true,
-        ultimaBusquedaDeVersion = p[Claves.ULTIMA_BUSQUEDA] ?: 0L,
-        versionPublicada = p[Claves.VERSION_PUBLICADA] ?: 0,
-        nombreVersionPublicada = p[Claves.NOMBRE_VERSION],
-        urlVersionPublicada = p[Claves.URL_VERSION],
+        buscarActualizaciones = p[Claves.BUSCAR_ACTUALIZACIONES] ?: true,
+        ultimaComprobacion = p[Claves.ULTIMA_COMPROBACION] ?: 0L,
+        versionPublicada = p[Claves.VERSION_PUBLICADA],
+        urlDeDescarga = p[Claves.URL_DESCARGA],
+        notasDeVersion = p[Claves.NOTAS_VERSION],
         // Se recorta al leer y no solo al escribir: un valor imposible en
         // disco tiraria la alarma con un IllegalArgumentException al construir
         // la hora, y la app se quedaria sin avisos sin decir por que.
@@ -225,21 +225,35 @@ class AjustesRepositorio(private val contexto: Context) {
         }
     }
 
-    suspend fun guardaBuscaActualizaciones(valor: Boolean) {
-        contexto.almacen.edit { it[Claves.BUSCA_ACTUALIZACIONES] = valor }
+    /**
+     * Encender y apagar limpia lo que dejo la ultima comprobacion, en los dos
+     * sentidos y por razones distintas. Al apagarlo, porque si no quedaria en
+     * pantalla el aviso de una version nueva que ya nadie va a volver a
+     * comprobar. Al encenderlo, porque quien acaba de activarlo espera
+     * enterarse ahora y no cuando venza el dia que corria desde una consulta de
+     * hace meses.
+     */
+    suspend fun guardaBuscarActualizaciones(valor: Boolean) {
+        contexto.almacen.edit {
+            it[Claves.BUSCAR_ACTUALIZACIONES] = valor
+            it.remove(Claves.ULTIMA_COMPROBACION)
+            it.remove(Claves.VERSION_PUBLICADA)
+            it.remove(Claves.URL_DESCARGA)
+            it.remove(Claves.NOTAS_VERSION)
+        }
     }
 
     /**
-     * Lo que el sitio contesto, de una sola escritura: la version, su nombre,
-     * su enlace y el momento. Por separado podria quedar un numero de version
-     * sin nombre que enseñar, o un "buscado hace un minuto" sin nada detras.
+     * Lo que el sitio contesto, de una sola escritura: la version, su enlace,
+     * sus notas y el momento. Por separado podria quedar una version sin enlace
+     * a donde mandar, o un "comprobado hace un minuto" sin nada detras.
      */
-    suspend fun guardaVersionPublicada(codigo: Int, nombre: String, url: String, momento: Long) {
+    suspend fun guardaComprobacion(cuando: Long, version: String, url: String, notas: String?) {
         contexto.almacen.edit {
-            it[Claves.VERSION_PUBLICADA] = codigo
-            it[Claves.NOMBRE_VERSION] = nombre
-            it[Claves.URL_VERSION] = url
-            it[Claves.ULTIMA_BUSQUEDA] = momento
+            it[Claves.ULTIMA_COMPROBACION] = cuando
+            it[Claves.VERSION_PUBLICADA] = version
+            it[Claves.URL_DESCARGA] = url
+            if (notas.isNullOrBlank()) it.remove(Claves.NOTAS_VERSION) else it[Claves.NOTAS_VERSION] = notas
         }
     }
 

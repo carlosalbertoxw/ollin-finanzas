@@ -8,7 +8,7 @@ import { version } from './version.js'
 const enlaceDeLanzamientos = `https://github.com/${version.repositorio}/releases`
 
 const textos = {
-  version: `versión ${version.nombre}`,
+  version: [`versión ${version.nombre}`, tamano(version.tamanoBytes)].filter(Boolean).join(' · '),
   'version-pie': `versión ${version.nombre}`,
   fecha: formateaFecha(version.fecha)
 }
@@ -31,8 +31,17 @@ for (const [id, url] of Object.entries(enlaces)) {
 }
 
 /** "30 de agosto de 2026", que es como lo lee una persona. */
-function formateaFecha(iso) {
+function formateaFecha (iso) {
+  if (!iso) return '—'
+  // Con la hora pegada a mano para que no se lea como UTC y se corra un dia
+  // hacia atras en cualquier huso al oeste de Greenwich.
   const fecha = new Date(`${iso}T00:00:00`)
   if (Number.isNaN(fecha.getTime())) return iso
   return fecha.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+/** Megabytes con un decimal. Nadie decide nada con los bytes exactos. */
+function tamano (bytes) {
+  if (!bytes) return null
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }

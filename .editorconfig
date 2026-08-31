@@ -1,0 +1,35 @@
+# Estilo oficial de Kotlin, que es el que ya declara gradle.properties
+# (kotlin.code.style=official). Escrito aqui para que no dependa de la memoria
+# de quien edite: Android Studio y la mayoria de los editores lo respetan solos.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+max_line_length = 100
+ij_kotlin_allow_trailing_comma = false
+ij_kotlin_allow_trailing_comma_on_call_site = false
+# Los imports van uno por uno: un comodin esconde de donde sale cada nombre.
+ij_kotlin_name_count_to_use_star_import = 2147483647
+ij_kotlin_name_count_to_use_star_import_for_members = 2147483647
+ij_kotlin_packages_to_use_import_on_demand = unset
+
+[*.{xml,json}]
+indent_size = 4
+
+[*.md]
+# Dos espacios al final son un salto de linea en Markdown.
+trim_trailing_whitespace = false
+
+[*.{yml,yaml,toml}]
+indent_size = 2
+
+[gradlew.bat]
+end_of_line = crlf

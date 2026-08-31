@@ -1,0 +1,97 @@
+# Lo que tiene que pasar antes de que nada llegue a main, y antes de publicar.
+#
+# Se declara `workflow_call` para que el flujo de publicacion lo invoque tal
+# cual en vez de copiar los pasos: una etiqueta no puede pasar por una
+# comprobacion mas floja que un pull request cualquiera.
+name: Pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+# Empujar dos veces seguidas no deja dos compilaciones peleandose por el cache.
+# En una etiqueta no se cancela nada: `github.ref` es unico por tag.
+concurrency:
+  group: pruebas-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    name: App Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # JDK 21 y no 17: Gradle 8.14.5 no interpreta las versiones 25 y 26 de
+      # Java y falla al compilar los .kts antes de tocar el codigo fuente. El
+      # `jvmTarget` del proyecto sigue siendo 17; son cosas distintas.
+      - name: Preparar JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Todo en una invocacion para que Gradle reutilice la configuracion y las
+      # tareas comunes en vez de arrancar cuatro veces.
+      #
+      #   testDebugUnitTest        las pruebas en la JVM, EsquemaDeBaseTest incluido
+      #   lintDebug                falla la compilacion si Lint encuentra errores
+      #   assembleDebugAndroidTest compila la suite instrumentada sin ejecutarla,
+      #                            que es lo unico que se puede hacer sin emulador
+      #   assembleRelease          R8 y shrink: rompe aqui, no al etiquetar
+      - name: Pruebas, Lint y compilacion
+        run: >
+          ./gradlew
+          testDebugUnitTest
+          lintDebug
+          assembleDebugAndroidTest
+          assembleRelease
+          --no-daemon --stacktrace
+
+      - name: Guardar los informes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: informes-app
+          path: |
+            app/build/reports/tests/
+            app/build/reports/lint-results-debug.html
+          retention-days: 14
+          if-no-files-found: ignore
+
+  sitio:
+    name: Sitio
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Instalar
+        working-directory: web
+        run: npm ci
+
+      # Compilar el sitio tambien valida el CHANGELOG: genera-version.mjs se
+      # niega si no encuentra un encabezado `## [x.y.z]`, que es exactamente lo
+      # que el build de la app necesita para saber su version.
+      - name: Compilar
+        working-directory: web
+        run: npm run build

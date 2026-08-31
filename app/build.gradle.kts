@@ -7,48 +7,91 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-// Los datos de la firma viven en keystore.properties, fuera del repositorio.
-// Se lee con providers.fileContents y no con File(...).readText() porque la
-// cache de configuracion esta activa: el API de providers registra el archivo
-// como entrada del build, asi que editarlo invalida la cache. Un File() suelto
-// se leeria una vez y las ediciones posteriores se ignorarian en silencio.
-// La version vive en version.properties, en la raiz. Un solo lugar del que
-// salen el versionName y el versionCode, y contra el que el flujo de release
-// compara el tag que lo disparo: publicar v1.2.0 con el archivo en 1.1.0 corta
-// antes de compilar nada.
-val propiedadesVersion = Properties().apply {
-    load(providers.fileContents(
-        rootProject.layout.projectDirectory.file("version.properties")
-    ).asText.get().reader())
+/**
+ * Credenciales de firma.
+ *
+ * Se leen de `keystore.properties` en la raiz, que no se versiona; si no
+ * existe, se caen a variables de entorno, que es lo que sirve en un servidor de
+ * integracion. Ver `keystore.properties.example` y docs/publicacion.md.
+ *
+ * Nunca van escritas aqui: este archivo si viaja en el repositorio, y un
+ * almacen filtrado permite publicar actualizaciones falsas de Ollin Finanzas
+ * que Android instalaria sin protestar.
+ *
+ * Las variables llevan el nombre completo de la app y no un `OLLIN_` a secas:
+ * Ollin Actividades se publica aparte y con su propio almacen, y en un servidor
+ * compartido unos nombres genericos harian que cada app tomara la llave de la
+ * otra sin avisar.
+ */
+val credenciales = Properties().apply {
+    val archivo = rootProject.file("keystore.properties")
+    if (archivo.isFile) archivo.inputStream().use(::load)
 }
 
-fun numeroDeVersion(clave: String): Int =
-    propiedadesVersion.getProperty(clave)?.trim()?.toIntOrNull()
-        ?: throw GradleException("version.properties no trae $clave, o no es un numero.")
+fun credencial(clave: String, variable: String): String? =
+    (credenciales.getProperty(clave) ?: System.getenv(variable))?.takeIf { it.isNotBlank() }
 
-val versionMayor = numeroDeVersion("versionMayor")
-val versionMenor = numeroDeVersion("versionMenor")
-val versionParche = numeroDeVersion("versionParche")
+val almacenDeClaves = credencial("storeFile", "OLLIN_FINANZAS_STORE_FILE")
+    ?.let(rootProject::file)
+    ?.takeIf { it.isFile }
 
-require(versionMenor in 0..99 && versionParche in 0..99) {
-    "versionMenor y versionParche tienen que caber en dos digitos: el versionCode " +
-        "les reserva ese espacio y con tres se comeria al siguiente."
+/**
+ * La version sale de CHANGELOG.md, no de este archivo.
+ *
+ * Un numero escrito a mano aqui se olvida: se publica la 1.2.0 con el build
+ * todavia en 1.1.0, o al reves, y quien instala el APK ve una version que no
+ * corresponde a las notas que leyo. Con el historial como unica fuente, subir
+ * la version y explicar por que son el mismo gesto, y el flujo de publicacion
+ * puede negarse a etiquetar algo que nadie documento.
+ *
+ * Se lee el primer encabezado `## [x.y.z]` del archivo. "Sin publicar" no casa
+ * con el patron a proposito, asi que compilar mientras hay cambios sin
+ * etiquetar sigue dando la ultima version publicada.
+ */
+val versionPublicada: Triple<Int, Int, Int> = run {
+    val historial = rootProject.file("CHANGELOG.md")
+    require(historial.isFile) { "Falta CHANGELOG.md: de ahi sale la version." }
+
+    val encabezado = Regex("""^##\s+\[(\d+)\.(\d+)\.(\d+)]""", RegexOption.MULTILINE)
+    val primero = encabezado.find(historial.readText())
+        ?: error("CHANGELOG.md no tiene ningun encabezado `## [x.y.z]`.")
+
+    val (mayor, menor, parche) = primero.destructured
+    Triple(mayor.toInt(), menor.toInt(), parche.toInt())
 }
 
-val nombreDeVersion = "$versionMayor.$versionMenor.$versionParche"
+val nombreDeVersion = versionPublicada.toList().joinToString(".")
 
-// Monotono por construccion: 1.2.3 -> 10203. Android solo exige que suba en
-// cada publicacion, pero de esta forma ademas se lee de un vistazo.
-val codigoDeVersion = versionMayor * 10_000 + versionMenor * 100 + versionParche
-
-val archivoFirma = rootProject.layout.projectDirectory.file("keystore.properties")
-val propiedadesFirma = providers.fileContents(archivoFirma).asText.orNull?.let { texto ->
-    Properties().apply { load(texto.reader()) }
+/**
+ * El entero que compara Android. Se deriva del semver con tres huecos de dos
+ * cifras --1.2.3 es 10203-- para que crezca solo y nunca haya que acordarse de
+ * subirlo aparte. Da margen hasta 99 versiones menores y 99 parches, de sobra
+ * para una app que publica a mano, y ordena igual que el semver: cualquier
+ * version posterior produce un entero mayor.
+ */
+val codigoDeVersion = versionPublicada.let { (mayor, menor, parche) ->
+    mayor * 10_000 + menor * 100 + parche
 }
 
-if (propiedadesFirma == null) {
-    logger.warn("Ollin: sin keystore.properties, el APK de release saldra SIN FIRMAR y no se podra instalar. Ver docs/desarrollo.md.")
-}
+/**
+ * De donde se entera la app de que hay una version nueva.
+ *
+ * Es el sitio de GitHub Pages y no la API de GitHub: la API limita las
+ * peticiones anonimas por IP --una red compartida las agota entre todos-- y
+ * devuelve un objeto enorme del que solo se usan tres campos. Un JSON estatico
+ * detras de un CDN no se cae, no se limita y se puede mirar con el navegador.
+ *
+ * Y es la direccion de `github.io` y no la del dominio propio aunque hoy la
+ * primera redirija a la segunda. Esta va atada al repositorio y dura lo que el
+ * repositorio; un dominio se renueva cada ano y se puede perder, y esta cadena
+ * queda compilada dentro de cada APK: los que ya estan instalados no se pueden
+ * corregir. El salto lo sigue el propio comprobador, exigiendo que el destino
+ * tambien sea https.
+ */
+val urlDeActualizaciones = providers
+    .gradleProperty("ollin.urlActualizaciones")
+    .orNull
+    ?: "https://carlosalbertoxw.github.io/ollin-finanzas/version.json"
 
 android {
     namespace = "com.carlosalbertoxw.ollin.finanzas"
@@ -62,31 +105,29 @@ android {
         versionName = nombreDeVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        resourceConfigurations += listOf("es")
+
+        buildConfigField("String", "URL_ACTUALIZACIONES", "\"$urlDeActualizaciones\"")
+    }
+
+    androidResources {
+        // La app esta escrita en espanol; no se empaquetan los recursos de las
+        // bibliotecas en los otros ochenta idiomas.
+        localeFilters += listOf("es")
     }
 
     signingConfigs {
-        // Solo se crea si hay keystore.properties. Sin el, la configuracion
-        // queda nula y el release sale sin firmar en vez de romper el build:
-        // asi el proyecto sigue compilando en una maquina recien clonada.
-        propiedadesFirma?.let { props ->
-            val faltantes = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
-                .filter { props.getProperty(it).isNullOrBlank() }
-            require(faltantes.isEmpty()) {
-                "keystore.properties existe pero le faltan claves: ${faltantes.joinToString()}"
+        create("release") {
+            if (almacenDeClaves != null) {
+                storeFile = almacenDeClaves
+                storePassword = credencial("storePassword", "OLLIN_FINANZAS_STORE_PASSWORD")
+                keyAlias = credencial("keyAlias", "OLLIN_FINANZAS_KEY_ALIAS")
+                keyPassword = credencial("keyPassword", "OLLIN_FINANZAS_KEY_PASSWORD")
             }
-
-            val almacen = rootProject.file(props.getProperty("storeFile"))
-            require(almacen.exists()) {
-                "keystore.properties apunta a ${almacen.absolutePath}, que no existe."
-            }
-
-            create("release") {
-                storeFile = almacen
-                storePassword = props.getProperty("storePassword")
-                keyAlias = props.getProperty("keyAlias")
-                keyPassword = props.getProperty("keyPassword")
-            }
+            // v1 no: minSdk 26 ya entiende v2, y firmar tambien el zip viejo
+            // solo agrega una firma que nadie verifica.
+            enableV1Signing = false
+            enableV2Signing = true
+            enableV3Signing = true
         }
     }
 
@@ -102,7 +143,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.findByName("release")
+            signingConfig = signingConfigs.getByName("release").takeIf { almacenDeClaves != null }
         }
     }
 
@@ -119,6 +160,10 @@ android {
 
     buildFeatures {
         compose = true
+        // Solo para URL_ACTUALIZACIONES: la direccion que consulta la app tiene
+        // que quedar dentro del APK, y este es el unico camino para ponerla ahi
+        // sin escribirla a mano en el codigo.
+        buildConfig = true
     }
 
     testOptions {
@@ -137,22 +182,6 @@ android {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
-}
-
-/**
- * La version, para quien no puede leer el .properties: el flujo de release la
- * compara contra el tag de git. Sale en dos renglones `clave=valor` para poder
- * cortarla con `cut` sin hacer malabares.
- */
-tasks.register("imprimeVersion") {
-    group = "help"
-    description = "Imprime versionName y versionCode de version.properties."
-    val nombre = nombreDeVersion
-    val codigo = codigoDeVersion
-    doLast {
-        println("versionName=$nombre")
-        println("versionCode=$codigo")
-    }
 }
 
 dependencies {

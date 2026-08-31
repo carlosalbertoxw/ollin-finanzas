@@ -105,7 +105,8 @@ Si el archivo existe pero está incompleto, o apunta a un `.jks` inexistente, ah
 
 - **`resourceConfigurations += listOf("es")`** — la app está escrita en español; no se empaquetan los recursos de las bibliotecas en los otros ochenta idiomas.
 - **`room.schemaLocation`** — KSP escribe los esquemas en `app/schemas/`, que sí se versionan: son el contrato de cada versión de la base y la referencia contra la que se escribe la migración siguiente.
-- **`version.properties`** — el `versionName` y el `versionCode` salen de ahí, no del `build.gradle.kts`. Ver [publicación](publicacion.md#el-número-de-versión). Para leerlos: `./gradlew -q :app:imprimeVersion`.
+- **La versión sale de `CHANGELOG.md`** — el `versionName` y el `versionCode` se derivan del primer encabezado `## [x.y.z]`, no del `build.gradle.kts`. Ver [publicación](publicacion.md).
+- **`buildConfig = true`** — solo para `URL_ACTUALIZACIONES`: la dirección que consulta la app tiene que quedar dentro del APK, y este es el único camino para ponerla ahí sin escribirla a mano en el código.
 - **`androidx.fragment` fijado a mano** — `biometric` 1.1.0 arrastra `fragment` 1.2.5, anterior a la API de `ActivityResult`: su `FragmentActivity` rechaza los request codes de más de 16 bits que genera `activity` 1.10.1, y **cualquier** selector de archivos revienta al abrirse. Quitar esa línea de `libs.versions.toml` vuelve a romper importar y exportar.
 - **`testOptions.unitTests`** con `isIncludeAndroidResources` y `isReturnDefaultValues`, para que las pruebas en la JVM no tropiecen con las clases stub de Android.
 - **`release`** con `isMinifyEnabled` e `isShrinkResources`.
@@ -114,7 +115,7 @@ La pantalla de Acerca de lee la versión del **paquete instalado** (`PackageMana
 
 ## Pruebas
 
-Hay dos suites: **189 pruebas unitarias** en la JVM y **11 pruebas de interfaz** que necesitan dispositivo. Las unitarias y el lint corren en cada push y cada PR ([`ci.yml`](../.github/workflows/ci.yml)).
+Hay dos suites: **190 pruebas unitarias** en la JVM y **11 pruebas de interfaz** que necesitan dispositivo. Las unitarias y el lint corren en cada push y cada PR ([`pruebas.yml`](../.github/workflows/pruebas.yml)).
 
 ### Unitarias (JVM)
 
@@ -139,8 +140,7 @@ Hay dos suites: **189 pruebas unitarias** en la JVM y **11 pruebas de interfaz**
 | [`ExportadorBordesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ExportadorBordesTest.kt) | Compromisos con datos, catálogos incompletos, nombres que obligan a entrecomillar, y tres años de movimientos diarios |
 | [`XlsxLectorSeguridadTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/XlsxLectorSeguridadTest.kt) | Que el lector rechace un `DOCTYPE` —la bomba de entidades— y respete el tope de tamaño |
 | [`EsquemaDeBaseTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EsquemaDeBaseTest.kt) | La guardia de la base: cada versión con su json exportado y la cadena de migraciones sin huecos. Ver [modelo de datos](modelo-de-datos.md#migraciones) |
-| [`ActualizacionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ActualizacionesTest.kt) | Cuándo toca preguntar por una versión nueva, qué cuenta como novedad y qué se acepta del `version.json` — incluida la url ajena, que se descarta entera |
-| [`BuscadorDeActualizacionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/BuscadorDeActualizacionesTest.kt) | Que apagada no toque la red, que la pedida a mano ignore el interruptor y el intervalo, y que un día sin respuesta no gaste el turno |
+| [`ActualizacionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ActualizacionesTest.kt) | El aviso de versión nueva sin red: comparación semántica (`1.10.0` es posterior a `1.9.0`), el `version.json` con sus aristas, el salto de redirección que solo se sigue hacia `https`, cuándo toca preguntar y que un día sin respuesta no gaste el turno |
 
 Las pruebas de Excel escriben libros reales en `app/build/pruebas/`, útiles para abrirlos a mano y comprobar el resultado. El reporte HTML queda en `app/build/reports/tests/`.
 
@@ -194,20 +194,23 @@ El diálogo de huella y el de credencial del sistema son UI del sistema operativ
 
 ## Integración continua
 
-Tres flujos, todos con **JDK 21**, en [`.github/workflows/`](../.github/workflows):
+Cuatro flujos, todos con **JDK 21**, en [`.github/workflows/`](../.github/workflows):
 
 | Flujo | Cuándo | Qué corre |
 |---|---|---|
-| `ci.yml` | push a `main` y cada PR | `testDebugUnitTest`, `lintDebug`, `assembleDebug` y el build del sitio |
-| `release.yml` | tag `vX.Y.Z` | Verifica el tag contra `version.properties`, prueba, firma y publica el APK |
-| `pages.yml` | `web/**`, `version.properties` o al terminar un Release | Construye el sitio y lo publica en GitHub Pages |
+| `pruebas.yml` | push a `main` y cada PR | `testDebugUnitTest`, `lintDebug`, `assembleDebugAndroidTest`, `assembleRelease` y el build del sitio |
+| `pruebas-instrumentadas.yml` | lunes, y a mano | La suite de interfaz sobre un emulador |
+| `publicacion.yml` | tag `vX.Y.Z` | Comprueba la etiqueta contra el CHANGELOG, invoca `pruebas.yml`, firma y publica el APK |
+| `sitio.yml` | `web/**`, `CHANGELOG.md`, o al terminar una publicación | Construye el sitio y lo publica en GitHub Pages |
+
+`publicacion.yml` **invoca** a `pruebas.yml` con `workflow_call` en vez de copiar sus pasos: una etiqueta no puede pasar por una comprobación más floja que un pull request cualquiera.
 
 Cuando CI falla, el reporte HTML de pruebas y el de lint quedan como artefacto del run durante 14 días — se leen mucho mejor que el rastro de la consola.
 
 Lo mismo que corre allá corre aquí:
 
 ```bash
-JAVA_HOME="$HOME/.jdks/jbr-21.0.11" ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+JAVA_HOME="$HOME/.jdks/jbr-21.0.11" ./gradlew testDebugUnitTest lintDebug assembleDebugAndroidTest assembleRelease
 ```
 
 El proceso completo de publicar una versión está en [publicación](publicacion.md).
@@ -222,13 +225,14 @@ npm --prefix web run dev      # http://localhost:5173/ollin-finanzas/
 npm --prefix web run build
 ```
 
-`public/version.json` y `src/version.js` los genera el build desde `version.properties` y están en `.gitignore`: son derivados, no fuentes. Detalles en [publicación](publicacion.md#el-sitio).
+`public/version.json` y `src/version.js` los genera el build desde `CHANGELOG.md` y están en `.gitignore`: son derivados, no fuentes. Detalles en [el sitio](sitio.md).
 
 ## Convenciones del código
 
 - **Todo en español**: nombres de clases, funciones, variables y comentarios. Los nombres de prueba van en backticks y en prosa (`` `el modo compacto emite exactamente ocho columnas` ``) — salvo en `androidTest`, donde van en camelCase porque los espacios solo son legales desde la API 30.
 - **Los comentarios explican el porqué, no el qué.** Si una decisión tiene una alternativa obvia que se descartó, el comentario dice por qué se descartó.
 - **Sin acentos en los comentarios y literales del código** (la documentación de `docs/` y el sitio de `web/` sí los usan).
+- **`.editorconfig` fija el estilo**: LF, UTF-8, cuatro espacios, 100 columnas en Kotlin y sin imports con comodín.
 - **Una pantalla por archivo**, con su ViewModel arriba y los composables privados abajo.
 - **La escritura pasa por el repositorio.** Las pantallas no tocan los DAO.
 - **Los importes son centavos en `Long`**, nunca decimales flotantes.

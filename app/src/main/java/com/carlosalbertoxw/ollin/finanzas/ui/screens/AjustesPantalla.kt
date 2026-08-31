@@ -91,6 +91,10 @@ class AjustesVm(
         viewModelScope.launch { prefs.guardaMuestraTutoriales(valor) }
     }
 
+    fun cambiaBuscarActualizaciones(valor: Boolean) {
+        viewModelScope.launch { prefs.guardaBuscarActualizaciones(valor) }
+    }
+
     fun cambiaHoraDeAviso(hora: Int, minuto: Int) {
         viewModelScope.launch { prefs.guardaHoraDeAviso(hora, minuto) }
     }
@@ -272,6 +276,29 @@ fun AjustesPantalla(
 
             TextButton(onClick = alAbrirTutoriales, modifier = Modifier.fillMaxWidth()) {
                 Text("Tutoriales de la app")
+            }
+
+            HorizontalDivider()
+
+            Text("Actualizaciones", style = MaterialTheme.typography.titleMedium)
+
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Avisarme de versiones nuevas", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "Ollin Finanzas no se instala desde Play, asi que nadie mas avisa de una " +
+                            "version nueva. Una vez al dia le pregunta al sitio del proyecto si " +
+                            "salio alguna, y lo enseña en Acerca de. Es una peticion a un archivo " +
+                            "fijo que no manda ningun dato tuyo: la comparacion pasa en el " +
+                            "telefono. Apagado, la app no toca internet en ningun momento.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colores.textoTenue
+                    )
+                }
+                Switch(
+                    checked = ajustes.buscarActualizaciones,
+                    onCheckedChange = vm::cambiaBuscarActualizaciones
+                )
             }
             TextButton(onClick = alAbrirAcercaDe, modifier = Modifier.fillMaxWidth()) {
                 Text("Acerca de Ollin Finanzas")
