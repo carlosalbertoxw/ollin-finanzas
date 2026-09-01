@@ -76,12 +76,15 @@ La huella se publica junto al archivo para que cualquiera pueda comprobar que lo
 |---|---|---|
 | Etiqueta contra `CHANGELOG` | `publicacion.yml` | Sí |
 | Pruebas unitarias, Lint, `assembleRelease` | `pruebas.yml`, invocado tal cual | Sí |
+| Actualizar sobre la versión anterior | `publicacion.yml` | Sí |
 | `MigracionesTest` en emulador | `publicacion.yml` | Todavía no existe |
 | Suite de interfaz completa | [`pruebas-instrumentadas.yml`](../.github/workflows/pruebas-instrumentadas.yml) | No |
 
 Las pruebas son **el mismo flujo** que corre en cualquier pull request, invocado con `workflow_call` en vez de copiado. Una etiqueta no puede pasar por una comprobación más floja que un cambio cualquiera, y dos copias de los mismos pasos divergen.
 
 Las migraciones bloquearán y las de interfaz no. Una migración equivocada deja la app sin abrir en el teléfono de quien actualiza y no hay forma de arreglarlo desde fuera; las de pantalla dependen de animaciones y relojes, y su intermitencia no puede ser lo que impida publicar una corrección. Esas corren solas los lunes y a mano cuando se ha tocado una pantalla.
+
+La prueba de actualización entró en ese grupo después de que la 1.0.1 saliera cerrándose al abrirse en los teléfonos que venían de la 1.0.0: instala la versión de la etiqueta anterior, la abre para que escriba sus preferencias, instala la nueva encima y comprueba que sigue abriendo. Ver [desarrollo](desarrollo.md#la-prueba-de-actualización).
 
 El esquema sigue en su versión inicial, así que no hay ninguna migración que ejecutar: el hueco está reservado en [`publicacion.yml`](../.github/workflows/publicacion.yml) con lo que tiene que ir ahí, y mientras tanto [`EsquemaDeBaseTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EsquemaDeBaseTest.kt) vigila en la JVM que la cadena no tenga huecos. Ver [modelo de datos](modelo-de-datos.md#migraciones).
 

@@ -1,0 +1,116 @@
+# Instalar la version nueva encima de la anterior y comprobar que abre.
+#
+# Existe por una regresion que costo una version publicada: la 1.0.1 cambio el
+# tipo de una clave de preferencias que la 1.0.0 ya habia escrito, y DataStore
+# --que guarda el tipo junto al valor-- lanzaba al leerla. La app se cerraba al
+# abrirse, pero solo en los telefonos que venian de la version anterior. Las 190
+# pruebas de entonces no podian verlo: todas empiezan con el disco vacio, que es
+# el unico escenario donde ese fallo no existe.
+#
+# Se declara `workflow_call` para que la publicacion lo invoque tal cual, igual
+# que hace con pruebas.yml. Bloquea publicar, y esta en el mismo grupo que las
+# migraciones: un fallo asi deja sin app a toda la gente que actualizo, y no se
+# arregla desde fuera. Las de interfaz no bloquean, porque dependen de
+# animaciones y su intermitencia no puede impedir publicar una correccion.
+name: Actualización
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    # Lunes a las 6:00 UTC, medianoche en el centro de Mexico.
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  actualizacion:
+    name: Actualizar sobre la version anterior
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      # Con historia y etiquetas: la version anterior se saca de la ultima.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Cual es la version anterior
+        id: anterior
+        run: |
+          set -euo pipefail
+
+          # La etiqueta que se esta publicando no cuenta: invocado desde la
+          # publicacion, el arbol ya es el de esa etiqueta y sin excluirla la
+          # prueba se dedicaria a instalar una version sobre si misma. Cuando
+          # esto corre sobre una rama, GITHUB_REF_NAME no casa con ninguna
+          # etiqueta y no descarta nada.
+          etiqueta=$(
+            git tag --sort=-v:refname --list 'v*' \
+              | grep -vx "$GITHUB_REF_NAME" \
+              | head -1
+          )
+
+          if [ -z "$etiqueta" ]; then
+            echo "No hay una version anterior sobre la que actualizar."
+            echo "hay=no" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "hay=si" >> "$GITHUB_OUTPUT"
+          echo "etiqueta=$etiqueta" >> "$GITHUB_OUTPUT"
+          echo "Se actualizara desde $etiqueta."
+
+      - name: Compilar la anterior
+        if: steps.anterior.outputs.hay == 'si'
+        run: |
+          set -euo pipefail
+          actual=$(git rev-parse HEAD)
+          git checkout --detach "${{ steps.anterior.outputs.etiqueta }}"
+          ./gradlew :app:assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/anterior.apk"
+          git checkout --detach "$actual"
+
+      - name: Compilar esta
+        if: steps.anterior.outputs.hay == 'si'
+        run: |
+          set -euo pipefail
+          ./gradlew :app:assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/nueva.apk"
+
+      # La virtualizacion por hardware no viene activada en los runners de
+      # Linux; sin esto el emulador arranca en modo software y tarda de mas.
+      - name: Habilitar KVM
+        if: steps.anterior.outputs.hay == 'si'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Instalar una encima de la otra
+        if: steps.anterior.outputs.hay == 'si'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: .github/scripts/actualiza-y-abre.sh
+
+      - name: Guardar el log
+        if: always() && steps.anterior.outputs.hay == 'si'
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-actualizacion
+          path: ${{ runner.temp }}/logcat-*.txt
+          retention-days: 14
+          if-no-files-found: ignore

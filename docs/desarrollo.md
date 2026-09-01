@@ -187,7 +187,7 @@ Cuatro cosas que hay que saber antes de escribir más:
 
 ### La prueba de actualización
 
-La otra mitad de `pruebas-instrumentadas.yml`, y la única que mira lo que le pasa a alguien que **ya tenía la app instalada**.
+En [`actualizacion.yml`](../.github/workflows/actualizacion.yml), y la única que mira lo que le pasa a alguien que **ya tenía la app instalada**.
 
 Compila dos APK de depuración desde git —el de la última etiqueta y el de esta rama—, instala el primero, lo abre para que escriba sus preferencias, instala el segundo encima sin desinstalar, y comprueba que sigue abriéndose. La lógica vive en [`actualiza-y-abre.sh`](../.github/scripts/actualiza-y-abre.sh) y se puede correr contra un teléfono conectado:
 
@@ -200,6 +200,10 @@ Tres decisiones que la sostienen:
 - **Los dos APK se compilan aquí, no se descarga la release publicada.** La llave de depuración la genera el propio runner, así que las dos versiones quedan firmadas igual y una se puede instalar sobre la otra; con firmas distintas Android lo rechaza. De paso, el flujo no necesita los secretos de firma.
 - **Se afirma poco a propósito**: que el proceso siga vivo y que no haya excepción mortal. No mira la pantalla, porque un fallo de arranque se manifiesta como el proceso que desaparece y eso se ve sin depender de animaciones.
 - **La versión anterior tiene que llegar a escribir**: es lo que da sentido a todo. El fallo que motivó esta prueba estaba en *leer* lo que la versión vieja dejó, no en instalar por instalar.
+
+**Bloquea la publicación**, en el mismo grupo que las migraciones: un fallo así deja sin app a toda la gente que actualizó y no se arregla desde fuera. Las de interfaz no bloquean, porque dependen de animaciones y su intermitencia no puede ser lo que impida publicar una corrección. Si el emulador falla por su cuenta, se relanza el trabajo desde la página del run; no hace falta volver a etiquetar.
+
+Al invocarse desde la publicación, el árbol ya es el de la etiqueta que se publica, así que esa etiqueta se excluye al buscar «la anterior» — si no, la prueba instalaría una versión sobre sí misma y no probaría nada.
 
 Existe porque la 1.0.1 se cerraba al abrirse en los teléfonos que venían de la 1.0.0, y las 190 pruebas de entonces no podían verlo: todas empiezan con el disco vacío. Ver [modelo de datos](modelo-de-datos.md#las-preferencias-también-son-datos-guardados).
 
@@ -218,11 +222,12 @@ Cuatro flujos, todos con **JDK 21**, en [`.github/workflows/`](../.github/workfl
 | Flujo | Cuándo | Qué corre |
 |---|---|---|
 | `pruebas.yml` | push a `main` y cada PR | `testDebugUnitTest`, `lintDebug`, `assembleDebugAndroidTest`, `assembleRelease` y el build del sitio |
-| `pruebas-instrumentadas.yml` | lunes, y a mano | La suite de interfaz y la prueba de actualización, sobre un emulador |
+| `pruebas-instrumentadas.yml` | lunes, y a mano | La suite de interfaz sobre un emulador |
+| `actualizacion.yml` | al etiquetar, lunes, y a mano | Instala la versión nueva sobre la anterior y comprueba que abre |
 | `publicacion.yml` | tag `vX.Y.Z` | Comprueba la etiqueta contra el CHANGELOG, invoca `pruebas.yml`, firma y publica el APK |
 | `sitio.yml` | `web/**`, `CHANGELOG.md`, o al terminar una publicación | Construye el sitio y lo publica en GitHub Pages |
 
-`publicacion.yml` **invoca** a `pruebas.yml` con `workflow_call` en vez de copiar sus pasos: una etiqueta no puede pasar por una comprobación más floja que un pull request cualquiera.
+`publicacion.yml` **invoca** a `pruebas.yml` y a `actualizacion.yml` con `workflow_call` en vez de copiar sus pasos: una etiqueta no puede pasar por una comprobación más floja que un pull request cualquiera. Los dos bloquean la publicación — si fallan, no se firma nada ni se crea la release.
 
 Cuando CI falla, el reporte HTML de pruebas y el de lint quedan como artefacto del run durante 14 días — se leen mucho mejor que el rastro de la consola.
 

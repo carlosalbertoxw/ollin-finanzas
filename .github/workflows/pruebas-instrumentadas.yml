@@ -1,14 +1,13 @@
-# Lo que solo se puede comprobar con un Android de verdad: la interfaz y la
-# actualizacion sobre una version anterior.
+# La suite de interfaz, sobre un emulador.
 #
-# No corren en cada push a proposito. Levantar un emulador cuesta unos diez
+# No corre en cada push a proposito. Levantar un emulador cuesta unos diez
 # minutos y las de interfaz dependen de animaciones, dialogos y relojes: su
 # intermitencia acabaria enseñando a ignorar el aspa roja, que es peor que no
 # tenerlas. Van una vez por semana y a mano cuando se ha tocado una pantalla.
 #
-# Las de migracion no estan aqui: esas si bloquean una publicacion, y viven en
-# el flujo de publicacion. Ver .github/workflows/publicacion.yml.
-name: Pruebas en emulador
+# La prueba de actualizacion se mudo a su propio flujo el dia que empezo a
+# bloquear una publicacion. Ver .github/workflows/actualizacion.yml.
+name: Pruebas de interfaz
 
 on:
   workflow_dispatch:
@@ -65,98 +64,5 @@ jobs:
         with:
           name: informe-interfaz-api${{ matrix.api-level }}
           path: app/build/reports/androidTests/
-          retention-days: 14
-          if-no-files-found: ignore
-
-  # ---------------------------------------------------------------------------
-  # Instalar la version nueva encima de la anterior y comprobar que abre.
-  #
-  # Existe por una regresion que costo una version publicada: la 1.0.1 cambio
-  # el tipo de una clave de preferencias que la 1.0.0 ya habia escrito, y
-  # DataStore --que guarda el tipo junto al valor-- lanzaba al leerla. La app se
-  # cerraba al abrirse, pero solo en los telefonos que venian de la version
-  # anterior. Las 190 pruebas de entonces no podian verlo: todas empiezan con el
-  # disco vacio, que es el unico escenario donde el problema no existe.
-  #
-  # Las dos versiones se compilan aqui desde git, en variante de depuracion, y
-  # no se descarga la release publicada. Dos razones: la llave de depuracion la
-  # genera el propio runner, asi que las dos quedan firmadas igual y una se
-  # puede instalar sobre la otra --con firmas distintas Android lo rechaza--, y
-  # asi el flujo no necesita los secretos de firma para nada.
-  # ---------------------------------------------------------------------------
-  actualizacion:
-    name: Actualizar sobre la version anterior
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-
-    steps:
-      # Con historia y etiquetas: la version anterior se saca de la ultima.
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      - uses: gradle/actions/setup-gradle@v4
-
-      - name: Cual es la version anterior
-        id: anterior
-        run: |
-          set -euo pipefail
-          etiqueta=$(git tag --sort=-v:refname --list 'v*' | head -1)
-
-          if [ -z "$etiqueta" ]; then
-            echo "Todavia no hay ninguna version publicada: no hay sobre que actualizar."
-            echo "hay=no" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "hay=si" >> "$GITHUB_OUTPUT"
-          echo "etiqueta=$etiqueta" >> "$GITHUB_OUTPUT"
-          echo "Se actualizara desde $etiqueta."
-
-      - name: Compilar la anterior
-        if: steps.anterior.outputs.hay == 'si'
-        run: |
-          set -euo pipefail
-          git checkout --detach "${{ steps.anterior.outputs.etiqueta }}"
-          ./gradlew :app:assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/anterior.apk"
-          git checkout -
-
-      - name: Compilar esta
-        if: steps.anterior.outputs.hay == 'si'
-        run: |
-          set -euo pipefail
-          ./gradlew :app:assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/nueva.apk"
-
-      - name: Habilitar KVM
-        if: steps.anterior.outputs.hay == 'si'
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
-            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: Instalar una encima de la otra
-        if: steps.anterior.outputs.hay == 'si'
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          disable-animations: true
-          script: .github/scripts/actualiza-y-abre.sh
-
-      - name: Guardar el log
-        if: always() && steps.anterior.outputs.hay == 'si'
-        uses: actions/upload-artifact@v4
-        with:
-          name: log-actualizacion
-          path: ${{ runner.temp }}/logcat-*.txt
           retention-days: 14
           if-no-files-found: ignore

@@ -113,12 +113,24 @@ jobs:
     uses: ./.github/workflows/pruebas.yml
 
   # ---------------------------------------------------------------------------
-  # Aqui va el job de migraciones en emulador, y todavia no existe porque no hay
-  # ninguna que correr: el esquema sigue en su version inicial. En cuanto se
-  # escriba la primera Migration entra aqui una `MigracionesTest` sobre un
-  # emulador de verdad, bloqueando la publicacion, porque una migracion
-  # equivocada deja la app sin abrir en el telefono de quien actualiza y no hay
-  # forma de arreglarlo desde fuera. Mientras tanto, EsquemaDeBaseTest vigila en
+  # Que la version nueva abra sobre la anterior, en un emulador de verdad.
+  #
+  # Se invoca el flujo en vez de copiar los pasos, igual que con las pruebas.
+  # Bloquea publicar: la 1.0.1 salio cerrandose al arrancar en los telefonos que
+  # venian de la 1.0.0, y eso no se arregla desde fuera --quien actualizo se
+  # queda sin app hasta que instale otra version a mano--.
+  # ---------------------------------------------------------------------------
+  actualizacion:
+    name: Actualización
+    needs: etiqueta
+    uses: ./.github/workflows/actualizacion.yml
+
+  # ---------------------------------------------------------------------------
+  # Aqui va tambien el job de migraciones en emulador, y todavia no existe
+  # porque no hay ninguna que correr: el esquema sigue en su version inicial. En
+  # cuanto se escriba la primera Migration entra aqui una `MigracionesTest`,
+  # bloqueando igual, porque una migracion equivocada deja la app sin abrir y
+  # tampoco se arregla desde fuera. Mientras tanto, EsquemaDeBaseTest vigila en
   # la JVM que la cadena no tenga huecos. Ver docs/modelo-de-datos.md.
   # ---------------------------------------------------------------------------
 
@@ -127,7 +139,7 @@ jobs:
   # ---------------------------------------------------------------------------
   publicar:
     name: Compilar y publicar
-    needs: [etiqueta, pruebas]
+    needs: [etiqueta, pruebas, actualizacion]
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
