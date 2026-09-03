@@ -30,7 +30,7 @@ apagar en Ajustes.
 | **Salud de los datos** | Una pantalla que revisa en continuo: tipos que contradicen al signo del importe, transferencias sin su pareja, movimientos sin categoría, medios incoherentes con la cuenta, y descripciones casi idénticas (Levenshtein ≤ 2). Varios hallazgos se reparan con un botón. |
 | **Presupuesto y analítica** | Meta contra realidad por categoría y tendencia mensual. |
 | **Compromisos** | Lo que ya está comprometido y aún no se paga: mensualidades, suscripciones, la renta, gastos anuales. Cada uno lleva su cuenta, su categoría, su periodicidad —de semanal a anual— y la fecha del siguiente pago, y avisa antes de vencer a la hora que elijas en Ajustes. **Registrar** abre la captura ya llena para que corrijas el monto si cambió. El plan nunca avanza solo: se desliza la tarjeta a la derecha y se elige **Cumplir** o **Descartar**, y las dos se deshacen devolviendo el plan justo a donde estaba, incluso uno que cae en día 31. Mientras nadie decida, el pago sigue pendiente aunque se pase de fecha. Todo esto —registrar, cumplir, descartar— se hace igual desde el tablero, sin entrar a la lista. |
-| **Importar y exportar .xlsx** | Tu respaldo es un libro de Excel que tú decides dónde guardar. |
+| **Importar y exportar .xlsx** | Tu respaldo es un libro de Excel que tú decides dónde guardar. La app te lo recuerda cada semana si no lo has hecho, y otra vez cuando sale una versión nueva — que es justo cuando conviene tener una copia. |
 
 Todos los importes viven como **centavos en un `Long`**. Nunca como decimal flotante: así
 un saldo cero es cero exacto y las conciliaciones cuadran.

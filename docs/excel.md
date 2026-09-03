@@ -153,6 +153,8 @@ Los diagnósticos se muestran en la propia tarjeta del resumen, agrupados por me
 
 Los fallos se traducen a mensajes accionables —archivo que no es un `.xlsx`, permiso perdido sobre el archivo, sin espacio, libro demasiado grande para la memoria—; la excepción cruda se manda a logcat sin datos del usuario.
 
+Exportar con éxito reinicia la cuenta del [recordatorio de respaldo](seguridad.md#el-recordatorio): el aviso semanal pedía justo esto.
+
 ## Escribir el archivo
 
 El destino se abre con modo `"wt"` (escribir truncando): al sobrescribir un archivo más grande, sin truncar quedaría la cola del viejo pegada al final y el `.xlsx` saldría corrupto. Pero varios proveedores de documentos —gestores de archivos y servicios de nube— no soportan ese modo, así que se cae a `"w"`; un archivo recién creado por el selector nace vacío, y eso es preferible a no poder exportar.

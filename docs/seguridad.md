@@ -106,7 +106,7 @@ Solo cuatro, y ninguno da acceso a datos ajenos a la app:
 |---|---|
 | `INTERNET` | Preguntar una vez al día si hay una versión nueva. Nada más pasa por aquí |
 | `USE_BIOMETRIC` | Desbloquear con huella o credencial del teléfono |
-| `POST_NOTIFICATIONS` | Avisar de compromisos por vencer |
+| `POST_NOTIFICATIONS` | Avisar de compromisos por vencer y recordar el respaldo |
 | `RECEIVE_BOOT_COMPLETED` | Reprogramar la revisión diaria tras reiniciar |
 
 Los archivos se leen y se escriben por el **selector del sistema** (Storage Access Framework), así que no hace falta permiso de almacenamiento: la app solo ve el archivo que el usuario eligió.

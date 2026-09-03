@@ -61,7 +61,7 @@ Sin dependencias de Android. Contiene:
 - `excel/` — lector y escritor de `.xlsx` propios, más el exportador e importador del libro. Ver [Excel](excel.md).
 - `prefs/` — preferencias en DataStore, expuestas como un `Flow<Ajustes>`.
 - `seguridad/` — llave de la base, derivación del PIN y control de bloqueo. Ver [seguridad](seguridad.md).
-- `notify/` — recordatorios de compromisos por vencer.
+- `notify/` — recordatorios de compromisos por vencer y el aviso semanal de respaldo, los dos colgados de la misma alarma diaria.
 - `actualizacion/` — la única salida a la red: preguntarle al sitio, una vez al día, si hay una versión más nueva. Ver [publicación](publicacion.md#cómo-se-entera-la-app).
 
 No hay excepciones a la regla del repositorio. `ReparaDatos` arma la lista de correcciones y la manda a `actualizaMovimientos`, que las aplica en una sola transacción; `ImportadorExcel` recibe la base entera justamente para poder abrir la suya.

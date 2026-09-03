@@ -53,10 +53,15 @@ jobs:
           # prueba se dedicaria a instalar una version sobre si misma. Cuando
           # esto corre sobre una rama, GITHUB_REF_NAME no casa con ninguna
           # etiqueta y no descarta nada.
+          # El `|| true` no es adorno: si la unica etiqueta es la que se esta
+          # publicando --la primera release de todas-- `grep` no encuentra nada
+          # y sale con 1, y con `pipefail` eso aborta el paso entero en vez de
+          # dejarlo llegar al "no hay version anterior" de aqui abajo.
           etiqueta=$(
             git tag --sort=-v:refname --list 'v*' \
               | grep -vx "$GITHUB_REF_NAME" \
-              | head -1
+              | head -1 \
+              || true
           )
 
           if [ -z "$etiqueta" ]; then
