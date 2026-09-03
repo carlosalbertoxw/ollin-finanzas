@@ -36,6 +36,24 @@ ESPERA=25
 # Cualquier fallo deja rastro, incluido el de una linea que no lo esperaba.
 trap 'echo "::error::La prueba de actualizacion fallo en la linea $LINENO."; vuelca "fallo"' ERR
 
+# Saca a anotacion del run lo que el log diga de nuestro proceso.
+#
+# Un artefacto de 164 KB que hay que descargar con token no lo lee nadie, y sin
+# leerlo no se distingue un fallo de la app de uno de la prueba --que ya costo
+# dos ciclos--. Solo lineas de nuestro paquete o de AndroidRuntime: filtrar por
+# "died" a secas trae las trazas del ActivityManager, que hablan de cualquiera.
+anota() {
+  local archivo="$1"
+  local motivos
+  motivos="$(
+    grep -E "$PAQUETE|AndroidRuntime|FATAL EXCEPTION" "$archivo" 2>/dev/null       | head -15       || true
+  )"
+  [ -z "$motivos" ] && { echo "::error::El log no dice nada de $PAQUETE."; return 0; }
+  echo "$motivos" | while IFS= read -r linea; do
+    echo "::error::${linea:0:200}"
+  done
+}
+
 vuelca() {
   local etiqueta="$1"
   adb logcat -d > "$RUNNER_TEMP/logcat-$etiqueta.txt" 2>/dev/null || true
@@ -115,17 +133,28 @@ fi
 
 if [ -z "$vivo" ]; then
   echo "::error::La version nueva no se mantuvo abierta sobre la anterior."
-  # Lo que dijo el sistema de nuestro proceso, como anotacion y no solo dentro
-  # del artefacto: un log que hay que descargar para leerlo no se lee. Las
-  # anotaciones se ven desde fuera del repositorio, incluso sin sesion.
-  motivos="$(
-    grep -iE "$PAQUETE|AndroidRuntime|FATAL|died|ANR in|Force finishing"       "$RUNNER_TEMP/logcat-nueva.txt" 2>/dev/null       | tail -12       || true
-  )"
-  if [ -n "$motivos" ]; then
-    echo "$motivos" | while IFS= read -r linea; do
-      echo "::error::$linea"
-    done
+  anota "$RUNNER_TEMP/logcat-nueva.txt"
+
+  # El experimento de control, y la razon de ser de este bloque: sin el, una
+  # compilacion que no arranca en ningun sitio se lee igual que una que solo
+  # muere al actualizar, y son problemas distintos --uno es de la version, el
+  # otro de lo que dejo escrito la anterior--. Aqui se borra todo y se instala
+  # de cero: si tampoco asi arranca, la actualizacion no tiene nada que ver.
+  echo "--- Control: la misma version, sin datos de la anterior"
+  adb uninstall "$PAQUETE" 2>&1 | sed 's/^/    /' || true
+  adb install "$NUEVA" 2>&1 | sed 's/^/    /'
+  adb logcat -c || true
+  abre
+  limpio="$(pid)"
+  vuelca "limpia"
+
+  if [ -z "$limpio" ]; then
+    echo "::error::Tampoco arranca en una instalacion limpia: no es un problema de actualizar."
+    anota "$RUNNER_TEMP/logcat-limpia.txt"
+  else
+    echo "::error::En limpio si arranca (pid $limpio). El problema esta en los datos que dejo la version anterior."
   fi
+
   exit 1
 fi
 
