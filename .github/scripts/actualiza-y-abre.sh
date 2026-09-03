@@ -50,9 +50,19 @@ pid() {
 
 # Abrir no puede tumbar el script: si el arranque no ocurre, lo que importa es
 # el diagnostico de despues, no el codigo de salida de quien lanzo el intent.
+#
+# `-S` fuerza a cerrar la app antes de arrancarla, y no es opcional aqui.
+# Instalar encima deja la tarea viva en recientes aunque el proceso este muerto,
+# y entonces `am start` a secas contesta "intent has been delivered to currently
+# running top-most instance" sin levantar nada: la prueba media un proceso que
+# nunca arranco y culpaba a la app. Ademas es lo que se quiere medir, un
+# arranque en frio sobre los datos de la version anterior.
+#
+# `-W` espera a que termine de arrancar y dice como fue, en vez de dejarlo a
+# una espera a ciegas.
 abre() {
   echo "Abriendo $ACTIVIDAD"
-  adb shell am start -n "$ACTIVIDAD" 2>&1 | sed 's/^/    /' || true
+  adb shell am start -S -W -n "$ACTIVIDAD" 2>&1 | sed 's/^/    /' || true
   sleep "$ESPERA"
 }
 
@@ -105,6 +115,17 @@ fi
 
 if [ -z "$vivo" ]; then
   echo "::error::La version nueva no se mantuvo abierta sobre la anterior."
+  # Lo que dijo el sistema de nuestro proceso, como anotacion y no solo dentro
+  # del artefacto: un log que hay que descargar para leerlo no se lee. Las
+  # anotaciones se ven desde fuera del repositorio, incluso sin sesion.
+  motivos="$(
+    grep -iE "$PAQUETE|AndroidRuntime|FATAL|died|ANR in|Force finishing"       "$RUNNER_TEMP/logcat-nueva.txt" 2>/dev/null       | tail -12       || true
+  )"
+  if [ -n "$motivos" ]; then
+    echo "$motivos" | while IFS= read -r linea; do
+      echo "::error::$linea"
+    done
+  fi
   exit 1
 fi
 
