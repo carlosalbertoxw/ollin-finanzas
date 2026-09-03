@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.Resultado
 import com.carlosalbertoxw.ollin.finanzas.data.notify.Recordatorios
 import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
 
@@ -53,9 +54,46 @@ class OllinApp : Application() {
             )
             contenedor.sembrador.sembrarSiHaceFalta()
 
+            // El punto desde el que se cuenta la semana del respaldo. Se pone
+            // en el primer arranque que ve esta funcion y no en la instalacion:
+            // quien ya tenia la app no merece un aviso el mismo dia que
+            // actualiza por no haber exportado nunca.
+            if (ajustes.anclaDeRespaldo <= 0L) {
+                contenedor.ajustes.guardaAnclaDeRespaldo(System.currentTimeMillis())
+            }
+
             // De cortesia y sin prisa: si no hay red o no toca todavia, no
             // pasa nada y se vuelve a intentar en el siguiente arranque.
             runCatching { contenedor.comprobadorActualizaciones.compruebaSiToca() }
+                .getOrNull()
+                ?.let { avisaDeVersionNueva(it) }
         }
+    }
+
+    /**
+     * Avisa de una version nueva, una sola vez por version.
+     *
+     * Sin recordar de cual se aviso, la comprobacion diaria repetiria la misma
+     * notificacion cada dia hasta que alguien actualice, y a la tercera se
+     * apaga el canal entero --con lo que tambien se pierden los avisos de
+     * compromisos, que son los que de verdad se usan a diario--.
+     *
+     * Lleva a Archivo y no al sitio de descarga a proposito: lo primero que
+     * conviene hacer antes de actualizar es exportar el libro.
+     */
+    private suspend fun avisaDeVersionNueva(resultado: Resultado) {
+        if (resultado !is Resultado.HayVersionNueva) return
+
+        val version = resultado.publicada.version.toString()
+        if (contenedor.ajustes.ajustes.first().versionAvisada == version) return
+
+        Recordatorios.notifica(
+            this,
+            id = Recordatorios.ID_VERSION,
+            titulo = "Hay una version nueva: $version",
+            texto = "Exporta tu respaldo antes de actualizar. Lo de siempre: el .xlsx es lo unico que sobrevive al cambio de telefono.",
+            ruta = MainActivity.RUTA_ARCHIVO
+        )
+        contenedor.ajustes.guardaVersionAvisada(version)
     }
 }

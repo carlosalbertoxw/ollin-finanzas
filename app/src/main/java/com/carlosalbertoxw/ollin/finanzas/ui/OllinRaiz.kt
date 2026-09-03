@@ -48,7 +48,7 @@ import com.carlosalbertoxw.ollin.finanzas.ui.screens.TransferenciaPantalla
 import com.carlosalbertoxw.ollin.finanzas.ui.screens.TutorialesPantalla
 
 @Composable
-fun OllinRaiz(contenedor: Contenedor) {
+fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
     // Unico lugar que conoce el contenedor entero. De aqui hacia abajo cada
     // pantalla recibe solo lo que usa, y asi su ViewModel se puede construir en
     // una prueba sin levantar la base cifrada ni DataStore.
@@ -107,7 +107,15 @@ fun OllinRaiz(contenedor: Contenedor) {
         }
     ) { relleno ->
         Box(Modifier.fillMaxSize().padding(relleno)) {
-            NavHost(navController = nav, startDestination = Destino.TABLERO.ruta) {
+            // La ruta inicial solo puede ser una de las pestanas: llega de una
+            // notificacion, y una ruta desconocida --o una con argumentos-- no
+            // puede acabar en una pantalla sin forma de volver.
+            val arranque = Destino.entries
+                .firstOrNull { it.ruta == rutaInicial }
+                ?.ruta
+                ?: Destino.TABLERO.ruta
+
+            NavHost(navController = nav, startDestination = arranque) {
 
                 composable(Destino.TABLERO.ruta) {
                     TableroPantalla(

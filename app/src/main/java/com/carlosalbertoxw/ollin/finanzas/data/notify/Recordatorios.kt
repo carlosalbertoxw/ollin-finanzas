@@ -154,7 +154,22 @@ object Recordatorios {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-    fun notifica(contexto: Context, id: Int, titulo: String, texto: String) {
+    /** Ids de los avisos que no son de un compromiso. Los de compromiso van del 2000. */
+    const val ID_RESPALDO = 3000
+    const val ID_VERSION = 3001
+
+    /**
+     * @param ruta a que pantalla llevar al tocarlo. Un recordatorio de respaldo
+     *   que abre el tablero deja el trabajo a medias: quien lo toca ya decidio
+     *   exportar.
+     */
+    fun notifica(
+        contexto: Context,
+        id: Int,
+        titulo: String,
+        texto: String,
+        ruta: String? = null
+    ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(contexto, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED
@@ -163,7 +178,9 @@ object Recordatorios {
         val abrir = PendingIntent.getActivity(
             contexto,
             id,
-            Intent(contexto, MainActivity::class.java),
+            Intent(contexto, MainActivity::class.java).apply {
+                if (ruta != null) putExtra(MainActivity.EXTRA_RUTA, ruta)
+            },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -202,6 +219,8 @@ class RecordatorioReceiver : BroadcastReceiver() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                avisaDeRespaldoSiToca(contexto, app)
+
                 val compromisos = app.contenedor.repositorio.listaCompromisos()
                 val hoy = LocalDate.now()
                 Recordatorios.porVencer(compromisos).forEachIndexed { i, (compromiso, fecha) ->
@@ -218,6 +237,28 @@ class RecordatorioReceiver : BroadcastReceiver() {
                 pendiente.finish()
             }
         }
+    }
+
+    /**
+     * Se cuelga de la revision diaria en vez de tener su propia alarma. Una
+     * alarma mas seria otra cosa que reprogramar tras cada reinicio y tras cada
+     * cambio de hora, para preguntar una vez a la semana algo que aqui se
+     * responde con una resta.
+     */
+    private suspend fun avisaDeRespaldoSiToca(contexto: Context, app: OllinApp) {
+        val ajustes = app.contenedor.ajustes.ajustes.first()
+        if (!ajustes.recuerdaRespaldo) return
+
+        val ahora = System.currentTimeMillis()
+        if (!Respaldos.toca(ajustes.ultimoRespaldo, ajustes.anclaDeRespaldo, ahora)) return
+
+        Recordatorios.notifica(
+            contexto,
+            id = Recordatorios.ID_RESPALDO,
+            titulo = "Respalda tu libro",
+            texto = Respaldos.textoDelAviso(ajustes.ultimoRespaldo, ajustes.anclaDeRespaldo, ahora),
+            ruta = MainActivity.RUTA_ARCHIVO
+        )
     }
 }
 

@@ -84,6 +84,20 @@ La razón es física: una llave del Keystore no se puede restaurar ni transferir
 
 **El respaldo real es la exportación a `.xlsx`**, que el usuario decide dónde guardar. Ver [Excel](excel.md).
 
+### El recordatorio
+
+Como el respaldo no lo hace nadie más, la app lo recuerda: un aviso **cada siete días** si no se ha exportado, y otro **cuando encuentra una versión nueva**, porque actualizar es justo el momento en que conviene tener una copia. Los dos llevan directo a la pantalla de Archivo; un recordatorio que abre el tablero deja el trabajo a medias.
+
+Las reglas están en [`Respaldos`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/notify/Respaldos.kt), en funciones puras sobre instantes:
+
+- **La semana se cuenta desde el último respaldo**, o desde un ancla si nunca hubo ninguno. Avisar a los siete días de instalar a quien exportó ayer sería ruido, y el ruido se apaga.
+- **El ancla se pone en el primer arranque que ve esta función**, no en la instalación de la app: quien ya la tenía empieza a contar el día que actualiza, sin recibir un aviso inmediato por no haber exportado nunca.
+- **El aviso dice cuántos días llevas sin respaldo.** «Hace 21 días» mueve a alguien a exportar; «acuérdate de respaldar» ya no lo lee nadie a la tercera semana.
+- **El de versión nueva se manda una sola vez por versión.** Repetirlo cada día hasta que alguien actualice acaba con el canal silenciado — y con él se irían los avisos de compromisos, que son los que se usan a diario.
+- **Se cuelga de la revisión diaria**, a la hora que elijas en Ajustes, en vez de tener su propia alarma: otra alarma sería otra cosa que reprogramar tras cada reinicio para preguntar una vez por semana algo que aquí se responde con una resta.
+
+Se apaga en `Ajustes → Respaldo`. Encenderlo o apagarlo reinicia la cuenta.
+
 ## Permisos
 
 Solo cuatro, y ninguno da acceso a datos ajenos a la app:

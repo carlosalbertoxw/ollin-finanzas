@@ -28,12 +28,25 @@ import com.carlosalbertoxw.ollin.finanzas.ui.theme.TemaOllin
  */
 class MainActivity : FragmentActivity() {
 
+    companion object {
+        /**
+         * A que pantalla abrir, cuando se llega desde una notificacion.
+         *
+         * Se lee una sola vez, al crearse la actividad: si la app ya estaba
+         * abierta, tocar el aviso la trae al frente y la deja donde estaba, que
+         * es lo que espera quien la tenia a medio usar.
+         */
+        const val EXTRA_RUTA = "ollin.ruta"
+        const val RUTA_ARCHIVO = "archivo"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         val contenedor = (application as OllinApp).contenedor
         val bloqueo = contenedor.controlBloqueo
+        val rutaInicial = intent?.getStringExtra(EXTRA_RUTA)
 
         setContent {
             // null mientras no se leen las preferencias del disco. Distinguirlo de
@@ -76,7 +89,7 @@ class MainActivity : FragmentActivity() {
                         // Aqui y no en onCreate: el permiso se pide con la app
                         // ya abierta, no sobre la pantalla del candado.
                         PideAvisos()
-                        OllinRaiz(contenedor)
+                        OllinRaiz(contenedor, rutaInicial)
                     }
                 }
             }

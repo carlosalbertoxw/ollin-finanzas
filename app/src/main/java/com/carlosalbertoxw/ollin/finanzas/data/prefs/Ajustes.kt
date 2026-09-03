@@ -66,6 +66,24 @@ data class Ajustes(
     val versionPublicada: String? = null,
     val urlDeDescarga: String? = null,
     val notasDeVersion: String? = null,
+    /**
+     * Recordar cada semana que el respaldo es cosa tuya.
+     *
+     * Encendido de fabrica: la base va cifrada con una llave del Keystore que
+     * no se respalda ni viaja, asi que el .xlsx que exportas es lo unico que
+     * sobrevive a perder el telefono. Quien ya tiene la costumbre lo apaga.
+     */
+    val recuerdaRespaldo: Boolean = true,
+    /** Cuando se exporto por ultima vez. 0 = nunca. */
+    val ultimoRespaldo: Long = 0L,
+    /**
+     * Desde cuando se cuenta la semana mientras no haya ningun respaldo. Se
+     * pone en el primer arranque que ve esta funcion, no en el de la app: quien
+     * ya la tenia instalada empieza a contar hoy y no desde que la instalo.
+     */
+    val anclaDeRespaldo: Long = 0L,
+    /** La version de la que ya se aviso, para no repetir el aviso cada dia. */
+    val versionAvisada: String? = null,
     val modoBloqueo: ModoBloqueo = ModoBloqueo.NINGUNO,
     /** Del PIN solo se guarda su huella derivada; el PIN en claro no se escribe nunca. */
     val pinHash: String? = null,
@@ -100,6 +118,10 @@ class AjustesRepositorio(private val contexto: Context) {
         val VERSION_PUBLICADA = stringPreferencesKey("version_publicada_nombre")
         val URL_DESCARGA = stringPreferencesKey("url_descarga")
         val NOTAS_VERSION = stringPreferencesKey("notas_version")
+        val RECUERDA_RESPALDO = booleanPreferencesKey("recuerda_respaldo")
+        val ULTIMO_RESPALDO = longPreferencesKey("ultimo_respaldo")
+        val ANCLA_RESPALDO = longPreferencesKey("ancla_respaldo")
+        val VERSION_AVISADA = stringPreferencesKey("version_avisada")
         val HORA_AVISO = intPreferencesKey("hora_aviso")
         val MINUTO_AVISO = intPreferencesKey("minuto_aviso")
         val BLOQUEO = stringPreferencesKey("modo_bloqueo")
@@ -160,6 +182,10 @@ class AjustesRepositorio(private val contexto: Context) {
         versionPublicada = p.lee(Claves.VERSION_PUBLICADA),
         urlDeDescarga = p.lee(Claves.URL_DESCARGA),
         notasDeVersion = p.lee(Claves.NOTAS_VERSION),
+        recuerdaRespaldo = p.lee(Claves.RECUERDA_RESPALDO) ?: true,
+        ultimoRespaldo = p.lee(Claves.ULTIMO_RESPALDO) ?: 0L,
+        anclaDeRespaldo = p.lee(Claves.ANCLA_RESPALDO) ?: 0L,
+        versionAvisada = p.lee(Claves.VERSION_AVISADA),
         // Se recorta al leer y no solo al escribir: un valor imposible en
         // disco tiraria la alarma con un IllegalArgumentException al construir
         // la hora, y la app se quedaria sin avisos sin decir por que.
@@ -290,6 +316,33 @@ class AjustesRepositorio(private val contexto: Context) {
             it[Claves.URL_DESCARGA] = url
             if (notas.isNullOrBlank()) it.remove(Claves.NOTAS_VERSION) else it[Claves.NOTAS_VERSION] = notas
         }
+    }
+
+    /**
+     * Encender o apagar el recordatorio reinicia la cuenta. Al encenderlo,
+     * porque quien lo activa hoy no espera un aviso inmediato por no haber
+     * exportado nunca; al apagarlo, porque la marca vieja no significa nada
+     * cuando se vuelva a encender dentro de meses.
+     */
+    suspend fun guardaRecuerdaRespaldo(valor: Boolean, momento: Long) {
+        contexto.almacen.edit {
+            it[Claves.RECUERDA_RESPALDO] = valor
+            it[Claves.ANCLA_RESPALDO] = momento
+        }
+    }
+
+    /** Se exporto: la semana vuelve a contar desde aqui. */
+    suspend fun guardaRespaldoHecho(momento: Long) {
+        contexto.almacen.edit { it[Claves.ULTIMO_RESPALDO] = momento }
+    }
+
+    /** El punto de partida, la primera vez que la app ve esta funcion. */
+    suspend fun guardaAnclaDeRespaldo(momento: Long) {
+        contexto.almacen.edit { it[Claves.ANCLA_RESPALDO] = momento }
+    }
+
+    suspend fun guardaVersionAvisada(version: String) {
+        contexto.almacen.edit { it[Claves.VERSION_AVISADA] = version }
     }
 
     suspend fun guardaUltimoArchivo(uri: String?) {

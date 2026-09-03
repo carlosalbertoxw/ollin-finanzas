@@ -115,7 +115,7 @@ La pantalla de Acerca de lee la versión del **paquete instalado** (`PackageMana
 
 ## Pruebas
 
-Hay dos suites: **194 pruebas unitarias** en la JVM y **11 pruebas de interfaz** que necesitan dispositivo. Las unitarias y el lint corren en cada push y cada PR ([`pruebas.yml`](../.github/workflows/pruebas.yml)).
+Hay dos suites: **204 pruebas unitarias** en la JVM y **11 pruebas de interfaz** que necesitan dispositivo. Las unitarias y el lint corren en cada push y cada PR ([`pruebas.yml`](../.github/workflows/pruebas.yml)).
 
 ### Unitarias (JVM)
 
@@ -140,6 +140,7 @@ Hay dos suites: **194 pruebas unitarias** en la JVM y **11 pruebas de interfaz**
 | [`ExportadorBordesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ExportadorBordesTest.kt) | Compromisos con datos, catálogos incompletos, nombres que obligan a entrecomillar, y tres años de movimientos diarios |
 | [`XlsxLectorSeguridadTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/XlsxLectorSeguridadTest.kt) | Que el lector rechace un `DOCTYPE` —la bomba de entidades— y respete el tope de tamaño |
 | [`EsquemaDeBaseTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EsquemaDeBaseTest.kt) | La guardia de la base: cada versión con su json exportado y la cadena de migraciones sin huecos. Ver [modelo de datos](modelo-de-datos.md#migraciones) |
+| [`RespaldosTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/RespaldosTest.kt) | Cuándo toca recordar un respaldo: la semana desde el último, el ancla cuando no hay ninguno, el reloj movido hacia atrás y qué dice el aviso. Ver [seguridad](seguridad.md#el-recordatorio) |
 | [`PreferenciasHeredadasTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/PreferenciasHeredadasTest.kt) | Actualizar por encima de una versión anterior: unas preferencias escritas por la 1.0.0 se leen sin cerrar la app, y una clave con el tipo equivocado se trata como ausente. Ver [modelo de datos](modelo-de-datos.md#las-preferencias-también-son-datos-guardados) |
 | [`ActualizacionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ActualizacionesTest.kt) | El aviso de versión nueva sin red: comparación semántica (`1.10.0` es posterior a `1.9.0`), el `version.json` con sus aristas, el salto de redirección que solo se sigue hacia `https`, cuándo toca preguntar y que un día sin respuesta no gaste el turno |
 

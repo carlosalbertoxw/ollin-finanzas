@@ -189,6 +189,9 @@ class ArchivoVm(
             val a = ajustes.value
             runCatching { repo.exporta(uri, a.esquema, a.hojas) }.fold(
                 onSuccess = {
+                    // La semana del recordatorio vuelve a contar desde aqui:
+                    // acaba de hacerse lo que el aviso pediria.
+                    prefs.guardaRespaldoHecho(System.currentTimeMillis())
                     _estado.value = EstadoArchivo.Exportado(
                         hojas = HojaExportable.normaliza(a.hojas).size,
                         movimientos = totalMovimientos.value

@@ -91,6 +91,12 @@ class AjustesVm(
         viewModelScope.launch { prefs.guardaMuestraTutoriales(valor) }
     }
 
+    fun cambiaRecuerdaRespaldo(valor: Boolean) {
+        viewModelScope.launch {
+            prefs.guardaRecuerdaRespaldo(valor, System.currentTimeMillis())
+        }
+    }
+
     fun cambiaBuscarActualizaciones(valor: Boolean) {
         viewModelScope.launch { prefs.guardaBuscarActualizaciones(valor) }
     }
@@ -276,6 +282,28 @@ fun AjustesPantalla(
 
             TextButton(onClick = alAbrirTutoriales, modifier = Modifier.fillMaxWidth()) {
                 Text("Tutoriales de la app")
+            }
+
+            HorizontalDivider()
+
+            Text("Respaldo", style = MaterialTheme.typography.titleMedium)
+
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Recordarme respaldar", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "Un aviso cada semana si no has exportado, y otro cuando salga una " +
+                            "version nueva. La base va cifrada con una llave que no se respalda " +
+                            "ni viaja a otro telefono: el .xlsx que tu exportas es lo unico que " +
+                            "sobrevive a perder este.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colores.textoTenue
+                    )
+                }
+                Switch(
+                    checked = ajustes.recuerdaRespaldo,
+                    onCheckedChange = vm::cambiaRecuerdaRespaldo
+                )
             }
 
             HorizontalDivider()
