@@ -113,23 +113,19 @@ jobs:
     uses: ./.github/workflows/pruebas.yml
 
   # ---------------------------------------------------------------------------
-  # Que la version nueva abra sobre la anterior, en un emulador de verdad.
+  # La prueba de actualizacion no esta aqui, y es a proposito.
   #
-  # Corre, pero **no bloquea todavia**, y esto no es pereza: bloqueando dio tres
-  # falsos negativos seguidos contra la 1.0.3 --una version que abre
-  # perfectamente en un telefono de verdad--. Dos fueron errores del script (se
-  # moria en silencio; entregaba el intent a una tarea fantasma sin levantar
-  # proceso) y el tercero sigue sin diagnostico.
+  # Deberia estar: comprueba que la version nueva abre sobre la anterior, que es
+  # lo que rompio la 1.0.1. Pero bloqueando dio tres falsos negativos seguidos
+  # contra una version que abre bien en un telefono de verdad, y un trabajo que
+  # no bloquea tampoco cabe aqui: un `uses:` no admite `continue-on-error`, asi
+  # que su fallo pintaria de rojo una publicacion que salio bien, y un rojo que
+  # no significa nada es justo lo que enseña a no mirar los rojos.
   #
-  # Una puerta que detiene publicaciones buenas se acaba ignorando, y una puerta
-  # ignorada no protege de nada. Vuelve a `needs` de `publicar` en cuanto se vea
-  # pasar contra una version conocida buena: hasta entonces informa, que ya es
-  # mas de lo que habia. Ver docs/desarrollo.md#la-prueba-de-actualizacion.
+  # Mientras tanto corre en su propio flujo, los lunes y a mano. Vuelve aqui
+  # --dentro de `needs` de `publicar`-- en cuanto se le vea pasar contra una
+  # version conocida buena. Ver .github/workflows/actualizacion.yml.
   # ---------------------------------------------------------------------------
-  actualizacion:
-    name: Actualización
-    needs: etiqueta
-    uses: ./.github/workflows/actualizacion.yml
 
   # ---------------------------------------------------------------------------
   # Aqui va tambien el job de migraciones en emulador, y todavia no existe
