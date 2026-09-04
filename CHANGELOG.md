@@ -22,7 +22,7 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 - **Recordatorio de respaldo.** Un aviso cada siete días si no has exportado tu libro, y otro cuando aparece una versión nueva — que es justo cuando conviene tener una copia. Los dos abren la pantalla de Archivo. La semana se cuenta desde tu último respaldo, así que exportar calla el aviso; el de versión nueva se manda una sola vez por versión. Se apaga en `Ajustes → Respaldo`.
 
-- Una prueba de actualización sobre emulador: instala la versión de la última etiqueta, la abre para que escriba sus preferencias, instala la nueva encima sin desinstalar y comprueba que sigue abriéndose. Es la que habría atrapado el fallo de la 1.0.1. Vive en `actualizacion.yml` y **bloquea la publicación**: si falla, no se firma nada ni se crea la release.
+- Una prueba de actualización sobre emulador: instala la versión de la última etiqueta, la abre para que escriba sus preferencias, instala la nueva encima sin desinstalar y comprueba que sigue abriéndose. Es la que habría atrapado el fallo de la 1.0.1. Vive en `actualizacion.yml`. Por ahora informa sin bloquear: al ponerla a detener publicaciones dio tres falsos negativos seguidos contra una versión que abre bien en un teléfono real, y una puerta que detiene releases buenas se acaba ignorando. Vuelve a bloquear en cuanto se le vea pasar contra una versión conocida buena.
 
 ## [1.0.2] - 2026-08-31
 

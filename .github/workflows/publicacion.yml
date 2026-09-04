@@ -115,10 +115,16 @@ jobs:
   # ---------------------------------------------------------------------------
   # Que la version nueva abra sobre la anterior, en un emulador de verdad.
   #
-  # Se invoca el flujo en vez de copiar los pasos, igual que con las pruebas.
-  # Bloquea publicar: la 1.0.1 salio cerrandose al arrancar en los telefonos que
-  # venian de la 1.0.0, y eso no se arregla desde fuera --quien actualizo se
-  # queda sin app hasta que instale otra version a mano--.
+  # Corre, pero **no bloquea todavia**, y esto no es pereza: bloqueando dio tres
+  # falsos negativos seguidos contra la 1.0.3 --una version que abre
+  # perfectamente en un telefono de verdad--. Dos fueron errores del script (se
+  # moria en silencio; entregaba el intent a una tarea fantasma sin levantar
+  # proceso) y el tercero sigue sin diagnostico.
+  #
+  # Una puerta que detiene publicaciones buenas se acaba ignorando, y una puerta
+  # ignorada no protege de nada. Vuelve a `needs` de `publicar` en cuanto se vea
+  # pasar contra una version conocida buena: hasta entonces informa, que ya es
+  # mas de lo que habia. Ver docs/desarrollo.md#la-prueba-de-actualizacion.
   # ---------------------------------------------------------------------------
   actualizacion:
     name: Actualización
@@ -139,7 +145,7 @@ jobs:
   # ---------------------------------------------------------------------------
   publicar:
     name: Compilar y publicar
-    needs: [etiqueta, pruebas, actualizacion]
+    needs: [etiqueta, pruebas]
     runs-on: ubuntu-latest
     timeout-minutes: 40
 

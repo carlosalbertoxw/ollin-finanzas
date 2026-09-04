@@ -202,7 +202,13 @@ Tres decisiones que la sostienen:
 - **Se afirma poco a propósito**: que el proceso siga vivo y que no haya excepción mortal. No mira la pantalla, porque un fallo de arranque se manifiesta como el proceso que desaparece y eso se ve sin depender de animaciones.
 - **La versión anterior tiene que llegar a escribir**: es lo que da sentido a todo. El fallo que motivó esta prueba estaba en *leer* lo que la versión vieja dejó, no en instalar por instalar.
 
-**Bloquea la publicación**, en el mismo grupo que las migraciones: un fallo así deja sin app a toda la gente que actualizó y no se arregla desde fuera. Las de interfaz no bloquean, porque dependen de animaciones y su intermitencia no puede ser lo que impida publicar una corrección. Si el emulador falla por su cuenta, se relanza el trabajo desde la página del run; no hace falta volver a etiquetar.
+**Hoy informa sin bloquear**, y ahí está la deuda. La intención es que bloquee, en el mismo grupo que las migraciones: un fallo así deja sin app a toda la gente que actualizó y no se arregla desde fuera. Pero al ponerla a detener publicaciones dio **tres falsos negativos seguidos** contra la 1.0.3, una versión que abre perfectamente en un teléfono real:
+
+1. El script moría en silencio si el lanzador devolvía un código distinto de cero — sin mensaje ni log, sin forma de saber si la culpa era de la app o de la prueba.
+2. `am start` a secas entregaba el intent a la tarea que sobrevive a `install -r`, sin levantar ningún proceso: la prueba medía un arranque que nunca ocurrió. De ahí el `-S`.
+3. El tercero sigue sin diagnóstico, y por eso existe el experimento de control: cuando el proceso no queda vivo, la prueba desinstala, instala la misma versión en limpio y lo reintenta, para decir si el problema es *actualizar* o es *esa compilación*.
+
+Una puerta que detiene publicaciones buenas se acaba ignorando, y una puerta ignorada no protege de nada. Vuelve a `needs` de `publicar` en cuanto se le vea pasar contra una versión conocida buena.
 
 Al invocarse desde la publicación, el árbol ya es el de la etiqueta que se publica, así que esa etiqueta se excluye al buscar «la anterior» — si no, la prueba instalaría una versión sobre sí misma y no probaría nada.
 
