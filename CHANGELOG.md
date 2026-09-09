@@ -16,6 +16,10 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ## [Sin publicar]
 
+### Añadido
+
+- **Licencia MIT.** El código queda bajo [MIT](https://github.com/carlosalbertoxw/ollin-finanzas/blob/main/LICENSE): cualquiera puede usarlo, copiarlo, modificarlo y redistribuirlo, incluso con fines comerciales, mientras conserve el aviso de copyright.
+
 ### Arreglado
 
 - La prueba de actualización acusaba a la app de no abrirse cuando quien no arrancaba nada era el propio script. Desde Android 13 la versión anterior pide el permiso de notificaciones nada más abrirse, y ese diálogo lo dibuja el sistema: `am force-stop` se lleva la app pero deja el diálogo encima de la tarea, así que el `am start` siguiente entregaba el intent sin levantar ningún proceso. Ahora el permiso se concede antes de abrir, y la prueba distingue «no arrancó porque nadie lo intentó» de «no arrancó porque se cerró». Era el tercero de los tres falsos negativos que la sacaron del flujo de publicación.

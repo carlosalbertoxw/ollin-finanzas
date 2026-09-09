@@ -2,6 +2,7 @@
 
 [![Pruebas](https://github.com/carlosalbertoxw/ollin-finanzas/actions/workflows/pruebas.yml/badge.svg)](https://github.com/carlosalbertoxw/ollin-finanzas/actions/workflows/pruebas.yml)
 [![Release](https://img.shields.io/github/v/release/carlosalbertoxw/ollin-finanzas?label=versi%C3%B3n)](https://github.com/carlosalbertoxw/ollin-finanzas/releases/latest)
+[![Licencia](https://img.shields.io/github/license/carlosalbertoxw/ollin-finanzas?label=licencia)](https://github.com/carlosalbertoxw/ollin-finanzas/blob/main/LICENSE)
 
 **El libro de tus movimientos.**
 
@@ -193,3 +194,12 @@ cd web && npm install && npm run dev
 - `minSdk` 26 · `targetSdk` 36 · Kotlin 2.1.20 · AGP 8.10.0 · Gradle 8.14.5
 
 Entorno, comandos y convenciones con más detalle en [Desarrollo](docs/desarrollo.md).
+
+---
+
+## Licencia
+
+[MIT](LICENSE) © 2026 Carlos Alberto.
+
+Puedes usar, copiar, modificar y redistribuir el código, incluso con fines comerciales,
+mientras conserves el aviso de copyright. La app se entrega sin garantía de ningún tipo.
