@@ -179,12 +179,13 @@ Requieren un emulador o teléfono con **API 26 o superior**; no corren en la JVM
 | [`ComponentesComunesTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/ComponentesComunesTest.kt) | Los componentes de `ui/components` montados solos, sin actividad ni base: `TextoDinero`, `TarjetaCifra`, `TarjetaValor`, `EstadoVacio`, `SeccionTitulo` |
 | [`NavegacionTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/NavegacionTest.kt) | Arranque sobre la app real, las cinco pestañas, ir y volver entre ellas, y que el botón de Capturar retire la barra de abajo |
 
-Cuatro cosas que hay que saber antes de escribir más:
+Cinco cosas que hay que saber antes de escribir más:
 
 - **Los nombres van en camelCase**, no entre backticks. Los espacios en nombres de método solo son legales desde la API 30 y el `minSdk` es 26.
 - **La app arranca bloqueada** hasta que termina de leer las preferencias. `NavegacionTest` espera con `waitUntil` a que aparezca la primera pestaña; sin eso la prueba mira el telón y falla por una carrera ajena a lo que se prueba.
 - **Todo se busca con `useUnmergedTree = true`.** `NavigationBarItem` y el botón flotante marcan `mergeDescendants`, así que en el árbol fusionado sus textos dejan de ser nodos propios y se hunden en el del contenedor: cualquier selector por descendiente encuentra cero. Compose lo dice en el propio error — *"the unmerged tree contains 1 node that matches"*—, pero cuesta un rato leerlo.
 - **No hay `testTag` en la interfaz.** Se selecciona por texto visible, que en una app monolingüe es estable. Para las pestañas se apunta al contenedor `isSelectable()` y no al texto suelto, porque el título también puede aparecer dentro de la pantalla.
+- **El permiso de avisos se concede antes de arrancar la actividad.** `NavegacionTest` lleva una regla propia con `@get:Rule(order = 0)` que hace `grantRuntimePermission` de `POST_NOTIFICATIONS`; la de Compose va con `order = 1`. Sin ella, desde Android 13 el diálogo del sistema tapa la actividad y las cuatro pruebas mueren con `No compose hierarchies found in the app`. El `order` es obligatorio: sin él JUnit no promete cuál regla envuelve a cuál, y si gana la de Compose la actividad arranca antes de que el permiso esté puesto. Por debajo de Android 13 la regla no toca nada, que es por lo que el emulador de API 26 pasaba y el de API 34 no.
 
 ### La prueba de actualización
 
@@ -206,15 +207,17 @@ Tres decisiones que la sostienen:
 
 1. El script moría en silencio si el lanzador devolvía un código distinto de cero — sin mensaje ni log, sin forma de saber si la culpa era de la app o de la prueba.
 2. `am start` a secas entregaba el intent a la tarea que sobrevive a `install -r`, sin levantar ningún proceso: la prueba medía un arranque que nunca ocurrió. De ahí el `-S`.
-3. El tercero sigue sin diagnóstico, y por eso existe el experimento de control: cuando el proceso no queda vivo, la prueba desinstala, instala la misma versión en limpio y lo reintenta, para decir si el problema es *actualizar* o es *esa compilación*.
+3. El tercero era el diálogo de notificaciones, y lo diagnosticó el run del 7 de septiembre de 2026. La versión anterior pide `POST_NOTIFICATIONS` al abrirse, y ese diálogo lo dibuja `com.google.android.permissioncontroller`: `am force-stop` sobre nuestro paquete se lleva la app pero lo deja a él en pie encima de la tarea. En el arranque siguiente el `-S` del punto anterior —que solo cierra el paquete destino— vuelve a encontrar una instancia ajena arriba, y `am start` contesta `TotalTime: 0` sin levantar nada. Ahora el permiso se concede con `pm grant` tras cada instalación desde cero, y `abre()` lee lo que `am start` responde: si dice `Activity not started`, la prueba falla diciendo que la culpa es de ella y no de la app.
 
-Una puerta que detiene publicaciones buenas se acaba ignorando, y una puerta ignorada no protege de nada. Vuelve a `needs` de `publicar` en cuanto se le vea pasar contra una versión conocida buena.
+El experimento de control se queda: cuando el proceso no queda vivo, la prueba desinstala, instala la misma versión en limpio y lo reintenta, para decir si el problema es *actualizar* o es *esa compilación*. Es lo que en ese run dijo que en limpio sí arrancaba, y con eso la sospecha pasó del APK a la prueba.
+
+Una puerta que detiene publicaciones buenas se acaba ignorando, y una puerta ignorada no protege de nada. Los tres tienen arreglo; falta verla pasar en verde contra una versión conocida buena, y ese día vuelve a `needs` de `publicar`.
 
 Al invocarse desde la publicación, el árbol ya es el de la etiqueta que se publica, así que esa etiqueta se excluye al buscar «la anterior» — si no, la prueba instalaría una versión sobre sí misma y no probaría nada.
 
 Existe porque la 1.0.1 se cerraba al abrirse en los teléfonos que venían de la 1.0.0, y las 190 pruebas de entonces no podían verlo: todas empiezan con el disco vacío. Ver [modelo de datos](modelo-de-datos.md#las-preferencias-también-son-datos-guardados).
 
-Si la suite tarda unos minutos, el teléfono puede dormirse a medio camino y la siguiente prueba falla con `No compose hierarchies found in the app`: la actividad nunca llegó a primer plano. No es un fallo real. Despierta la pantalla antes de correrlas:
+`No compose hierarchies found in the app` tiene dos causas, y ninguna es que la app esté rota. La primera es el diálogo de notificaciones tapando la actividad, y por eso `NavegacionTest` concede el permiso antes de arrancarla. La segunda: si la suite tarda unos minutos, el teléfono puede dormirse a medio camino y la actividad nunca llega a primer plano. Despierta la pantalla antes de correrlas:
 
 ```bash
 adb shell input keyevent KEYCODE_WAKEUP
@@ -230,11 +233,13 @@ Cuatro flujos, todos con **JDK 21**, en [`.github/workflows/`](../.github/workfl
 |---|---|---|
 | `pruebas.yml` | push a `main` y cada PR | `testDebugUnitTest`, `lintDebug`, `assembleDebugAndroidTest`, `assembleRelease` y el build del sitio |
 | `pruebas-instrumentadas.yml` | lunes, y a mano | La suite de interfaz sobre un emulador |
-| `actualizacion.yml` | al etiquetar, lunes, y a mano | Instala la versión nueva sobre la anterior y comprueba que abre |
+| `actualizacion.yml` | lunes, y a mano | Instala la versión nueva sobre la anterior y comprueba que abre |
 | `publicacion.yml` | tag `vX.Y.Z` | Comprueba la etiqueta contra el CHANGELOG, invoca `pruebas.yml`, firma y publica el APK |
 | `sitio.yml` | `web/**`, `CHANGELOG.md`, o al terminar una publicación | Construye el sitio y lo publica en GitHub Pages |
 
-`publicacion.yml` **invoca** a `pruebas.yml` y a `actualizacion.yml` con `workflow_call` en vez de copiar sus pasos: una etiqueta no puede pasar por una comprobación más floja que un pull request cualquiera. Los dos bloquean la publicación — si fallan, no se firma nada ni se crea la release.
+`publicacion.yml` **invoca** a `pruebas.yml` con `workflow_call` en vez de copiar sus pasos: una etiqueta no puede pasar por una comprobación más floja que un pull request cualquiera. Bloquea la publicación — si falla, no se firma nada ni se crea la release.
+
+`actualizacion.yml` también declara `workflow_call`, pero hoy no lo invoca nadie: salió de la publicación el día que su fallo pintó de rojo una release que había salido bien. Un `uses:` no admite `continue-on-error`, así que ahí dentro no hay forma de que informe sin manchar. El hueco sigue reservado y comentado en [`publicacion.yml`](../.github/workflows/publicacion.yml).
 
 Cuando CI falla, el reporte HTML de pruebas y el de lint quedan como artefacto del run durante 14 días — se leen mucho mejor que el rastro de la consola.
 
