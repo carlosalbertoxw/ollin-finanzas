@@ -76,7 +76,7 @@ La huella se publica junto al archivo para que cualquiera pueda comprobar que lo
 |---|---|---|
 | Etiqueta contra `CHANGELOG` | `publicacion.yml` | Sí |
 | Pruebas unitarias, Lint, `assembleRelease` | `pruebas.yml`, invocado tal cual | Sí |
-| Actualizar sobre la versión anterior | [`actualizacion.yml`](../.github/workflows/actualizacion.yml) | Todavía no |
+| Actualizar sobre la versión anterior | [`actualizacion.yml`](../.github/workflows/actualizacion.yml), invocado tal cual | Sí |
 | `MigracionesTest` en emulador | `publicacion.yml` | Todavía no existe |
 | Suite de interfaz completa | [`pruebas-instrumentadas.yml`](../.github/workflows/pruebas-instrumentadas.yml) | No |
 
@@ -86,7 +86,7 @@ Las migraciones bloquearán y las de interfaz no. Una migración equivocada deja
 
 La prueba de actualización nació para ese grupo, después de que la 1.0.1 saliera cerrándose al abrirse en los teléfonos que venían de la 1.0.0: instala la versión de la etiqueta anterior, la abre para que escriba sus preferencias, instala la nueva encima y comprueba que sigue abriendo.
 
-**Hoy está fuera, y es temporal.** Al ponerla a bloquear dio tres falsos negativos seguidos contra la 1.0.3, una versión que abre perfectamente en un teléfono real; y un trabajo invocado con `uses:` no admite `continue-on-error`, así que dejarla dentro sin bloquear teñía de rojo publicaciones que habían salido bien. Corre sola los lunes y a mano, y vuelve a `needs` en cuanto se le vea pasar en verde contra una versión conocida buena. Ver [desarrollo](desarrollo.md#la-prueba-de-actualización).
+Estuvo fuera del 3 al 9 de septiembre de 2026: al ponerla a bloquear dio tres falsos negativos seguidos contra la 1.0.3, una versión que abre perfectamente en un teléfono real, y un trabajo invocado con `uses:` no admite `continue-on-error`, así que dejarla dentro sin bloquear teñía de rojo publicaciones que habían salido bien. Los tres eran fallos del andamiaje; arreglados, volvió a `needs` el día que se la vio pasar en verde contra la 1.0.3. Ver [desarrollo](desarrollo.md#la-prueba-de-actualización).
 
 El esquema sigue en su versión inicial, así que no hay ninguna migración que ejecutar: el hueco está reservado en [`publicacion.yml`](../.github/workflows/publicacion.yml) con lo que tiene que ir ahí, y mientras tanto [`EsquemaDeBaseTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EsquemaDeBaseTest.kt) vigila en la JVM que la cadena no tenga huecos. Ver [modelo de datos](modelo-de-datos.md#migraciones).
 

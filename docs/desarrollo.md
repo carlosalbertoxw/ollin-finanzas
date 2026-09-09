@@ -203,7 +203,9 @@ Tres decisiones que la sostienen:
 - **Se afirma poco a propósito**: que el proceso siga vivo y que no haya excepción mortal. No mira la pantalla, porque un fallo de arranque se manifiesta como el proceso que desaparece y eso se ve sin depender de animaciones.
 - **La versión anterior tiene que llegar a escribir**: es lo que da sentido a todo. El fallo que motivó esta prueba estaba en *leer* lo que la versión vieja dejó, no en instalar por instalar.
 
-**Hoy informa sin bloquear**, y ahí está la deuda. La intención es que bloquee, en el mismo grupo que las migraciones: un fallo así deja sin app a toda la gente que actualizó y no se arregla desde fuera. Pero al ponerla a detener publicaciones dio **tres falsos negativos seguidos** contra la 1.0.3, una versión que abre perfectamente en un teléfono real:
+**Bloquea**, en el mismo grupo que las migraciones: un fallo así deja sin app a toda la gente que actualizó y no se arregla desde fuera.
+
+Estuvo fuera de la publicación del 3 al 9 de septiembre de 2026, porque al ponerla a bloquear dio **tres falsos negativos seguidos** contra la 1.0.3, una versión que abre perfectamente en un teléfono real. Los tres eran del andamiaje y no de la app, y conviene tenerlos a la vista antes de volver a tocar el script:
 
 1. El script moría en silencio si el lanzador devolvía un código distinto de cero — sin mensaje ni log, sin forma de saber si la culpa era de la app o de la prueba.
 2. `am start` a secas entregaba el intent a la tarea que sobrevive a `install -r`, sin levantar ningún proceso: la prueba medía un arranque que nunca ocurrió. De ahí el `-S`.
@@ -211,7 +213,7 @@ Tres decisiones que la sostienen:
 
 El experimento de control se queda: cuando el proceso no queda vivo, la prueba desinstala, instala la misma versión en limpio y lo reintenta, para decir si el problema es *actualizar* o es *esa compilación*. Es lo que en ese run dijo que en limpio sí arrancaba, y con eso la sospecha pasó del APK a la prueba.
 
-Una puerta que detiene publicaciones buenas se acaba ignorando, y una puerta ignorada no protege de nada. Los tres tienen arreglo; falta verla pasar en verde contra una versión conocida buena, y ese día vuelve a `needs` de `publicar`.
+Una puerta que detiene publicaciones buenas se acaba ignorando, y una puerta ignorada no protege de nada. Por eso la condición para devolverla a `needs` de `publicar` no fue arreglar los tres, sino **verla pasar en verde contra una versión conocida buena**: el 9 de septiembre de 2026 corrió sobre la 1.0.3 y su paso de emulador duró 158 segundos, que es lo que distingue una prueba que pasó de una que se saltó su propio trabajo.
 
 Al invocarse desde la publicación, el árbol ya es el de la etiqueta que se publica, así que esa etiqueta se excluye al buscar «la anterior» — si no, la prueba instalaría una versión sobre sí misma y no probaría nada.
 
@@ -233,13 +235,11 @@ Cuatro flujos, todos con **JDK 21**, en [`.github/workflows/`](../.github/workfl
 |---|---|---|
 | `pruebas.yml` | push a `main` y cada PR | `testDebugUnitTest`, `lintDebug`, `assembleDebugAndroidTest`, `assembleRelease` y el build del sitio |
 | `pruebas-instrumentadas.yml` | lunes, y a mano | La suite de interfaz sobre un emulador |
-| `actualizacion.yml` | lunes, y a mano | Instala la versión nueva sobre la anterior y comprueba que abre |
+| `actualizacion.yml` | al etiquetar, lunes, y a mano | Instala la versión nueva sobre la anterior y comprueba que abre |
 | `publicacion.yml` | tag `vX.Y.Z` | Comprueba la etiqueta contra el CHANGELOG, invoca `pruebas.yml`, firma y publica el APK |
 | `sitio.yml` | `web/**`, `CHANGELOG.md`, o al terminar una publicación | Construye el sitio y lo publica en GitHub Pages |
 
-`publicacion.yml` **invoca** a `pruebas.yml` con `workflow_call` en vez de copiar sus pasos: una etiqueta no puede pasar por una comprobación más floja que un pull request cualquiera. Bloquea la publicación — si falla, no se firma nada ni se crea la release.
-
-`actualizacion.yml` también declara `workflow_call`, pero hoy no lo invoca nadie: salió de la publicación el día que su fallo pintó de rojo una release que había salido bien. Un `uses:` no admite `continue-on-error`, así que ahí dentro no hay forma de que informe sin manchar. El hueco sigue reservado y comentado en [`publicacion.yml`](../.github/workflows/publicacion.yml).
+`publicacion.yml` **invoca** a `pruebas.yml` y a `actualizacion.yml` con `workflow_call` en vez de copiar sus pasos: una etiqueta no puede pasar por una comprobación más floja que un pull request cualquiera. Los dos bloquean la publicación — si fallan, no se firma nada ni se crea la release.
 
 Cuando CI falla, el reporte HTML de pruebas y el de lint quedan como artefacto del run durante 14 días — se leen mucho mejor que el rastro de la consola.
 

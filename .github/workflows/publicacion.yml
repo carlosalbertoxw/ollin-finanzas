@@ -113,19 +113,23 @@ jobs:
     uses: ./.github/workflows/pruebas.yml
 
   # ---------------------------------------------------------------------------
-  # La prueba de actualizacion no esta aqui, y es a proposito.
+  # Que la version nueva abra encima de la anterior, que es lo que rompio la
+  # 1.0.1. Bloquea, en el mismo grupo que las migraciones: un fallo asi deja sin
+  # app a toda la gente que actualizo y no se arregla desde fuera.
   #
-  # Deberia estar: comprueba que la version nueva abre sobre la anterior, que es
-  # lo que rompio la 1.0.1. Pero bloqueando dio tres falsos negativos seguidos
-  # contra una version que abre bien en un telefono de verdad, y un trabajo que
-  # no bloquea tampoco cabe aqui: un `uses:` no admite `continue-on-error`, asi
-  # que su fallo pintaria de rojo una publicacion que salio bien, y un rojo que
-  # no significa nada es justo lo que enseña a no mirar los rojos.
-  #
-  # Mientras tanto corre en su propio flujo, los lunes y a mano. Vuelve aqui
-  # --dentro de `needs` de `publicar`-- en cuanto se le vea pasar contra una
-  # version conocida buena. Ver .github/workflows/actualizacion.yml.
+  # Estuvo fuera de aqui del 3 al 9 de septiembre de 2026. Bloqueando dio tres
+  # falsos negativos seguidos contra la 1.0.3, y un trabajo que no bloquea
+  # tampoco cabia: un `uses:` no admite `continue-on-error`, asi que su fallo
+  # pintaba de rojo publicaciones que habian salido bien. Los tres eran del
+  # andamiaje --el script moria en silencio, `am start` entregaba el intent a
+  # una tarea fantasma, y el dialogo de avisos tapaba el arranque-- y con ellos
+  # arreglados paso en verde contra la 1.0.3, que es la condicion que se habia
+  # puesto para devolverla aqui.
   # ---------------------------------------------------------------------------
+  actualizacion:
+    name: Actualizacion
+    needs: etiqueta
+    uses: ./.github/workflows/actualizacion.yml
 
   # ---------------------------------------------------------------------------
   # Aqui va tambien el job de migraciones en emulador, y todavia no existe
@@ -141,7 +145,7 @@ jobs:
   # ---------------------------------------------------------------------------
   publicar:
     name: Compilar y publicar
-    needs: [etiqueta, pruebas]
+    needs: [etiqueta, pruebas, actualizacion]
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
