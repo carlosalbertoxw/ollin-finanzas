@@ -16,6 +16,12 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ## [Sin publicar]
 
+### Arreglado
+
+- La prueba de actualización acusaba a la app de no abrirse cuando quien no arrancaba nada era el propio script. Desde Android 13 la versión anterior pide el permiso de notificaciones nada más abrirse, y ese diálogo lo dibuja el sistema: `am force-stop` se lleva la app pero deja el diálogo encima de la tarea, así que el `am start` siguiente entregaba el intent sin levantar ningún proceso. Ahora el permiso se concede antes de abrir, y la prueba distingue «no arrancó porque nadie lo intentó» de «no arrancó porque se cerró». Era el tercero de los tres falsos negativos que la sacaron del flujo de publicación.
+
+- Las cuatro pruebas de `NavegacionTest` fallaban en un emulador de API 34 por la misma razón: el diálogo tapaba la actividad y Compose no encontraba ninguna jerarquía que mirar. Se concede el permiso antes de arrancarla, con el orden de las reglas declarado. En API 26 pasaban porque ahí ese permiso todavía no existe.
+
 ## [1.0.3] - 2026-08-31
 
 ### Añadido

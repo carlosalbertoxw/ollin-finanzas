@@ -66,6 +66,30 @@ pid() {
   adb shell pidof "$PAQUETE" 2>/dev/null | tr -d '\r' || true
 }
 
+# Concede el permiso de avisos sin pasar por el dialogo del sistema.
+#
+# La app lo pide nada mas abrir, y quien dibuja el dialogo es
+# com.google.android.permissioncontroller, no nuestro paquete: `am force-stop`
+# se lleva por delante a la app pero deja ese dialogo en pie encima de la tarea.
+# En el arranque siguiente `am start -S` --que solo cierra el paquete destino--
+# encuentra arriba una instancia ajena, entrega el intent sin levantar nada y
+# contesta TotalTime 0. La prueba media entonces un proceso que nunca existio y
+# lo apuntaba como una regresion al actualizar: eso fue el fallo del 7 de
+# septiembre de 2026, con los dos APK llevando la misma app.
+#
+# Concederlo es ademas lo que hace la mayoria de la gente, asi que el escenario
+# no se falsea. Va tras cada instalacion desde cero; al actualizar con `-r` el
+# permiso se conserva, que es justo lo que le pasa a quien ya lo habia dado.
+concede_avisos() {
+  local salida
+  if salida="$(adb shell pm grant "$PAQUETE" android.permission.POST_NOTIFICATIONS 2>&1)"; then
+    if [ -n "$salida" ]; then echo "$salida" | sed 's/^/    /'; fi
+  else
+    echo "    (no se pudo conceder el permiso de avisos: $salida)"
+  fi
+  return 0
+}
+
 # Abrir no puede tumbar el script: si el arranque no ocurre, lo que importa es
 # el diagnostico de despues, no el codigo de salida de quien lanzo el intent.
 #
@@ -80,7 +104,33 @@ pid() {
 # una espera a ciegas.
 abre() {
   echo "Abriendo $ACTIVIDAD"
-  adb shell am start -S -W -n "$ACTIVIDAD" 2>&1 | sed 's/^/    /' || true
+  local salida
+  salida="$(adb shell am start -S -W -n "$ACTIVIDAD" 2>&1 || true)"
+  echo "$salida" | sed 's/^/    /'
+
+  # `am start` contesta "Status: ok" aunque no haya levantado nada: si encuentra
+  # algo arriba se limita a entregarle el intent, y lo dice en un aviso que
+  # hasta ahora se imprimia y se tiraba. Sin leerlo, la prueba no distingue "no
+  # arranco porque nadie lo intento" de "no arranco porque la app se cerro", y
+  # ahi esta toda la diferencia entre un fallo de esta prueba y una regresion
+  # que debe bloquear una publicacion.
+  if echo "$salida" | grep -q "Activity not started"; then
+    echo "::error::El intent no arranco nada: se entrego a lo que ya estaba encima."
+    echo "::error::Falla esta prueba, no la app. Mira que quedo arriba de la tarea."
+    vuelca "sin-arranque"
+    exit 1
+  fi
+
+  # No es motivo para fallar --puede ser un dialogo legitimo dibujado encima--
+  # pero deja dicho a quien lea el log que lo que se mide despues quiza no sea
+  # nuestra activity.
+  local encima
+  encima="$(echo "$salida" | sed -n 's/^ *Activity: *//p' | sed 's/[[:space:]]*$//' | head -1)"
+  case "$encima" in
+    "" | "$PAQUETE"/*) ;;
+    *) echo "::warning::Arriba quedo $encima, no $ACTIVIDAD." ;;
+  esac
+
   sleep "$ESPERA"
 }
 
@@ -94,6 +144,7 @@ adb shell getprop ro.build.version.sdk | sed 's/^/  API /'
 
 echo "--- La version anterior"
 adb install -r "$ANTERIOR" 2>&1 | sed 's/^/    /'
+concede_avisos
 abre
 
 # Que la anterior haya llegado a escribir sus preferencias es lo que da sentido
@@ -143,6 +194,7 @@ if [ -z "$vivo" ]; then
   echo "--- Control: la misma version, sin datos de la anterior"
   adb uninstall "$PAQUETE" 2>&1 | sed 's/^/    /' || true
   adb install "$NUEVA" 2>&1 | sed 's/^/    /'
+  concede_avisos
   adb logcat -c || true
   abre
   limpio="$(pid)"

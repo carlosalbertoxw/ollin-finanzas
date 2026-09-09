@@ -1,5 +1,7 @@
 package com.carlosalbertoxw.ollin.finanzas
 
+import android.Manifest
+import android.os.Build
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsSelected
@@ -12,11 +14,14 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.carlosalbertoxw.ollin.finanzas.ui.nav.Destino
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
+import org.junit.runners.model.Statement
 
 /**
  * Navegacion sobre la app de verdad: base cifrada, catalogo sembrado y las
@@ -30,7 +35,42 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class NavegacionTest {
 
-    @get:Rule
+    /**
+     * Concede el permiso de avisos antes de que arranque la actividad.
+     *
+     * Desde Android 13 la app lo pide nada mas abrirse, y el dialogo lo dibuja
+     * el sistema por encima: MainActivity se queda en pausa, Compose deja de
+     * tener ninguna raiz en estado resumed y la espera de aqui abajo revienta
+     * con "No compose hierarchies found in the app" sin llegar a probar nada.
+     * Paso en el primer run de este flujo, el 7 de septiembre de 2026: los
+     * siete tests que no lanzan la actividad pasaron, y estos cuatro cayeron
+     * solo en API 34.
+     *
+     * El `order` no es adorno. Sin el, JUnit no promete cual de las dos reglas
+     * envuelve a la otra, y si gana la de Compose la actividad arranca antes de
+     * que el permiso este concedido: el arreglo no serviria de nada.
+     *
+     * Por debajo de Android 13 no se toca: el permiso no existe en la
+     * plataforma, y `PideAvisos` tampoco pide nada ahi. Es justo la diferencia
+     * que separo al emulador de API 26, que paso, del de API 34, que no.
+     */
+    @get:Rule(order = 0)
+    val avisos = TestRule { siguiente, _ ->
+        object : Statement() {
+            override fun evaluate() {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val instrumentacion = InstrumentationRegistry.getInstrumentation()
+                    instrumentacion.uiAutomation.grantRuntimePermission(
+                        instrumentacion.targetContext.packageName,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    )
+                }
+                siguiente.evaluate()
+            }
+        }
+    }
+
+    @get:Rule(order = 1)
     val compose = createAndroidComposeRule<MainActivity>()
 
     /**
