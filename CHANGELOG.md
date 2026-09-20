@@ -16,6 +16,8 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ## [Sin publicar]
 
+## [1.1.0] - 2026-09-19
+
 ### Añadido
 
 - **Periodicidad «Único» para lo que se paga una sola vez.** La colegiatura de este agosto, el depósito del departamento, la reparación ya cotizada: cosas que no se repiten y que antes había que dar de alta como un plan mensual de un solo pago para que no volvieran a aparecer. Se modela como lo que es —un plan de un pago— así que lo cierra el mismo contador que cierra un MSI en su última mensualidad. Descartarlo también lo cierra: no tiene un pago siguiente al que correrse, y sin esto se habría quedado pendiente para siempre en la misma fecha, repitiendo cada día el aviso de algo ya decidido. No entra en la carga fija mensual, porque no se siente todos los meses.
@@ -85,7 +87,8 @@ Primera versión pública.
 - **Aviso de actualizaciones.** Ollin consulta una vez al día si hay una versión más nueva publicada y lo enseña en *Acerca de*. Se apaga en Ajustes. Ver [seguridad y privacidad](https://github.com/carlosalbertoxw/ollin-finanzas/blob/main/docs/seguridad.md).
 - **Sitio de descarga** en GitHub Pages, con el APK firmado, su huella y las instrucciones de instalación fuera de la tienda.
 
-[Sin publicar]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.3...HEAD
+[Sin publicar]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.0...v1.0.1
