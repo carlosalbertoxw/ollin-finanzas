@@ -5,10 +5,16 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.ui.graphics.vector.ImageVector
 
-/** Las cinco pestañas de abajo. Todo lo demas cuelga de ellas. */
+/**
+ * Las cuatro pestañas de abajo. Todo lo demas cuelga de ellas.
+ *
+ * Archivo estuvo aqui y se fue a Ajustes: importar y exportar se hace de vez en
+ * cuando --y el aviso de respaldo lleva ahi de un toque-- mientras que las
+ * cuatro que quedan se miran a diario. Una barra reservada a lo cotidiano es
+ * una barra que se lee de un vistazo.
+ */
 enum class Destino(
     val ruta: String,
     val titulo: String,
@@ -17,8 +23,7 @@ enum class Destino(
     TABLERO("tablero", "Tablero", Icons.Filled.PieChart),
     MOVIMIENTOS("movimientos", "Movimientos", Icons.Filled.ReceiptLong),
     PRESUPUESTO("presupuesto", "Presupuesto", Icons.Filled.AccountBalanceWallet),
-    ANALITICA("analitica", "Analitica", Icons.Filled.Insights),
-    ARCHIVO("archivo", "Archivo", Icons.Filled.SwapVert)
+    ANALITICA("analitica", "Analitica", Icons.Filled.Insights)
 }
 
 object Rutas {
@@ -26,6 +31,7 @@ object Rutas {
     const val CAPTURA_CON_ID = "captura?id={id}&compromiso={compromiso}"
     const val TRANSFERENCIA = "transferencia"
     const val TRANSFERENCIA_CON_ID = "transferencia?id={id}"
+    const val ARCHIVO = "archivo"
     const val CUENTAS = "cuentas"
     const val CATEGORIAS = "categorias"
     const val COMPROMISOS = "compromisos"

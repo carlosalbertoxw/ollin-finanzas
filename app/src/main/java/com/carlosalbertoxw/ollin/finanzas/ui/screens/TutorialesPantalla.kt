@@ -89,7 +89,7 @@ val TUTORIALES: List<Tutorial> = listOf(
         resumen = "Lo que entra y lo que sale, en menos de treinta segundos.",
         icono = Icons.Filled.NoteAdd,
         pasos = listOf(
-            "Toca el boton Capturar, que esta en cualquiera de las cinco pestañas de abajo.",
+            "Toca el boton Capturar, que esta en cualquiera de las pestañas de abajo.",
             "Elige el tipo: entrada si el dinero llega, salida si se va.",
             "Escribe el importe. Se guarda en centavos exactos, asi que no hay redondeos raros.",
             "Elige la cuenta y la categoria de las listas. No se escriben a mano a proposito: " +
@@ -149,7 +149,8 @@ val TUTORIALES: List<Tutorial> = listOf(
         pasos = listOf(
             "Entra a Ajustes y luego a Administrar compromisos.",
             "Da de alta cada uno con su cuenta, categoria, periodicidad y fecha del " +
-                "siguiente pago.",
+                "siguiente pago. Si no se repite --una colegiatura, un deposito-- elige " +
+                "la periodicidad Unico.",
             "La app revisa una vez al dia y te avisa antes de que venza.",
             "Cuando toque, usa Registrar: se abre la captura ya llena para que corrijas el " +
                 "monto si cambio.",
@@ -159,7 +160,9 @@ val TUTORIALES: List<Tutorial> = listOf(
         truco = "Nada avanza solo: mientras no cumplas ni descartes, el pago sigue " +
             "pendiente aunque se pase de fecha. Descartar recorre la fecha sin contar el " +
             "pago, asi que no acorta unos meses sin intereses, y las dos decisiones se " +
-            "deshacen desde el aviso que sale abajo."
+            "deshacen desde el aviso que sale abajo. Lo que ya no pide nada se archiva: " +
+            "el boton de la caja, arriba, cambia entre la lista de pendientes y la de " +
+            "cerrados."
     ),
     Tutorial(
         clave = "calidad",
@@ -183,7 +186,7 @@ val TUTORIALES: List<Tutorial> = listOf(
         resumen = "Tu respaldo es un .xlsx que tu decides donde guardar.",
         icono = Icons.Filled.SwapVert,
         pasos = listOf(
-            "Entra a la pestaña Archivo.",
+            "Entra a Ajustes > Importar y exportar.",
             "Elige el esquema: Extendido para trabajar dentro de la app, Compacto para " +
                 "las ocho columnas esenciales.",
             "Elige que pestañas generar. Registros siempre va, porque es la fuente de las " +

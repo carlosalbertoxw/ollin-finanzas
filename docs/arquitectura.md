@@ -28,7 +28,11 @@ val vm = recuerdaVm("archivo") { ArchivoVm(repo, ajustes, revisaCalidad) }
 
 Los textos de los hallazgos de Salud también viven aquí, en [`TextosHallazgo`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/TextosHallazgo.kt), no en el caso de uso. El dominio detecta y mide; redactar la frase que lee el usuario es material de producto y se cambia sin tocar `RevisaCalidad` ni sus pruebas.
 
-La navegación vive en [`OllinRaiz`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/OllinRaiz.kt), con un `NavHost` de Navigation Compose. Las cinco pestañas inferiores son el enum [`Destino`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/nav/Destinos.kt) —Tablero, Movimientos, Presupuesto, Analítica, Archivo— y el resto de las rutas (captura, transferencia, cuentas, categorías, compromisos, calidad, revisión, ajustes, tutoriales, acerca de) son constantes en `Rutas`.
+La navegación vive en [`OllinRaiz`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/OllinRaiz.kt), con un `NavHost` de Navigation Compose. Las cuatro pestañas inferiores son el enum [`Destino`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/nav/Destinos.kt) —Tablero, Movimientos, Presupuesto, Analítica— y el resto de las rutas (captura, transferencia, cuentas, categorías, compromisos, archivo, calidad, revisión, ajustes, tutoriales, acerca de) son constantes en `Rutas`.
+
+Archivo fue la quinta pestaña y hoy cuelga de Ajustes: importar y exportar se hace de vez en cuando, y la barra de abajo se reserva a lo que se mira a diario. El aviso semanal de respaldo sigue abriéndola de un toque —`MainActivity.RUTA_ARCHIVO`, que ya apunta a `Rutas.ARCHIVO`—, solo que ahora se monta **encima** del tablero en vez de arrancar ahí, para que su botón de volver tenga a dónde volver.
+
+Tocar una cuenta en el tablero abre Movimientos ya filtrado por ella. La cuenta viaja en un `rememberSaveable` de `OllinRaiz` y no como argumento de navegación: la barra de abajo guarda y restaura el estado de cada pestaña, así que un argumento solo habría llegado la primera vez y en las siguientes lo habría pisado el estado restaurado. Movimientos lo consume una sola vez y lo devuelve a nulo, para que volver a la pestaña más tarde no reimponga un filtro ya quitado.
 
 El botón flotante **Capturar** solo aparece sobre las pestañas principales; en las pantallas que cuelgan de ellas se oculta.
 

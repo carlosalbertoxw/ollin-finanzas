@@ -106,7 +106,7 @@ class NavegacionTest {
         hasClickAction() and hasAnyDescendant(hasText("Capturar"))
 
     @Test
-    fun arrancaEnElTableroConLasCincoPestanas() {
+    fun arrancaEnElTableroConTodasLasPestanas() {
         Destino.entries.forEach { destino ->
             nodo(pestana(destino)).assertExists()
         }

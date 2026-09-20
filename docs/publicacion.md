@@ -122,13 +122,13 @@ Sigue funcionando, para una emergencia o para probar el artefacto de release en 
 
 ```bash
 cp keystore.properties.example keystore.properties   # y rellenarlo
-JAVA_HOME="$HOME/.jdks/jbr-21.0.11" ./gradlew assembleRelease
+./gradlew assembleRelease
 ```
 
 Queda en `app/build/outputs/apk/release/app-release.apk`. Para saber con qué llave se va a firmar antes de compilar nada, sin escribir ninguna contraseña:
 
 ```bash
-JAVA_HOME="$HOME/.jdks/jbr-21.0.11" ./gradlew :app:signingReport
+./gradlew :app:signingReport
 ```
 
 Y para comprobar la firma de un APK ya construido:

@@ -129,6 +129,7 @@ fun AjustesPantalla(
     alAbrirCuentas: () -> Unit,
     alAbrirCategorias: () -> Unit,
     alAbrirCompromisos: () -> Unit,
+    alAbrirArchivo: () -> Unit,
     alAbrirTutoriales: () -> Unit,
     alAbrirAcercaDe: () -> Unit,
     alCerrar: () -> Unit
@@ -246,6 +247,12 @@ fun AjustesPantalla(
             // alta el primero.
             TextButton(onClick = alAbrirCompromisos, modifier = Modifier.fillMaxWidth()) {
                 Text("Administrar compromisos")
+            }
+            // Archivo dejo de ser pestaña y esta es su entrada. El aviso
+            // semanal de respaldo sigue llevando ahi directo desde la barra de
+            // notificaciones, que es cuando de verdad urge.
+            TextButton(onClick = alAbrirArchivo, modifier = Modifier.fillMaxWidth()) {
+                Text("Importar y exportar (.xlsx)")
             }
 
             HorizontalDivider()

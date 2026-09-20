@@ -75,15 +75,17 @@ Lo que ya está comprometido y todavía no se paga.
 | `nombre` | |
 | `cuentaId`, `categoriaId` | Admiten nulo: un compromiso puede existir antes de decidirlos |
 | `montoCentavos` | Importe de cada pago, positivo |
-| `periodicidad` | `SEMANAL`, `QUINCENAL`, `MENSUAL`, `BIMESTRAL`, `TRIMESTRAL`, `SEMESTRAL`, `ANUAL` |
+| `periodicidad` | `UNICO`, `SEMANAL`, `QUINCENAL`, `MENSUAL`, `BIMESTRAL`, `TRIMESTRAL`, `SEMESTRAL`, `ANUAL` |
 | `fechaPrimerPago` | El próximo pago se calcula desde aquí, no se guarda |
-| `totalPagos` | `null` = indefinido (una suscripción). Un MSI sí tiene número de pagos |
+| `totalPagos` | `null` = indefinido (una suscripción). Un MSI sí tiene número de pagos; un `UNICO` se guarda con uno |
 | `pagosRealizados`, `pagosDescartados` | Los dos contadores que mueven el plan |
 | `activo`, `avisarDiasAntes`, `notas` | |
 
 El próximo pago es `fechaPrimerPago` más `(pagosRealizados + pagosDescartados)` periodos. Al derivarlo, avanzar el plan es incrementar un contador y no reescribir una fecha que podría quedar desfasada.
 
 **La periodicidad mide en días o en meses, nunca en los dos.** `SEMANAL` y `QUINCENAL` avanzan sumando días; de `MENSUAL` en adelante se suman meses. No se pueden unificar sin mentir: sumar 30 días no es sumar un mes —el plan se correría un día en cada febrero— y "medio mes" no es una cantidad de meses que exista. Nadie lee `dias` ni `meses` por su cuenta: se avanza con `Periodicidad.avanza`, se retrocede con `retrocede` y se lee con `cada`. `equivalenteMensual` es lo que permite sumar cadencias distintas en una sola cifra mensual.
+
+**`UNICO` es la única sin paso**, y por eso `esUnico` la distingue: no se repite, así que `avanza` devuelve el ancla intacta, `vecesPorAnio` es cero y no entra en la carga fija mensual. Se modela como un plan de un solo pago —`totalPagos = 1`— para que lo cierre el mismo contador que cierra un MSI en su última mensualidad. Descartarlo también lo cierra: sin siguiente pago al que correrse, un descarte lo dejaría pendiente para siempre en la misma fecha.
 
 ### `mapeo_descripcion`
 

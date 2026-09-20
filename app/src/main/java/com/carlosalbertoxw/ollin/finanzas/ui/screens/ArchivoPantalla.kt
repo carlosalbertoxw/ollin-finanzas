@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Upload
@@ -30,6 +31,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
@@ -38,6 +40,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -239,7 +242,8 @@ fun ArchivoPantalla(
     repo: FinanzasRepositorio,
     ajustes: AjustesRepositorio,
     revisaCalidad: RevisaCalidad,
-    alAbrirCalidad: () -> Unit
+    alAbrirCalidad: () -> Unit,
+    alCerrar: () -> Unit
 ) {
     val vm = recuerdaVm("archivo") { ArchivoVm(repo, ajustes, revisaCalidad) }
     val ajustes by vm.ajustes.collectAsStateWithLifecycle()
@@ -255,179 +259,190 @@ fun ArchivoPantalla(
         uri?.let(vm::exporta)
     }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp, 16.dp, 16.dp, 96.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text("Archivo", style = MaterialTheme.typography.headlineSmall)
-        Text(
-            "Ollin Finanzas guarda tus datos en el telefono y usa el .xlsx como formato de " +
-                "intercambio: lo lees, lo escribes, y sigue siendo tuyo.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = colores.textoTenue
+    Column(Modifier.fillMaxSize()) {
+        // Ya no es una pestaña, asi que necesita puerta de salida propia.
+        TopAppBar(
+            title = { Text("Archivo") },
+            navigationIcon = {
+                IconButton(onClick = alCerrar) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                }
+            }
         )
 
-        when (val e = estado) {
-            is EstadoArchivo.Trabajando -> Marco {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.height(20.dp))
-                    Spacer(Modifier.fillMaxWidth(0.05f))
-                    Text(e.mensaje)
-                }
-            }
-
-            is EstadoArchivo.Fallo -> Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("No se pudo completar", style = MaterialTheme.typography.titleSmall)
-                    Spacer(Modifier.height(4.dp))
-                    Text(e.mensaje, style = MaterialTheme.typography.bodyMedium)
-                    TextButton(onClick = vm::limpia) { Text("Entendido") }
-                }
-            }
-
-            is EstadoArchivo.Exportado -> Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("Libro generado", style = MaterialTheme.typography.titleSmall)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "${e.hojas} pestañas con ${e.movimientos} movimientos. " +
-                            "Las hojas de analisis llevan formulas vivas: se recalculan al abrir.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    TextButton(onClick = vm::limpia) { Text("Listo") }
-                }
-            }
-
-            is EstadoArchivo.Importado ->
-                ResumenImportacion(e.resultado, e.hallazgosEnSalud, vm::limpia, alAbrirCalidad)
-
-            EstadoArchivo.Reposo -> Unit
-        }
-
-        // ----------------------------------------------------------- importar
-        SeccionTitulo("Importar")
-        Text(
-            "Lee un .xlsx y reconoce sus encabezados sin importar acentos ni mayusculas. " +
-                "Al entrar corrige lo que encuentre mal. Ademas de los movimientos, entran " +
-                "Diccionarios, Presupuesto y Compromisos si el libro trae esas pestañas.",
-            style = MaterialTheme.typography.bodySmall,
-            color = colores.textoTenue
-        )
-
-        Marco {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                InterruptorConNota(
-                    titulo = "Corregir al importar",
-                    detalle = "Alinea el tipo con el signo del importe y recalcula si el movimiento " +
-                        "es entre tus cuentas o con un tercero.",
-                    valor = ajustes.corregirAlImportar,
-                    alCambiar = vm::cambiaCorregir
-                )
-                InterruptorConNota(
-                    titulo = "Reemplazar todo",
-                    detalle = if (ajustes.reemplazarAlImportar)
-                        "Se borran los $total movimientos actuales —y las metas y compromisos— " +
-                            "y se cargan los del archivo. Las cuentas y categorias que queden " +
-                            "sin un solo movimiento, incluidas las de ejemplo, tambien se van."
-                    else "Lo del archivo se agrega a lo que ya tienes.",
-                    valor = ajustes.reemplazarAlImportar,
-                    alCambiar = vm::cambiaReemplazar
-                )
-            }
-        }
-
-        Button(
-            onClick = {
-                lanza(vm, "abrir") {
-                    abrir.launch(arrayOf(MIME_XLSX, "application/octet-stream", "*/*"))
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp, 8.dp, 16.dp, 96.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(Icons.Filled.Upload, contentDescription = null)
-            Text("  Elegir archivo .xlsx")
-        }
-
-        // ----------------------------------------------------------- exportar
-        SeccionTitulo("Exportar")
-
-        Text("Columnas de la hoja Registros", style = MaterialTheme.typography.labelLarge)
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            EsquemaExportacion.entries.forEachIndexed { i, esquema ->
-                SegmentedButton(
-                    selected = ajustes.esquema == esquema,
-                    onClick = { vm.cambiaEsquema(esquema) },
-                    shape = SegmentedButtonDefaults.itemShape(i, EsquemaExportacion.entries.size)
-                ) { Text(esquema.etiqueta) }
-            }
-        }
-        Text(
-            ajustes.esquema.descripcion,
-            style = MaterialTheme.typography.bodySmall,
-            color = colores.textoTenue
-        )
-
-        Spacer(Modifier.height(4.dp))
-        Text("Pestañas a incluir", style = MaterialTheme.typography.labelLarge)
-
-        HojaExportable.entries.forEach { hoja ->
-            val activa = hoja in HojaExportable.normaliza(ajustes.hojas)
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
-            ) {
-                Checkbox(
-                    checked = activa,
-                    onCheckedChange = { vm.alternaHoja(hoja) },
-                    enabled = !hoja.obligatoria
-                )
-                Column(Modifier.padding(top = 12.dp)) {
-                    Text(
-                        hoja.titulo + if (hoja.obligatoria) "  (siempre)" else "",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        hoja.descripcion,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colores.textoTenue
-                    )
-                }
-            }
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(
-                onClick = { vm.cambiaHojasPreset(HojaExportable.MINIMA) },
-                modifier = Modifier.weight(1f)
-            ) { Text("Solo datos") }
-            OutlinedButton(
-                onClick = { vm.cambiaHojasPreset(HojaExportable.PREDETERMINADAS) },
-                modifier = Modifier.weight(1f)
-            ) { Text("Libro completo") }
-        }
-
-        Button(
-            onClick = { lanza(vm, "guardar") { crear.launch(vm.nombreSugerido()) } },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = total > 0
-        ) {
-            Icon(Icons.Filled.Download, contentDescription = null)
-            Text("  Exportar ${HojaExportable.normaliza(ajustes.hojas).size} pestañas")
-        }
-
-        if (total == 0) {
             Text(
-                "Todavia no hay movimientos que exportar.",
+                "Ollin Finanzas guarda tus datos en el telefono y usa el .xlsx como formato de " +
+                    "intercambio: lo lees, lo escribes, y sigue siendo tuyo.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = colores.textoTenue
+            )
+
+            when (val e = estado) {
+                is EstadoArchivo.Trabajando -> Marco {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(Modifier.height(20.dp))
+                        Spacer(Modifier.fillMaxWidth(0.05f))
+                        Text(e.mensaje)
+                    }
+                }
+
+                is EstadoArchivo.Fallo -> Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("No se pudo completar", style = MaterialTheme.typography.titleSmall)
+                        Spacer(Modifier.height(4.dp))
+                        Text(e.mensaje, style = MaterialTheme.typography.bodyMedium)
+                        TextButton(onClick = vm::limpia) { Text("Entendido") }
+                    }
+                }
+
+                is EstadoArchivo.Exportado -> Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Libro generado", style = MaterialTheme.typography.titleSmall)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "${e.hojas} pestañas con ${e.movimientos} movimientos. " +
+                                "Las hojas de analisis llevan formulas vivas: se recalculan al abrir.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        TextButton(onClick = vm::limpia) { Text("Listo") }
+                    }
+                }
+
+                is EstadoArchivo.Importado ->
+                    ResumenImportacion(e.resultado, e.hallazgosEnSalud, vm::limpia, alAbrirCalidad)
+
+                EstadoArchivo.Reposo -> Unit
+            }
+
+            // ----------------------------------------------------------- importar
+            SeccionTitulo("Importar")
+            Text(
+                "Lee un .xlsx y reconoce sus encabezados sin importar acentos ni mayusculas. " +
+                    "Al entrar corrige lo que encuentre mal. Ademas de los movimientos, entran " +
+                    "Diccionarios, Presupuesto y Compromisos si el libro trae esas pestañas.",
                 style = MaterialTheme.typography.bodySmall,
                 color = colores.textoTenue
             )
+
+            Marco {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    InterruptorConNota(
+                        titulo = "Corregir al importar",
+                        detalle = "Alinea el tipo con el signo del importe y recalcula si el movimiento " +
+                            "es entre tus cuentas o con un tercero.",
+                        valor = ajustes.corregirAlImportar,
+                        alCambiar = vm::cambiaCorregir
+                    )
+                    InterruptorConNota(
+                        titulo = "Reemplazar todo",
+                        detalle = if (ajustes.reemplazarAlImportar)
+                            "Se borran los $total movimientos actuales —y las metas y compromisos— " +
+                                "y se cargan los del archivo. Las cuentas y categorias que queden " +
+                                "sin un solo movimiento, incluidas las de ejemplo, tambien se van."
+                        else "Lo del archivo se agrega a lo que ya tienes.",
+                        valor = ajustes.reemplazarAlImportar,
+                        alCambiar = vm::cambiaReemplazar
+                    )
+                }
+            }
+
+            Button(
+                onClick = {
+                    lanza(vm, "abrir") {
+                        abrir.launch(arrayOf(MIME_XLSX, "application/octet-stream", "*/*"))
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Filled.Upload, contentDescription = null)
+                Text("  Elegir archivo .xlsx")
+            }
+
+            // ----------------------------------------------------------- exportar
+            SeccionTitulo("Exportar")
+
+            Text("Columnas de la hoja Registros", style = MaterialTheme.typography.labelLarge)
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                EsquemaExportacion.entries.forEachIndexed { i, esquema ->
+                    SegmentedButton(
+                        selected = ajustes.esquema == esquema,
+                        onClick = { vm.cambiaEsquema(esquema) },
+                        shape = SegmentedButtonDefaults.itemShape(i, EsquemaExportacion.entries.size)
+                    ) { Text(esquema.etiqueta) }
+                }
+            }
+            Text(
+                ajustes.esquema.descripcion,
+                style = MaterialTheme.typography.bodySmall,
+                color = colores.textoTenue
+            )
+
+            Spacer(Modifier.height(4.dp))
+            Text("Pestañas a incluir", style = MaterialTheme.typography.labelLarge)
+
+            HojaExportable.entries.forEach { hoja ->
+                val activa = hoja in HojaExportable.normaliza(ajustes.hojas)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Checkbox(
+                        checked = activa,
+                        onCheckedChange = { vm.alternaHoja(hoja) },
+                        enabled = !hoja.obligatoria
+                    )
+                    Column(Modifier.padding(top = 12.dp)) {
+                        Text(
+                            hoja.titulo + if (hoja.obligatoria) "  (siempre)" else "",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            hoja.descripcion,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colores.textoTenue
+                        )
+                    }
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedButton(
+                    onClick = { vm.cambiaHojasPreset(HojaExportable.MINIMA) },
+                    modifier = Modifier.weight(1f)
+                ) { Text("Solo datos") }
+                OutlinedButton(
+                    onClick = { vm.cambiaHojasPreset(HojaExportable.PREDETERMINADAS) },
+                    modifier = Modifier.weight(1f)
+                ) { Text("Libro completo") }
+            }
+
+            Button(
+                onClick = { lanza(vm, "guardar") { crear.launch(vm.nombreSugerido()) } },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = total > 0
+            ) {
+                Icon(Icons.Filled.Download, contentDescription = null)
+                Text("  Exportar ${HojaExportable.normaliza(ajustes.hojas).size} pestañas")
+            }
+
+            if (total == 0) {
+                Text(
+                    "Todavia no hay movimientos que exportar.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colores.textoTenue
+                )
+            }
         }
     }
 }

@@ -24,7 +24,17 @@ Kotlin 2.1.20 no arranca con JDK 25 ni 26: su compilador no sabe leer esas versi
 26.0.1
 ```
 
-Ojo con el JBR que trae Android Studio: en instalaciones recientes ya es 25 y falla igual. Hay que apuntar `JAVA_HOME` a un JDK 21 — Android Studio suele dejar uno en `~/.jdks/`.
+Ojo con el JBR que trae Android Studio: en instalaciones recientes ya es 25 y falla igual. Hay que apuntar Gradle a un JDK 21 — Android Studio suele dejar uno en `~/.jdks/`.
+
+**Se fija una sola vez, en el `gradle.properties` del usuario** (`~/.gradle/gradle.properties`), y vale para todos los proyectos de la máquina:
+
+```
+org.gradle.java.home=C:/Users/<usuario>/.jdks/jbr-21.0.11
+```
+
+Ese archivo **no** es el `gradle.properties` del proyecto, y la diferencia importa: el del proyecto sí se versiona, así que una ruta de máquina escrita ahí tumbaría los flujos de GitHub en cuanto intentaran usarla sobre Linux. Los flujos ya fijan el 21 por su cuenta con `setup-java`; esto solo pone la máquina a la par.
+
+Para una ejecución suelta, sin tocar nada, sirve igual la variable de entorno:
 
 ```bash
 JAVA_HOME="$HOME/.jdks/jbr-21.0.11" ./gradlew tasks
@@ -115,7 +125,7 @@ La pantalla de Acerca de lee la versión del **paquete instalado** (`PackageMana
 
 ## Pruebas
 
-Hay dos suites: **204 pruebas unitarias** en la JVM y **11 pruebas de interfaz** que necesitan dispositivo. Las unitarias y el lint corren en cada push y cada PR ([`pruebas.yml`](../.github/workflows/pruebas.yml)).
+Hay dos suites: **208 pruebas unitarias** en la JVM y **11 pruebas de interfaz** que necesitan dispositivo. Las unitarias y el lint corren en cada push y cada PR ([`pruebas.yml`](../.github/workflows/pruebas.yml)).
 
 ### Unitarias (JVM)
 
@@ -177,7 +187,7 @@ Requieren un emulador o teléfono con **API 26 o superior**; no corren en la JVM
 | Prueba | Qué cubre |
 |---|---|
 | [`ComponentesComunesTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/ComponentesComunesTest.kt) | Los componentes de `ui/components` montados solos, sin actividad ni base: `TextoDinero`, `TarjetaCifra`, `TarjetaValor`, `EstadoVacio`, `SeccionTitulo` |
-| [`NavegacionTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/NavegacionTest.kt) | Arranque sobre la app real, las cinco pestañas, ir y volver entre ellas, y que el botón de Capturar retire la barra de abajo |
+| [`NavegacionTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/NavegacionTest.kt) | Arranque sobre la app real, las pestañas de `Destino`, ir y volver entre ellas, y que el botón de Capturar retire la barra de abajo |
 
 Cinco cosas que hay que saber antes de escribir más:
 
@@ -246,7 +256,7 @@ Cuando CI falla, el reporte HTML de pruebas y el de lint quedan como artefacto d
 Lo mismo que corre allá corre aquí:
 
 ```bash
-JAVA_HOME="$HOME/.jdks/jbr-21.0.11" ./gradlew testDebugUnitTest lintDebug assembleDebugAndroidTest assembleRelease
+./gradlew testDebugUnitTest lintDebug assembleDebugAndroidTest assembleRelease
 ```
 
 El proceso completo de publicar una versión está en [publicación](publicacion.md).

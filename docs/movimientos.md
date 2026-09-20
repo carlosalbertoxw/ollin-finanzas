@@ -121,6 +121,8 @@ Las dos son `null` mientras no haya contra qué medirlas. Un "0.0 meses" o un "0
 
 Se carga **por páginas de 200**, y al final aparece cuántos faltan con un botón para traerlos. Cambiar el filtro vuelve a la primera página: pedir mil renglones de un filtro que ya no está en pantalla es trabajo tirado.
 
+El filtro de cuenta es un desplegable con **Todas las cuentas** arriba para quitarlo. Tocar una cuenta en el tablero entra aquí con ese filtro ya puesto, que es la respuesta a la pregunta que sigue a ver un saldo raro: de dónde salió.
+
 El **total del filtro se suma en SQL**, no sobre la página cargada. Es la diferencia entre una calculadora y una cifra que miente: sumar lo cargado daría, en cuanto el filtro tuviera más renglones de los que caben, un total parcial presentado como si fuera el del filtro completo. Por lo mismo, el contador de "restantes" sale de un `COUNT(*)` con el mismo `WHERE`, no de la lista en memoria.
 
 ## Presupuesto
@@ -133,14 +135,17 @@ Las metas de un mes se pueden copiar al siguiente, que es como se arma un presup
 
 Lo que ya está comprometido y aún no se paga: mensualidades MSI, suscripciones, gastos anuales, la renta. Cada uno lleva cuenta, categoría, periodicidad, monto y fecha del primer pago.
 
-La periodicidad va de **semanal** a **anual**. Las dos cortas —semanal y quincenal— avanzan en días y el resto en meses, porque sumar 30 días no es sumar un mes y "medio mes" no existe como cantidad de meses. En la lista, el total "al mes" lleva todo lo que se repite al menos una vez al mes a lo que pesa en un mes: dejar fuera lo semanal subestimaría justo la carga más seguida.
+La periodicidad va de **semanal** a **anual**, más **único** para lo que se paga una sola vez: la colegiatura de este agosto, el depósito del departamento, la reparación ya cotizada. Las dos cortas —semanal y quincenal— avanzan en días y el resto en meses, porque sumar 30 días no es sumar un mes y "medio mes" no existe como cantidad de meses; un único no avanza a ningún lado. En la lista, el total "al mes" lleva todo lo que se repite al menos una vez al mes a lo que pesa en un mes: dejar fuera lo semanal subestimaría justo la carga más seguida. Un único no se repite, así que no entra en esa cifra.
 
 - El **próximo pago** se calcula: `fechaPrimerPago` más `(pagosRealizados + pagosDescartados)` periodos. La fecha del primer pago es un ancla que no se mueve nunca; lo que se mueven son los contadores. Es también lo que ordena la lista —activos primero, lo más atrasado hasta arriba—, y por eso el orden se arma en el ViewModel y no en SQL: no hay columna con esa fecha, así que ordenar por `fechaPrimerPago` dejaría la tarjeta recién cumplida en su lugar viejo.
-- Un compromiso con `totalPagos` termina solo: al llegar al último, se apaga.
+- Un compromiso con `totalPagos` termina solo: al llegar al último, se apaga. Un **único** es exactamente eso —un plan de un solo pago— y se apaga con el primero.
+- **Lo apagado se va al archivo**: el plan a plazos que llegó a su última mensualidad y el pago único ya resuelto. Dejan de sumar en las dos cifras de arriba y el recordatorio diario ya no los nombra, pero siguen siendo tuyos: se abren, se editan y se borran. Junto al nombre se lee cómo terminó, **Cumplido** si se pagó hasta el final y **Descartado** si se cerró sin pagarse.
+
+  El botón de la caja, en la barra superior y al lado del de agregar, **cambia la pantalla entre las dos listas**: o lo pendiente o lo cerrado, nunca revueltos, y el título de la barra dice en cuál estás. Son dos consultas que se hacen en momentos distintos. El botón está siempre, aunque no haya nada archivado todavía —colgado del final de la lista solo aparecía si ya había algo dentro, y entonces no había forma de enterarse de que el archivo existe—; con el archivo vacío, la pantalla dice qué va a caer ahí. Dar de alta un compromiso devuelve a la lista de pendientes, que es donde el nuevo se va a ver.
 - **Registrar no da el pago por hecho.** Abre la captura ya llena —cuenta, categoría, monto, medio y naturaleza deducida del tipo de la categoría— para que corrijas lo que haya cambiado. Guardar escribe el movimiento y lo deja ligado al compromiso, pero no mueve el plan.
 - **El plan avanza a mano.** Se desliza la tarjeta a la derecha y aparecen dos decisiones:
   - **Cumplir** — sube `pagosRealizados` y apaga el plan si con ese pago se acabó.
-  - **Descartar** — sube `pagosDescartados`: recorre el plan al siguiente sin contar como pagado, así que el mes que no se cobró no acorta un MSI.
+  - **Descartar** — sube `pagosDescartados`: recorre el plan al siguiente sin contar como pagado, así que el mes que no se cobró no acorta un MSI. En un **único** no hay siguiente al que correrse, así que descartarlo lo cierra y lo archiva: dejarlo pendiente sería repetir todos los días un aviso de algo ya decidido.
   - Las dos se deshacen desde el aviso que aparece abajo, y **deshacer devuelve el plan exactamente a donde estaba** — incluso un plan del día 31. Ver [por qué el ancla no se mueve](modelo-de-datos.md#el-próximo-pago-se-calcula-no-se-guarda).
 - **Mientras nadie decida, el pago sigue pendiente**, aunque ya se haya pasado de fecha: sale marcado como vencido en la lista y en el tablero, y el recordatorio diario lo sigue nombrando. Es a propósito: el cargo puede llegar por fuera de la app, rebotar o no cobrarse este periodo, y solo el dueño de la cuenta sabe cuál de las tres pasó.
 - Editar el pago de un compromiso no toca el plan: solo conserva el vínculo.

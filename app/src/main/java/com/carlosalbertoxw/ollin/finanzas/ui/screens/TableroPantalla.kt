@@ -192,6 +192,7 @@ fun TableroPantalla(
     ajustes: AjustesRepositorio,
     revisaCalidad: RevisaCalidad,
     alAbrirCuentas: () -> Unit,
+    alAbrirMovimientosDeCuenta: (Long) -> Unit,
     alAbrirCalidad: () -> Unit,
     alAbrirCompromisos: () -> Unit,
     alPagarCompromiso: (Long) -> Unit,
@@ -470,7 +471,13 @@ fun TableroPantalla(
         }
         items(estado.saldos.filter { it.movimientos > 0 }, key = { "cuenta-${it.cuentaId}" }) { saldo ->
             Row(
-                Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                Modifier
+                    .fillMaxWidth()
+                    // La pregunta que sigue a ver un saldo raro es siempre la
+                    // misma --de donde salio-- y hasta ahora habia que ir a
+                    // Movimientos y armar el filtro a mano.
+                    .clickable { alAbrirMovimientosDeCuenta(saldo.cuentaId) }
+                    .padding(vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.weight(1f)) {

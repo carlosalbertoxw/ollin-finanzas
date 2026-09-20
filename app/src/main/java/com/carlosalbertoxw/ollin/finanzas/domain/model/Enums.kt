@@ -114,7 +114,7 @@ enum class TipoCategoria(val etiqueta: String) {
 }
 
 /**
- * Periodicidad de un compromiso recurrente.
+ * Periodicidad de un compromiso.
  *
  * Dos cadencias distintas conviven aqui, y por eso hay dos campos: las cortas
  * se miden en dias y las largas en meses. No se pueden unificar sin mentir.
@@ -125,6 +125,17 @@ enum class TipoCategoria(val etiqueta: String) {
  * se retrocede con [retrocede] y se lee con [cada].
  */
 enum class Periodicidad(val etiqueta: String, val meses: Int = 0, val dias: Int = 0) {
+    /**
+     * No se repite: se paga una vez y se acaba. La colegiatura de este agosto,
+     * el deposito del departamento, la reparacion que ya te cotizaron.
+     *
+     * Es la unica sin paso -- ni [meses] ni [dias] -- porque no hay un pago
+     * siguiente al que correrse, y por eso [avanza] la deja donde esta. Lo que
+     * la cierra es el mismo contador que cierra un MSI: un compromiso unico es
+     * un plan de un solo pago, y al cumplirlo se archiva igual que cualquier
+     * otro plan que llego a su ultimo pago.
+     */
+    UNICO("Unico"),
     SEMANAL("Semanal", dias = 7),
     /** Cada quince dias, tal cual: no es "dos veces al mes" con dia fijo. */
     QUINCENAL("Quincenal", dias = 15),
@@ -134,9 +145,21 @@ enum class Periodicidad(val etiqueta: String, val meses: Int = 0, val dias: Int 
     SEMESTRAL("Semestral", meses = 6),
     ANUAL("Anual", meses = 12);
 
-    /** Cuantos pagos caen en un ano. Es lo que permite comparar cadencias distintas. */
+    /** Cierto cuando el plan no se repite. Ver [UNICO]. */
+    val esUnico: Boolean
+        get() = dias == 0 && meses == 0
+
+    /**
+     * Cuantos pagos caen en un ano. Es lo que permite comparar cadencias
+     * distintas. Cero para lo que no se repite: un pago unico no tiene ritmo
+     * anual, y sin este caso la division por el paso reventaria.
+     */
     val vecesPorAnio: Int
-        get() = if (dias > 0) 365 / dias else 12 / meses
+        get() = when {
+            dias > 0 -> 365 / dias
+            meses > 0 -> 12 / meses
+            else -> 0
+        }
 
     /** Se repite al menos una vez al mes: es carga que se siente todos los meses. */
     val cabeEnUnMes: Boolean
@@ -148,6 +171,7 @@ enum class Periodicidad(val etiqueta: String, val meses: Int = 0, val dias: Int 
     /** Como se lee la cadencia en pantalla. */
     val cada: String
         get() = when {
+            esUnico -> "Una sola vez"
             dias == 7 -> "Cada semana"
             dias > 0 -> "Cada $dias dias"
             meses == 1 -> "Cada mes"
@@ -160,8 +184,13 @@ enum class Periodicidad(val etiqueta: String, val meses: Int = 0, val dias: Int 
      * ultimo valido del mes destino y no lo recuerda, asi que encadenar sumas
      * arrastra el recorte para siempre. Ver [com.carlosalbertoxw.ollin.finanzas.data.db.Compromiso.proximoPago].
      */
-    fun avanza(ancla: LocalDate, pasos: Long): LocalDate =
-        if (dias > 0) ancla.plusDays(pasos * dias) else ancla.plusMonths(pasos * meses)
+    fun avanza(ancla: LocalDate, pasos: Long): LocalDate = when {
+        // Sin repeticion no hay a donde avanzar: el unico pago es el del ancla,
+        // y ahi se queda hasta que alguien lo cumpla o lo descarte.
+        esUnico -> ancla
+        dias > 0 -> ancla.plusDays(pasos * dias)
+        else -> ancla.plusMonths(pasos * meses)
+    }
 
     /** El inverso de [avanza]: de una fecha del plan al ancla que la produce. */
     fun retrocede(fecha: LocalDate, pasos: Long): LocalDate = avanza(fecha, -pasos)

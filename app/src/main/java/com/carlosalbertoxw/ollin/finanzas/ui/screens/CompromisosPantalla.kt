@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.EventRepeat
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -31,6 +32,8 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarDuration
@@ -78,6 +81,21 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 
+/**
+ * La lista partida en los dos estados que de verdad se miran distinto.
+ *
+ * [archivados] son los que ya no piden nada: el plan a plazos que llego a su
+ * ultima mensualidad y el pago unico que se cumplio o se descarto. Siguen
+ * existiendo -- son historia, y borrarlos es otra decision -- pero estorban
+ * arriba, donde uno viene a ver que debe.
+ */
+data class ListaCompromisos(
+    val activos: List<Compromiso> = emptyList(),
+    val archivados: List<Compromiso> = emptyList()
+) {
+    val vacia: Boolean get() = activos.isEmpty() && archivados.isEmpty()
+}
+
 class CompromisosVm(private val repo: FinanzasRepositorio) : ViewModel() {
 
 
@@ -86,15 +104,22 @@ class CompromisosVm(private val repo: FinanzasRepositorio) : ViewModel() {
      * columna sino la fecha del primero corrida por los pagos ya hechos, asi
      * que se ordena aqui: en SQL, cumplir uno lo dejaria en su lugar viejo.
      */
-    val compromisos: StateFlow<List<Compromiso>> = repo.observaCompromisos()
+    val compromisos: StateFlow<ListaCompromisos> = repo.observaCompromisos()
         .map { lista ->
-            lista.sortedWith(
-                compareByDescending<Compromiso> { it.activo }
-                    .thenBy { proximoPago(it) }
-                    .thenBy { it.nombre.lowercase() }
+            val (activos, archivados) = lista.partition { it.activo }
+            ListaCompromisos(
+                activos = activos.sortedWith(
+                    compareBy<Compromiso> { proximoPago(it) }.thenBy { it.nombre.lowercase() }
+                ),
+                // Al reves que los activos: en lo cerrado lo que se busca es lo
+                // ultimo que se cerro, no lo mas viejo del archivo.
+                archivados = archivados.sortedWith(
+                    compareByDescending<Compromiso> { proximoPago(it) }
+                        .thenBy { it.nombre.lowercase() }
+                )
             )
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ListaCompromisos())
 
     val cuentas: StateFlow<List<Cuenta>> = repo.observaCuentas()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -137,6 +162,89 @@ private fun proximoPago(c: Compromiso): LocalDate = c.proximoPago
 
 private fun pendiente(c: Compromiso): Long = c.montoCentavos * (c.pagosRestantes ?: 0)
 
+/**
+ * Como termino un compromiso archivado: llego a su ultimo pago o se cerro sin
+ * pagarlo. Sin totalPagos el plan era indefinido y solo un unico pudo haberlo
+ * archivado, asi que uno es el minimo con el que se compara.
+ */
+private fun cierre(c: Compromiso): String =
+    if (c.pagosRealizados >= (c.totalPagos ?: 1)) "Cumplido" else "Descartado"
+
+/**
+ * La tarjeta de un compromiso. La misma en la lista de pendientes y en el
+ * archivo: lo que cambia es que solo los activos piden algo, y por eso solo
+ * ellos muestran el renglon de la fecha y el boton de registrar.
+ */
+@Composable
+private fun TarjetaCompromiso(
+    c: Compromiso,
+    categorias: List<Categoria>,
+    alEditar: () -> Unit,
+    alPagar: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colores = LocalColoresOllin.current
+    val fecha = proximoPago(c)
+    val vencido = c.activo && fecha.isBefore(LocalDate.now())
+
+    Card(
+        modifier.fillMaxWidth().clickable(onClick = alEditar),
+        colors = CardDefaults.cardColors(
+            containerColor = if (c.activo) MaterialTheme.colorScheme.surfaceContainer
+            else MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(c.nombre, style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        buildString {
+                            append(c.periodicidad.etiqueta)
+                            categorias.firstOrNull { it.id == c.categoriaId }?.let {
+                                append("  ·  ${it.nombre}")
+                            }
+                            c.totalPagos?.let {
+                                append("  ·  ${c.pagosRealizados}/$it pagos")
+                            }
+                            // En el archivo, saber que paso con el ultimo pago
+                            // es justo lo que uno viene a consultar.
+                            if (!c.activo) append("  ·  ${cierre(c)}")
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colores.textoTenue
+                    )
+                }
+                TextoDinero(-c.montoCentavos)
+            }
+
+            if (c.activo) {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Un pago atrasado no se cae de la lista: se queda
+                    // marcado hasta que se cumpla o se descarte.
+                    Text(
+                        (if (vencido) "Vencio el $fecha" else "Proximo: $fecha") +
+                            if (pendiente(c) > 0) "  ·  faltan ${Dinero.formateaCorto(pendiente(c))}" else "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (vencido) colores.alerta else colores.textoTenue,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = alPagar) { Text("Registrar") }
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompromisosPantalla(
@@ -151,6 +259,8 @@ fun CompromisosPantalla(
     val colores = LocalColoresOllin.current
 
     var editando by remember { mutableStateOf<Compromiso?>(null) }
+    // Plegados de entrada: la pantalla es para ver que se debe, no que se pago.
+    var abreArchivados by remember { mutableStateOf(false) }
 
     val avisos = remember { SnackbarHostState() }
     val alcance = rememberCoroutineScope()
@@ -171,14 +281,39 @@ fun CompromisosPantalla(
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             TopAppBar(
-                title = { Text("Compromisos") },
+                // El titulo es la señal de que el boton cambio de lista, no de
+                // que abrio una seccion mas: son dos vistas, no una sola
+                // revuelta.
+                title = { Text(if (abreArchivados) "Archivados" else "Compromisos") },
                 navigationIcon = {
                     IconButton(onClick = alCerrar) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 actions = {
+                    // Cambia de lista entera en vez de desplegar una seccion
+                    // al final: lo cerrado y lo pendiente se consultan en
+                    // momentos distintos y mezclados no se leen. Vive en la
+                    // barra para poder entrar al archivo tambien cuando esta
+                    // vacio; colgado de la lista solo aparecia si ya habia algo
+                    // dentro, y entonces nadie se enteraba de que existe.
+                    IconToggleButton(
+                        checked = abreArchivados,
+                        onCheckedChange = { abreArchivados = it }
+                    ) {
+                        Icon(
+                            Icons.Filled.Inventory2,
+                            contentDescription = if (abreArchivados) "Ver pendientes"
+                            else "Ver archivados",
+                            tint = if (abreArchivados) MaterialTheme.colorScheme.primary
+                            else LocalContentColor.current
+                        )
+                    }
                     IconButton(onClick = {
+                        // Lo que se da de alta nace pendiente: si el alta ocurre
+                        // con el archivo en pantalla, se vuelve a la lista donde
+                        // el compromiso nuevo si se va a ver.
+                        abreArchivados = false
                         editando = Compromiso(
                             nombre = "",
                             cuentaId = cuentas.firstOrNull()?.id,
@@ -190,7 +325,46 @@ fun CompromisosPantalla(
                 }
             )
 
-            if (compromisos.isEmpty()) {
+            if (abreArchivados) {
+                // Solo lo cerrado. Nada de cifras ni de deslizamientos: aqui ya
+                // no hay ninguna decision que tomar, solo historial que mirar.
+                if (compromisos.archivados.isEmpty()) {
+                    EstadoVacio(
+                        icono = Icons.Filled.Inventory2,
+                        titulo = "Nada archivado todavia",
+                        detalle = "Aqui van a caer los pagos unicos que cumplas o descartes " +
+                            "y los planes a plazos que lleguen a su ultima mensualidad.",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    LazyColumn(
+                        Modifier.fillMaxSize(),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(compromisos.archivados, key = { it.id }) { c ->
+                            TarjetaCompromiso(
+                                c = c,
+                                categorias = categorias,
+                                alEditar = { editando = c },
+                                alPagar = { alPagar(c.id) },
+                                modifier = Modifier.animateItem()
+                            )
+                        }
+
+                        item {
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                "Un compromiso archivado ya no suma en las cifras ni entra en " +
+                                    "el recordatorio diario. Sigue siendo tuyo: se abre para " +
+                                    "consultarlo o borrarlo.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colores.textoTenue
+                            )
+                        }
+                    }
+                }
+            } else if (compromisos.vacia) {
                 EstadoVacio(
                     icono = Icons.Filled.EventRepeat,
                     titulo = "Sin compromisos",
@@ -199,12 +373,12 @@ fun CompromisosPantalla(
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                val totalPendiente = compromisos.filter { it.activo }.sumOf { pendiente(it) }
+                val totalPendiente = compromisos.activos.sumOf { pendiente(it) }
                 // Todo lo que se repite al menos una vez al mes, llevado a lo
                 // que pesa en un mes: dejar fuera lo semanal y lo quincenal
                 // haria que la cifra subestimara justo la carga mas seguida.
-                val mensualFijo = compromisos
-                    .filter { it.activo && it.periodicidad.cabeEnUnMes }
+                val mensualFijo = compromisos.activos
+                    .filter { it.periodicidad.cabeEnUnMes }
                     .sumOf { it.periodicidad.equivalenteMensual(it.montoCentavos) }
 
                 LazyColumn(
@@ -225,14 +399,12 @@ fun CompromisosPantalla(
                         }
                     }
 
-                    items(compromisos, key = { it.id }) { c ->
-                        val fecha = proximoPago(c)
-                        val vencido = c.activo && fecha.isBefore(LocalDate.now())
-
+                    items(compromisos.activos, key = { it.id }) { c ->
                         FilaDeslizable(
-                            habilitada = c.activo,
+                            habilitada = true,
                             // Cumplir cambia la fecha y con ella el lugar en la
                             // lista: animado se ve a donde se fue la tarjeta.
+                            // Cuando el cumplimiento lo archiva, se ve irse.
                             modifier = Modifier.animateItem(),
                             alCumplir = {
                                 vm.cumple(c.id)
@@ -243,59 +415,30 @@ fun CompromisosPantalla(
                                 avisa("${c.nombre}: pago descartado") { vm.deshaceDescarte(c.id) }
                             }
                         ) {
-                            Card(
-                                Modifier.fillMaxWidth().clickable { editando = c },
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (c.activo) MaterialTheme.colorScheme.surfaceContainer
-                                    else MaterialTheme.colorScheme.surfaceVariant
-                                )
-                            ) {
-                                Column(Modifier.padding(16.dp)) {
-                                    Row(
-                                        Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(Modifier.weight(1f)) {
-                                            Text(c.nombre, style = MaterialTheme.typography.titleSmall)
-                                            Text(
-                                                buildString {
-                                                    append(c.periodicidad.etiqueta)
-                                                    categorias.firstOrNull { it.id == c.categoriaId }?.let {
-                                                        append("  ·  ${it.nombre}")
-                                                    }
-                                                    c.totalPagos?.let {
-                                                        append("  ·  ${c.pagosRealizados}/$it pagos")
-                                                    }
-                                                },
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = colores.textoTenue
-                                            )
-                                        }
-                                        TextoDinero(-c.montoCentavos)
-                                    }
+                            TarjetaCompromiso(
+                                c = c,
+                                categorias = categorias,
+                                alEditar = { editando = c },
+                                alPagar = { alPagar(c.id) }
+                            )
+                        }
+                    }
 
-                                    if (c.activo) {
-                                        Spacer(Modifier.height(8.dp))
-                                        Row(
-                                            Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            // Un pago atrasado no se cae de la lista: se queda
-                                            // marcado hasta que se cumpla o se descarte.
-                                            Text(
-                                                (if (vencido) "Vencio el $fecha" else "Proximo: $fecha") +
-                                                    if (pendiente(c) > 0) "  ·  faltan ${Dinero.formateaCorto(pendiente(c))}" else "",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = if (vencido) colores.alerta else colores.textoTenue,
-                                                modifier = Modifier.weight(1f)
-                                            )
-                                            TextButton(onClick = { alPagar(c.id) }) { Text("Registrar") }
-                                        }
-                                    }
-                                }
-                            }
+                    // Que no quede nada pendiente es una noticia, no un hueco.
+                    if (compromisos.activos.isEmpty()) {
+                        item {
+                            Text(
+                                if (compromisos.archivados.size == 1)
+                                    "No queda ningun compromiso pendiente. El que ya cerraste " +
+                                        "esta en el archivo, con el boton de la caja."
+                                else
+                                    "No queda ningun compromiso pendiente. Los " +
+                                        "${compromisos.archivados.size} que ya cerraste estan " +
+                                        "en el archivo, con el boton de la caja.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colores.textoTenue,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
                         }
                     }
 
@@ -304,7 +447,10 @@ fun CompromisosPantalla(
                         Text(
                             "Desliza un compromiso a la derecha para darlo por cumplido o descartar " +
                                 "ese pago. Nada avanza solo: hasta que decidas, sigue pendiente y " +
-                                "Ollin Finanzas te lo recuerda una vez al dia.",
+                                "Ollin Finanzas te lo recuerda una vez al dia. Lo que ya no pide " +
+                                "nada -- un pago unico resuelto o un plan que llego a su ultima " +
+                                "mensualidad -- se archiva y deja de avisar; el boton de la caja, " +
+                                "arriba, cambia a esa lista.",
                             style = MaterialTheme.typography.bodySmall,
                             color = colores.textoTenue
                         )
@@ -393,13 +539,14 @@ private fun DialogoCompromiso(
                 OutlinedTextField(
                     value = siguientePago.toString(),
                     onValueChange = {},
-                    label = { Text("Siguiente pago") },
+                    label = { Text(if (periodicidad.esUnico) "Fecha del pago" else "Siguiente pago") },
                     readOnly = true,
                     supportingText = {
                         // El dia del mes solo significa algo si el paso son
-                        // meses: un plan semanal cae en un dia distinto cada vez.
+                        // meses: un plan semanal cae en un dia distinto cada vez,
+                        // y uno unico no cae una segunda vez en ningun dia.
                         Text(
-                            if (periodicidad.dias > 0) periodicidad.cada
+                            if (periodicidad.esUnico || periodicidad.dias > 0) periodicidad.cada
                             else "${periodicidad.cada} el dia ${siguientePago.dayOfMonth}"
                         )
                     },
@@ -408,15 +555,25 @@ private fun DialogoCompromiso(
                         TextButton(onClick = { muestraCalendario = true }) { Text("Cambiar") }
                     }
                 )
-                // Va al final a proposito: un desplegable como ultimo campo abre
-                // su menu encima de los botones del dialogo.
-                OutlinedTextField(
-                    value = totalPagos,
-                    onValueChange = { totalPagos = it.filter(Char::isDigit) },
-                    label = { Text("Numero de pagos (vacio = indefinido)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
-                )
+                // Un compromiso unico no admite plazos: es exactamente un pago,
+                // y preguntarlo solo abriria la puerta a contradecir la cadencia.
+                if (!periodicidad.esUnico) {
+                    // Va al final a proposito: un desplegable como ultimo campo abre
+                    // su menu encima de los botones del dialogo.
+                    OutlinedTextField(
+                        value = totalPagos,
+                        onValueChange = { totalPagos = it.filter(Char::isDigit) },
+                        label = { Text("Numero de pagos (vacio = indefinido)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true
+                    )
+                } else {
+                    Text(
+                        "Se paga una sola vez. Al cumplirlo o descartarlo pasa a Archivados.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = LocalColoresOllin.current.textoTenue
+                    )
+                }
             }
         },
         confirmButton = {
@@ -444,7 +601,13 @@ private fun DialogoCompromiso(
                                 siguientePago,
                                 (compromiso.pagosRealizados + compromiso.pagosDescartados).toLong()
                             ),
-                            totalPagos = totalPagos.toIntOrNull(),
+                            // Un unico es un plan de un solo pago, y es ese
+                            // contador -- no un caso aparte -- lo que lo archiva
+                            // al cumplirlo. Se cuenta sobre los pagos ya hechos
+                            // para que convertir un plan viejo en unico deje
+                            // exactamente uno por delante y no borre su historia.
+                            totalPagos = if (periodicidad.esUnico) compromiso.pagosRealizados + 1
+                            else totalPagos.toIntOrNull(),
                             cuentaId = cuentaId,
                             categoriaId = categoriaId
                         )

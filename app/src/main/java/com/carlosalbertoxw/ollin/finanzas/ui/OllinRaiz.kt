@@ -19,8 +19,12 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -64,6 +68,27 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
     val destinoActual = remember(rutaActual) {
         Destino.entries.firstOrNull { it.ruta == rutaActual }
     }
+
+    /**
+     * Cuenta que Movimientos debe filtrar al abrirse, puesta por el tablero al
+     * tocar un saldo.
+     *
+     * Es un recado entre destinos y no un argumento de navegacion porque la
+     * barra de abajo guarda y restaura el estado de cada pestaña: un argumento
+     * solo viajaria la primera vez, y en las siguientes lo pisaria el estado
+     * restaurado. Vive aqui, por encima del NavHost, para sobrevivir al salto.
+     */
+    var cuentaParaMovimientos by rememberSaveable { mutableStateOf<Long?>(null) }
+
+    /** Ir a una pestaña como si se tocara su boton, con su estado guardado. */
+    fun vaAPestana(destino: Destino) {
+        nav.navigate(destino.ruta) {
+            popUpTo(Destino.TABLERO.ruta) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
     // El boton de captura solo tiene sentido sobre las pestañas principales.
     val muestraCaptura = destinoActual != null
 
@@ -74,13 +99,7 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
                     Destino.entries.forEach { destino ->
                         NavigationBarItem(
                             selected = destino == destinoActual,
-                            onClick = {
-                                nav.navigate(destino.ruta) {
-                                    popUpTo(Destino.TABLERO.ruta) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
+                            onClick = { vaAPestana(destino) },
                             icon = { Icon(destino.icono, contentDescription = destino.titulo) },
                             label = { Text(destino.titulo) },
                             colors = NavigationBarItemDefaults.colors(
@@ -123,6 +142,10 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
                         ajustes = ajustes,
                         revisaCalidad = revisaCalidad,
                         alAbrirCuentas = { nav.navigate(Rutas.CUENTAS) },
+                        alAbrirMovimientosDeCuenta = { id ->
+                            cuentaParaMovimientos = id
+                            vaAPestana(Destino.MOVIMIENTOS)
+                        },
                         alAbrirCalidad = { nav.navigate(Rutas.CALIDAD) },
                         alAbrirCompromisos = { nav.navigate(Rutas.COMPROMISOS) },
                         alPagarCompromiso = { id -> nav.navigate(Rutas.capturaDeCompromiso(id)) },
@@ -135,7 +158,9 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
                     MovimientosPantalla(
                         repo = repo,
                         alAbrirMovimiento = { id -> nav.navigate(Rutas.captura(id)) },
-                        alNuevaTransferencia = { nav.navigate(Rutas.transferencia()) }
+                        alNuevaTransferencia = { nav.navigate(Rutas.transferencia()) },
+                        cuentaInicial = cuentaParaMovimientos,
+                        alAplicarCuentaInicial = { cuentaParaMovimientos = null }
                     )
                 }
 
@@ -150,12 +175,13 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
                     AnaliticaPantalla(repo)
                 }
 
-                composable(Destino.ARCHIVO.ruta) {
+                composable(Rutas.ARCHIVO) {
                     ArchivoPantalla(
                         repo = repo,
                         ajustes = ajustes,
                         revisaCalidad = revisaCalidad,
-                        alAbrirCalidad = { nav.navigate(Rutas.CALIDAD) }
+                        alAbrirCalidad = { nav.navigate(Rutas.CALIDAD) },
+                        alCerrar = { nav.popBackStack() }
                     )
                 }
 
@@ -243,6 +269,7 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
                         alAbrirCuentas = { nav.navigate(Rutas.CUENTAS) },
                         alAbrirCategorias = { nav.navigate(Rutas.CATEGORIAS) },
                         alAbrirCompromisos = { nav.navigate(Rutas.COMPROMISOS) },
+                        alAbrirArchivo = { nav.navigate(Rutas.ARCHIVO) },
                         alAbrirTutoriales = { nav.navigate(Rutas.TUTORIALES) },
                         alAbrirAcercaDe = { nav.navigate(Rutas.ACERCA_DE) },
                         alCerrar = { nav.popBackStack() }
@@ -270,6 +297,24 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
                         },
                         alCerrar = { nav.popBackStack() }
                     )
+                }
+            }
+
+            /**
+             * Los avisos de respaldo y de version nueva apuntan a Archivo, que
+             * ya no es pestaña. Se abre encima del tablero en vez de arrancar
+             * ahi: asi su boton de volver tiene a donde volver.
+             *
+             * Va despues del NavHost porque es el quien monta el grafo, y una
+             * sola vez por intent: la actividad se vuelve a crear al girar el
+             * telefono y relee el mismo extra, asi que sin la marca el aviso
+             * reabriria Archivo cada vez que alguien rota la pantalla.
+             */
+            var avisoAtendido by rememberSaveable { mutableStateOf(false) }
+            LaunchedEffect(rutaInicial) {
+                if (!avisoAtendido && rutaInicial == Rutas.ARCHIVO) {
+                    avisoAtendido = true
+                    nav.navigate(Rutas.ARCHIVO)
                 }
             }
         }

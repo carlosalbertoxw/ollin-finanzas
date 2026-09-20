@@ -730,14 +730,21 @@ fun CapturaPantalla(
     }
 }
 
-/** Desplegable simple sobre una lista de pares id/etiqueta. */
+/**
+ * Desplegable simple sobre una lista de pares id/etiqueta.
+ *
+ * El id admite nulo porque hay listas donde "ninguno" es una opcion legitima y
+ * no una cuenta disfrazada: el filtro de Movimientos ofrece "Todas las cuentas"
+ * y necesita devolver el mismo nulo que entiende el repositorio. Un id centinela
+ * como 0 habria funcionado hasta el dia en que alguna tabla empezara en 0.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectorDesplegable(
     etiqueta: String,
     valor: String,
-    opciones: List<Pair<Long, String>>,
-    alElegir: (Long) -> Unit,
+    opciones: List<Pair<Long?, String>>,
+    alElegir: (Long?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var abierto by remember { mutableStateOf(false) }

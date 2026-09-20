@@ -254,6 +254,69 @@ class FinanzasRepositorioTest : BaseEnMemoria() {
         assertEquals(LocalDate.of(2026, 3, 31), repositorio.compromiso(id)!!.proximoPago)
     }
 
+    private suspend fun nuevoCompromisoUnico(fecha: LocalDate): Long =
+        repositorio.guardaCompromiso(
+            Compromiso(
+                nombre = "Colegiatura de agosto",
+                cuentaId = null,
+                categoriaId = null,
+                montoCentavos = 450_000,
+                periodicidad = Periodicidad.UNICO,
+                fechaPrimerPago = fecha,
+                // Un unico es un plan de un solo pago: asi lo guarda el editor.
+                totalPagos = 1
+            )
+        )
+
+    @Test
+    fun `cumplir un compromiso unico lo archiva de inmediato`() = runTest {
+        val id = nuevoCompromisoUnico(LocalDate.of(2026, 8, 5))
+
+        repositorio.avanzaCompromiso(id)
+
+        var c = repositorio.compromiso(id)!!
+        assertEquals(1, c.pagosRealizados)
+        assertFalse("Un pago unico cumplido ya no pide nada", c.activo)
+
+        // Y deshacerlo lo saca del archivo, como cualquier otro cumplimiento.
+        repositorio.retrocedeCompromiso(id)
+        c = repositorio.compromiso(id)!!
+        assertEquals(0, c.pagosRealizados)
+        assertTrue(c.activo)
+    }
+
+    /**
+     * Sin esto se quedaba pendiente para siempre: descartar corre el plan al
+     * siguiente pago, y un unico no tiene siguiente. La fecha no se movia, el
+     * compromiso seguia activo y el aviso diario repetia algo ya decidido.
+     */
+    @Test
+    fun `descartar un compromiso unico tambien lo archiva`() = runTest {
+        val fecha = LocalDate.of(2026, 8, 5)
+        val id = nuevoCompromisoUnico(fecha)
+
+        repositorio.descartaPagoCompromiso(id)
+
+        var c = repositorio.compromiso(id)!!
+        assertEquals("Descartar no es pagar", 0, c.pagosRealizados)
+        assertEquals(fecha, c.proximoPago)
+        assertFalse("Cerrado sin pagarse, pero cerrado", c.activo)
+
+        repositorio.restauraPagoCompromiso(id)
+        c = repositorio.compromiso(id)!!
+        assertTrue("Deshacer el descarte lo devuelve a los pendientes", c.activo)
+    }
+
+    /** Lo que se archiva es lo que ya no pide nada, no lo que se salto un mes. */
+    @Test
+    fun `descartar un plan que se repite no lo archiva`() = runTest {
+        val id = nuevoCompromiso(LocalDate.of(2026, 1, 10), totalPagos = 12)
+
+        repositorio.descartaPagoCompromiso(id)
+
+        assertTrue(repositorio.compromiso(id)!!.activo)
+    }
+
     @Test
     fun `descartar corre el plan pero no acorta un MSI`() = runTest {
         val id = nuevoCompromiso(LocalDate.of(2026, 1, 10), totalPagos = 12)

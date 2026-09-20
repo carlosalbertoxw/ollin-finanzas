@@ -21,6 +21,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +45,9 @@ import com.carlosalbertoxw.ollin.finanzas.ui.components.EstadoVacio
 import com.carlosalbertoxw.ollin.finanzas.ui.components.SeccionTitulo
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
+
+/** Como se lee no tener filtro de cuenta. Es opcion del menu y texto del campo. */
+private const val TODAS_LAS_CUENTAS = "Todas las cuentas"
 
 data class FiltroMovimientos(
     val texto: String = "",
@@ -139,9 +143,25 @@ class MovimientosVm(private val repo: FinanzasRepositorio) : ViewModel() {
 fun MovimientosPantalla(
     repo: FinanzasRepositorio,
     alAbrirMovimiento: (Long) -> Unit,
-    alNuevaTransferencia: () -> Unit
+    alNuevaTransferencia: () -> Unit,
+    /**
+     * Cuenta que el tablero pide filtrar al llegar, o nulo si se entro por la
+     * pestaña. Es un recado de un solo uso: en cuanto se aplica se devuelve con
+     * [alAplicarCuentaInicial] para que volver a esta pestaña mas tarde no
+     * reimponga un filtro que el usuario ya quito.
+     */
+    cuentaInicial: Long? = null,
+    alAplicarCuentaInicial: () -> Unit = {}
 ) {
     val vm = recuerdaVm("movimientos") { MovimientosVm(repo) }
+
+    LaunchedEffect(cuentaInicial) {
+        if (cuentaInicial != null) {
+            vm.actualiza { it.copy(cuentaId = cuentaInicial) }
+            alAplicarCuentaInicial()
+        }
+    }
+
     val filtro by vm.filtro.collectAsStateWithLifecycle()
     val movimientos by vm.movimientos.collectAsStateWithLifecycle()
     val cuentas by vm.cuentas.collectAsStateWithLifecycle()
@@ -163,25 +183,28 @@ fun MovimientosPantalla(
 
             Row(
                 Modifier.fillMaxWidth().padding(top = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                // Desplegable y no un chip que cicla: con ocho cuentas, llegar a
+                // la ultima costaba ocho toques y pasarse obligaba a dar la
+                // vuelta entera. Aqui se ve la lista completa y se elige de una.
+                SelectorDesplegable(
+                    etiqueta = "Cuenta",
+                    valor = cuentas.firstOrNull { it.id == filtro.cuentaId }?.nombre
+                        ?: TODAS_LAS_CUENTAS,
+                    // La primera opcion es la salida: sin ella, quitar el filtro
+                    // de cuenta seria justo lo que el desplegable no deja hacer.
+                    opciones = listOf(null to TODAS_LAS_CUENTAS) +
+                        cuentas.map { it.id to it.nombre },
+                    alElegir = { id -> vm.actualiza { it.copy(cuentaId = id) } },
+                    modifier = Modifier.weight(1f)
+                )
                 FilterChip(
                     selected = filtro.incluyeTraspasos,
                     onClick = { vm.actualiza { it.copy(incluyeTraspasos = !it.incluyeTraspasos) } },
                     label = { Text("Traspasos") },
                     leadingIcon = { Icon(Icons.Filled.SwapHoriz, contentDescription = null) }
-                )
-                FilterChip(
-                    selected = filtro.cuentaId != null,
-                    onClick = {
-                        // Cicla entre las cuentas para filtrar rapido sin abrir un dialogo.
-                        val actual = cuentas.indexOfFirst { it.id == filtro.cuentaId }
-                        val siguiente = cuentas.getOrNull(actual + 1)
-                        vm.actualiza { it.copy(cuentaId = siguiente?.id) }
-                    },
-                    label = {
-                        Text(cuentas.firstOrNull { it.id == filtro.cuentaId }?.nombre ?: "Cuenta")
-                    }
                 )
             }
 
@@ -207,7 +230,8 @@ fun MovimientosPantalla(
             EstadoVacio(
                 icono = Icons.Filled.ReceiptLong,
                 titulo = "Nada por aqui",
-                detalle = "Ajusta el filtro, captura un movimiento o importa tu Excel desde la pestaña Archivo.",
+                detalle = "Ajusta el filtro, captura un movimiento o importa tu Excel desde " +
+                    "Ajustes > Importar y exportar.",
                 modifier = Modifier.fillMaxWidth()
             )
             return

@@ -18,6 +18,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
 import com.carlosalbertoxw.ollin.finanzas.ui.OllinRaiz
+import com.carlosalbertoxw.ollin.finanzas.ui.nav.Rutas
 import com.carlosalbertoxw.ollin.finanzas.ui.PideAvisos
 import com.carlosalbertoxw.ollin.finanzas.ui.screens.BloqueoPantalla
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.TemaOllin
@@ -37,7 +38,13 @@ class MainActivity : FragmentActivity() {
          * es lo que espera quien la tenia a medio usar.
          */
         const val EXTRA_RUTA = "ollin.ruta"
-        const val RUTA_ARCHIVO = "archivo"
+
+        /**
+         * Se delega en [Rutas] en vez de repetir la cadena: Archivo dejo de ser
+         * pestaña y su ruta se mudo de sitio, y una copia suelta aqui habria
+         * seguido apuntando al mismo texto sin que nada avisara si cambia.
+         */
+        const val RUTA_ARCHIVO = Rutas.ARCHIVO
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -310,11 +310,15 @@ class FinanzasRepositorio(
      * Da por pagada una mensualidad y apaga el plan si con esa se acabo. Lo
      * dispara el usuario desde la lista de compromisos: nada avanza solo,
      * porque un cargo puede llegar por fuera de la app y otro puede rebotar.
+     *
+     * Apagarlo es lo que lo manda a los archivados de la pantalla de
+     * Compromisos: ahi van tanto el pago unico que ya se hizo como el plan a
+     * plazos que llego a su ultima mensualidad.
      */
     suspend fun avanzaCompromiso(compromisoId: Long) {
         val c = compromisos.porId(compromisoId) ?: return
         val pagados = c.pagosRealizados + 1
-        val terminado = c.totalPagos?.let { pagados >= it } ?: false
+        val terminado = c.periodicidad.esUnico || (c.totalPagos?.let { pagados >= it } ?: false)
         compromisos.actualiza(c.copy(pagosRealizados = pagados, activo = !terminado))
     }
 
@@ -338,14 +342,25 @@ class FinanzasRepositorio(
      */
     suspend fun descartaPagoCompromiso(compromisoId: Long) {
         val c = compromisos.porId(compromisoId) ?: return
-        compromisos.actualiza(c.copy(pagosDescartados = c.pagosDescartados + 1))
+        // Un compromiso de una sola vez no tiene siguiente pago al que correrse:
+        // descartarlo es cerrarlo sin haberlo pagado, y se archiva igual que si
+        // se hubiera cumplido. Sin esto se quedaria pendiente para siempre en la
+        // misma fecha, avisando todos los dias de algo que ya se decidio.
+        compromisos.actualiza(
+            c.copy(
+                pagosDescartados = c.pagosDescartados + 1,
+                activo = c.activo && !c.periodicidad.esUnico
+            )
+        )
     }
 
     /** Deshace un descarte: devuelve el plan al pago que se habia saltado. */
     suspend fun restauraPagoCompromiso(compromisoId: Long) {
         val c = compromisos.porId(compromisoId) ?: return
         if (c.pagosDescartados == 0) return
-        compromisos.actualiza(c.copy(pagosDescartados = c.pagosDescartados - 1))
+        // Revive igual que [retrocedeCompromiso]: si el descarte fue lo que lo
+        // archivo, deshacerlo tiene que sacarlo de los archivados.
+        compromisos.actualiza(c.copy(pagosDescartados = c.pagosDescartados - 1, activo = true))
     }
 
     // ---------------------------------------------------------- import/export

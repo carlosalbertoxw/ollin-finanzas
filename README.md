@@ -23,15 +23,15 @@ apagar en Ajustes.
 
 | | |
 |---|---|
-| **Movimientos** | Entradas, salidas, transferencias y saldos de apertura. Captura con listas cerradas: sin categorías escritas a mano que después no coinciden entre sí. |
+| **Movimientos** | Entradas, salidas, transferencias y saldos de apertura. Captura con listas cerradas: sin categorías escritas a mano que después no coinciden entre sí. La lista se filtra por texto y por cuenta, y la suma del filtro se calcula en SQL sobre todo lo que cumple, no sobre lo que alcanzó a cargarse. Tocar una cuenta en el tablero entra aquí con ese filtro ya puesto. |
 | **Transferencias en una sola captura** | Mueves dinero entre dos cuentas tuyas una vez y la app genera los dos renglones ligados por un mismo grupo. Borrar uno borra el otro, así que nunca queda media transferencia. |
 | **Categorías con padre e hija** | La categoría clasifica y la descripción detalla. Son dos cosas distintas y viven en columnas distintas, para que un rubro repartido en cinco descripciones se vea como el rubro grande que es. |
 | **Patrimonio aparte del gasto** | Categorías de tipo **Patrimonio** y cuentas de tipo **Activo**. Comprar terreno, cripto o un celular es trasladar patrimonio, no gastarlo, y los tableros lo separan del consumo real. |
 | **Contraparte derivada** | No se captura si el movimiento es entre tus cuentas o con un tercero: se deduce del tipo. Traspaso o saldo inicial → propia; entrada o salida → tercero. Un campo que se captura a mano es un campo que se deja de mantener. |
 | **Salud de los datos** | Una pantalla que revisa en continuo: tipos que contradicen al signo del importe, transferencias sin su pareja, movimientos sin categoría, medios incoherentes con la cuenta, y descripciones casi idénticas (Levenshtein ≤ 2). Varios hallazgos se reparan con un botón. |
 | **Presupuesto y analítica** | Meta contra realidad por categoría y tendencia mensual. |
-| **Compromisos** | Lo que ya está comprometido y aún no se paga: mensualidades, suscripciones, la renta, gastos anuales. Cada uno lleva su cuenta, su categoría, su periodicidad —de semanal a anual— y la fecha del siguiente pago, y avisa antes de vencer a la hora que elijas en Ajustes. **Registrar** abre la captura ya llena para que corrijas el monto si cambió. El plan nunca avanza solo: se desliza la tarjeta a la derecha y se elige **Cumplir** o **Descartar**, y las dos se deshacen devolviendo el plan justo a donde estaba, incluso uno que cae en día 31. Mientras nadie decida, el pago sigue pendiente aunque se pase de fecha. Todo esto —registrar, cumplir, descartar— se hace igual desde el tablero, sin entrar a la lista. |
-| **Importar y exportar .xlsx** | Tu respaldo es un libro de Excel que tú decides dónde guardar. La app te lo recuerda cada semana si no lo has hecho, y otra vez cuando sale una versión nueva — que es justo cuando conviene tener una copia. |
+| **Compromisos** | Lo que ya está comprometido y aún no se paga: mensualidades, suscripciones, la renta, gastos anuales. Cada uno lleva su cuenta, su categoría, su periodicidad —de semanal a anual, o **único** para lo que se paga una sola vez— y la fecha del siguiente pago, y avisa antes de vencer a la hora que elijas en Ajustes. **Registrar** abre la captura ya llena para que corrijas el monto si cambió. El plan nunca avanza solo: se desliza la tarjeta a la derecha y se elige **Cumplir** o **Descartar**, y las dos se deshacen devolviendo el plan justo a donde estaba, incluso uno que cae en día 31. Mientras nadie decida, el pago sigue pendiente aunque se pase de fecha. Lo que ya no pide nada —un pago único resuelto, un plan que llegó a su última mensualidad— se va al **archivo**: el botón de la caja, en la barra superior, cambia la pantalla a la lista de lo cerrado —solo eso, sin mezclarlo con lo pendiente— y la guarda como historia sin que siga avisando. Todo esto —registrar, cumplir, descartar— se hace igual desde el tablero, sin entrar a la lista. |
+| **Importar y exportar .xlsx** | Tu respaldo es un libro de Excel que tú decides dónde guardar, en **Ajustes → Importar y exportar**. La app te lo recuerda cada semana si no lo has hecho, y otra vez cuando sale una versión nueva — que es justo cuando conviene tener una copia; el aviso abre la pantalla directo. |
 
 Todos los importes viven como **centavos en un `Long`**. Nunca como decimal flotante: así
 un saldo cero es cero exacto y las conciliaciones cuadran.
@@ -167,14 +167,20 @@ el número de versión, sin más pista:
 ```
 
 Ojo con el JBR que trae Android Studio: en instalaciones recientes ya es 25 y falla igual.
-Apunta `JAVA_HOME` a un JDK 21 — Android Studio suele dejar uno en `~/.jdks/`.
+Fíjalo una sola vez en el `gradle.properties` de tu usuario —`~/.gradle/gradle.properties`,
+no el del proyecto, que sí se versiona— apuntando a un JDK 21; Android Studio suele dejar
+uno en `~/.jdks/`. Ver [el JDK de Gradle](docs/desarrollo.md#el-jdk-de-gradle).
 
-```bash
-JAVA_HOME="$HOME/.jdks/jbr-21.0.11" ./gradlew :app:assembleDebug
+```
+org.gradle.java.home=C:/Users/<usuario>/.jdks/jbr-21.0.11
 ```
 
 ```bash
-JAVA_HOME="$HOME/.jdks/jbr-21.0.11" ./gradlew :app:testDebugUnitTest
+./gradlew :app:assembleDebug
+```
+
+```bash
+./gradlew :app:testDebugUnitTest
 ```
 
 Las pruebas de `ExcelRoundTripTest` generan libros reales en `app/build/pruebas/`, útiles

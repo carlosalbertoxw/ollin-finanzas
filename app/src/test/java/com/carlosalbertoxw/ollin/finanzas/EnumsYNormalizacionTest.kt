@@ -146,15 +146,44 @@ class EnumsYNormalizacionTest {
         assertEquals(7, Periodicidad.SEMANAL.dias)
         assertEquals(Periodicidad.QUINCENAL, Periodicidad.desdeEtiqueta("QUINCENAL"))
 
-        Periodicidad.entries.forEach { p ->
-            // Una cadencia es de dias o de meses, nunca de las dos ni de
-            // ninguna: si lo fuera, [avanza] no sabria que paso dar.
+        Periodicidad.entries.filter { !it.esUnico }.forEach { p ->
+            // Una cadencia es de dias o de meses, nunca de las dos: si lo fuera,
+            // [avanza] no sabria que paso dar. La unica sin paso es UNICO, que
+            // no se repite y por eso se prueba aparte.
             assertTrue("$p no define un paso unico", (p.dias > 0) != (p.meses > 0))
             // Y las que van en meses tienen que dividir el ano, o la proyeccion
             // anual de un compromiso deja de cuadrar.
             if (p.meses > 0) assertEquals("$p no divide el ano", 0, 12 % p.meses)
             assertTrue("$p no cae nunca en un ano", p.vecesPorAnio > 0)
         }
+
+        // Solo una puede no tener paso. Si manana alguien agrega otra sin dias
+        // ni meses, [avanza] la dejaria clavada en su fecha sin que se note.
+        assertEquals(
+            listOf(Periodicidad.UNICO),
+            Periodicidad.entries.filter { it.esUnico }
+        )
+    }
+
+    @Test
+    fun `Periodicidad UNICO no se repite ni pesa en la carga mensual`() {
+        val unico = Periodicidad.UNICO
+        assertEquals(unico, Periodicidad.desdeEtiqueta("Unico"))
+        assertTrue(unico.esUnico)
+
+        // Sin ritmo anual: la division por el paso reventaria, y no hay cifra
+        // honesta que poner. Cero es lo que hace que no entre en la carga fija.
+        assertEquals(0, unico.vecesPorAnio)
+        assertFalse(unico.cabeEnUnMes)
+        assertEquals(0L, unico.equivalenteMensual(50_000L))
+
+        // Y no hay pago siguiente: el ancla es el unico pago, avance lo que
+        // avance el contador. Es lo que deja al compromiso quieto en su fecha
+        // hasta que alguien lo cumpla o lo descarte.
+        val fecha = LocalDate.of(2026, 3, 10)
+        assertEquals(fecha, unico.avanza(fecha, 1))
+        assertEquals(fecha, unico.avanza(fecha, 7))
+        assertEquals(fecha, unico.retrocede(fecha, 3))
     }
 
     @Test

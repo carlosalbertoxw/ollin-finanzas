@@ -18,9 +18,19 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ### Añadido
 
+- **Periodicidad «Único» para lo que se paga una sola vez.** La colegiatura de este agosto, el depósito del departamento, la reparación ya cotizada: cosas que no se repiten y que antes había que dar de alta como un plan mensual de un solo pago para que no volvieran a aparecer. Se modela como lo que es —un plan de un pago— así que lo cierra el mismo contador que cierra un MSI en su última mensualidad. Descartarlo también lo cierra: no tiene un pago siguiente al que correrse, y sin esto se habría quedado pendiente para siempre en la misma fecha, repitiendo cada día el aviso de algo ya decidido. No entra en la carga fija mensual, porque no se siente todos los meses.
+
+- **Tocar una cuenta en el tablero abre sus movimientos.** La pregunta que sigue a ver un saldo raro es siempre la misma —de dónde salió— y hasta ahora había que ir a Movimientos y armar el filtro a mano. Ahora el renglón de la cuenta lleva directo a la lista ya filtrada por ella.
+
+- **Archivo de compromisos.** Lo que ya no pide nada —el pago único resuelto, el plan a plazos que llegó a su última mensualidad— sale de la lista de pendientes. El botón de la caja, en la barra superior y al lado del de agregar, **cambia la pantalla entre las dos listas**: o lo pendiente o lo cerrado, nunca revueltos, con el título de la barra diciendo en cuál estás. Está siempre, aunque no hayas archivado nada todavía, y con el archivo vacío la pantalla dice qué va a caer ahí. Lo archivado sigue siendo tuyo —se abre, se edita, se borra— y junto al nombre se lee cómo terminó, **Cumplido** o **Descartado**. Las dos cifras de arriba y el recordatorio diario ya solo miran lo pendiente, que es lo que siempre miraron; lo que cambia es que ahora la lista se lee igual que ellos.
+
 - **Licencia MIT.** El código queda bajo [MIT](https://github.com/carlosalbertoxw/ollin-finanzas/blob/main/LICENSE): cualquiera puede usarlo, copiarlo, modificarlo y redistribuirlo, incluso con fines comerciales, mientras conserve el aviso de copyright.
 
 ### Cambiado
+
+- **Archivo deja de ser pestaña y se muda a Ajustes.** Importar y exportar se hace de vez en cuando; las cuatro pestañas que quedan —Tablero, Movimientos, Presupuesto, Analítica— se miran a diario, y una barra reservada a lo cotidiano se lee de un vistazo. Entra por **Ajustes → Importar y exportar**, y el aviso semanal de respaldo —y el de versión nueva— la siguen abriendo de un toque desde la barra de notificaciones, que es cuando de verdad urge.
+
+- **El filtro de cuenta de Movimientos es un desplegable.** Era un chip que ciclaba: para llegar a la octava cuenta había que tocarlo ocho veces, y pasarse obligaba a dar la vuelta entera hasta volver a empezar. Ahora se abre la lista completa y se elige de una, con **Todas las cuentas** arriba para quitar el filtro. El chip de traspasos se queda a su lado, igual que antes.
 
 - **La prueba de actualización vuelve a bloquear la publicación.** Salió del flujo el 3 de septiembre porque bloqueando daba falsos negativos contra una versión que abre bien en un teléfono real; arreglados los tres —todos del andamiaje, ninguno de la app— pasó en verde contra la 1.0.3 y regresa a donde sirve de algo: si la versión nueva no abre encima de la anterior, no se firma nada ni se crea la release.
 
