@@ -16,7 +16,7 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ## [Sin publicar]
 
-## [1.1.0] - 2026-09-19
+## [1.1.0] - 2026-09-20
 
 ### Añadido
 
