@@ -108,6 +108,12 @@ OLLIN_BASE=/ npm run build
 
 Se toma el primer punto y no la sección aplanada porque aplanarla pega el título del apartado a la primera frase —*«Arreglado El aviso no llegaba…»*— y encadena cambios sin relación en un párrafo ilegible. La tarjeta tiene sitio para dos o tres renglones; quien quiera el detalle tiene el enlace a la release.
 
+## La huella de la firma
+
+La sección *Cómo se instala* enseña la huella SHA-256 del certificado con el que se firman todas las versiones. `genera-version.mjs` la lee del [README](../README.md#comprobar-que-el-apk-es-el-bueno) —la línea `SHA-256 del certificado de firma`— y la hornea en `src/version.js`. No va en `version.json`: la app no la necesita, porque Android ya rechaza una actualización firmada con otra llave.
+
+El original vive en el repositorio y no aquí a propósito. Si alguien alterara este sitio, podría cambiar a la vez el enlace de descarga y la huella; la del README seguiría diciendo la verdad, y es contra la que conviene comparar. El flujo de publicación comprueba contra esa misma línea que el APK va firmado con la llave correcta.
+
 ## Privacidad del sitio
 
 Sin analítica, sin cookies, sin rastreadores, sin fuentes remotas —la tipografía es la del sistema— y sin peticiones más allá de sus propios assets: la versión viene horneada en el build.
