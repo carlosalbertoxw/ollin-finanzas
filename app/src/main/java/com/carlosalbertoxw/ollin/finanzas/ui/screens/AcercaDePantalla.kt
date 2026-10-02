@@ -1,5 +1,7 @@
 package com.carlosalbertoxw.ollin.finanzas.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.Image
@@ -16,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -27,27 +30,35 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.carlosalbertoxw.ollin.finanzas.BuildConfig
 import com.carlosalbertoxw.ollin.finanzas.R
 import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.ComprobadorActualizaciones
 import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.Resultado
 import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.Version
 import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.VersionPublicada
+import com.carlosalbertoxw.ollin.finanzas.data.diagnostico.RegistroDeFallos
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.Ajustes
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
@@ -112,9 +123,9 @@ class AcercaDeVm(
  * tus datos.
  *
  * Vive aparte de Ajustes a proposito: lo de aqui se lee de corrido, y mezclarlo
- * con los interruptores alargaria la pantalla que si se usa a diario. La unica
- * excepcion es el interruptor de la busqueda de versiones, que va pegado a lo
- * que enciende y apaga.
+ * con los interruptores alargaria la pantalla que si se usa a diario. Por lo
+ * mismo, el interruptor de la busqueda de versiones esta en Ajustes y aqui solo
+ * se consulta.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,6 +141,15 @@ fun AcercaDePantalla(
     val vm = recuerdaVm("acercaDe") { AcercaDeVm(comprobador, ajustes, instalada) }
     val estado by vm.estado.collectAsStateWithLifecycle()
     val comprobando by vm.comprobando.collectAsStateWithLifecycle()
+
+    // Del disco y fuera del hilo principal. `revision` obliga a releer despues
+    // de borrar el informe.
+    var revision by remember { mutableIntStateOf(0) }
+    val fallo by produceState<String?>(null, revision) {
+        value = withContext(Dispatchers.IO) { RegistroDeFallos.lee(contexto) }
+    }
+    var verFallo by remember { mutableStateOf(false) }
+    var verLicencias by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
@@ -235,7 +255,7 @@ fun AcercaDePantalla(
                 "La app hace una sola llamada a internet: preguntarle al sitio del proyecto " +
                     "si hay una version mas nueva, una vez al dia. Es una peticion a un " +
                     "archivo fijo que no manda ningun dato tuyo -- ni siquiera que version " +
-                    "traes -- y se apaga aqui mismo.",
+                    "traes -- y se apaga en Ajustes.",
                 style = MaterialTheme.typography.bodySmall,
                 color = colores.textoTenue
             )
@@ -246,6 +266,22 @@ fun AcercaDePantalla(
                 style = MaterialTheme.typography.bodySmall,
                 color = colores.textoTenue
             )
+
+            fallo?.let {
+                HorizontalDivider()
+
+                Text("La app se cerro sola", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "La ultima vez que Ollin Finanzas se cerro por un error, guardo un " +
+                        "informe aqui, en el telefono. No se manda a ningun lado: puedes " +
+                        "leerlo, copiarlo para reportarlo o borrarlo.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colores.textoTenue
+                )
+                TextButton(onClick = { verFallo = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Ver el informe")
+                }
+            }
 
             HorizontalDivider()
 
@@ -276,10 +312,89 @@ fun AcercaDePantalla(
                 Text("Ver los tutoriales")
             }
 
+            HorizontalDivider()
+
+            TextButton(onClick = { verLicencias = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("Licencias de terceros")
+            }
+
             Spacer(Modifier.height(24.dp))
             TextButton(onClick = alCerrar, modifier = Modifier.fillMaxWidth()) { Text("Volver") }
         }
     }
+
+    val informe = fallo
+    if (verFallo && informe != null) {
+        DialogoDeTexto(
+            titulo = "Informe del ultimo fallo",
+            texto = informe,
+            monoespaciado = true,
+            alCerrar = { verFallo = false },
+            accion = "Copiar" to {
+                contexto.getSystemService(ClipboardManager::class.java)
+                    ?.setPrimaryClip(ClipData.newPlainText("Informe de Ollin Finanzas", informe))
+            },
+            otraAccion = "Borrar" to {
+                RegistroDeFallos.borra(contexto)
+                verFallo = false
+                revision++
+            }
+        )
+    }
+
+    if (verLicencias) {
+        val licencias = remember {
+            contexto.resources.openRawResource(R.raw.licencias_terceros)
+                .bufferedReader().use { it.readText() }
+        }
+        DialogoDeTexto(
+            titulo = "Licencias de terceros",
+            texto = licencias,
+            alCerrar = { verLicencias = false }
+        )
+    }
+}
+
+/**
+ * Un texto largo para leer, con desplazamiento. Lo usan el informe de fallo y
+ * las licencias: los dos se leen tal cual, sin formato.
+ *
+ * Monoespaciado solo para el informe, donde las trazas se alinean por columnas.
+ * Las licencias van en letra normal y en parrafos sin saltos fijos: en una
+ * pantalla de telefono, un renglon partido a 76 columnas se vuelve a partir a
+ * la mitad.
+ */
+@Composable
+private fun DialogoDeTexto(
+    titulo: String,
+    texto: String,
+    alCerrar: () -> Unit,
+    monoespaciado: Boolean = false,
+    accion: Pair<String, () -> Unit>? = null,
+    otraAccion: Pair<String, () -> Unit>? = null
+) {
+    AlertDialog(
+        onDismissRequest = alCerrar,
+        title = { Text(titulo) },
+        text = {
+            Text(
+                texto,
+                style = if (monoespaciado) {
+                    MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                } else {
+                    MaterialTheme.typography.bodySmall
+                },
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            )
+        },
+        confirmButton = {
+            Row {
+                otraAccion?.let { (etiqueta, haz) -> TextButton(onClick = haz) { Text(etiqueta) } }
+                accion?.let { (etiqueta, haz) -> TextButton(onClick = haz) { Text(etiqueta) } }
+                TextButton(onClick = alCerrar) { Text("Cerrar") }
+            }
+        }
+    )
 }
 
 /**

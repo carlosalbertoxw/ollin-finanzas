@@ -239,7 +239,7 @@ El diálogo de huella y el de credencial del sistema son UI del sistema operativ
 
 ## Integración continua
 
-Cuatro flujos, todos con **JDK 21**, en [`.github/workflows/`](../.github/workflows):
+Siete flujos, todos con **JDK 21**, en [`.github/workflows/`](../.github/workflows):
 
 | Flujo | Cuándo | Qué corre |
 |---|---|---|
@@ -248,6 +248,10 @@ Cuatro flujos, todos con **JDK 21**, en [`.github/workflows/`](../.github/workfl
 | `actualizacion.yml` | al etiquetar, lunes, y a mano | Instala la versión nueva sobre la anterior y comprueba que abre |
 | `publicacion.yml` | tag `vX.Y.Z` | Comprueba la etiqueta contra el CHANGELOG, invoca `pruebas.yml`, firma y publica el APK |
 | `sitio.yml` | `web/**`, `CHANGELOG.md`, o al terminar una publicación | Construye el sitio y lo publica en GitHub Pages |
+| `codeql.yml` | push a `main`, cada PR y los lunes | Análisis estático de seguridad del código Kotlin |
+| `dependencias.yml` | push a `main` que toque Gradle, y a mano | Envía a GitHub el grafo real de dependencias de Gradle, para que lleguen sus alertas |
+
+Las acciones van **fijadas por SHA**, con la versión en un comentario (`@<sha> # v4.4.0`). Una etiqueta como `@v4` la puede mover quien controle esa acción, y el job que firma la release corre con las contraseñas del almacén en el entorno: una acción alterada podría llevárselas. [Dependabot](../.github/dependabot.yml) propone cada lunes las versiones nuevas de las acciones, de Gradle y del sitio, así que fijar no significa congelar. El wrapper lleva también `distributionSha256Sum`, para que Gradle compruebe la distribución que descarga.
 
 `publicacion.yml` **invoca** a `pruebas.yml` y a `actualizacion.yml` con `workflow_call` en vez de copiar sus pasos: una etiqueta no puede pasar por una comprobación más floja que un pull request cualquiera. Los dos bloquean la publicación — si fallan, no se firma nada ni se crea la release.
 

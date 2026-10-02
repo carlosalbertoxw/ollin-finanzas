@@ -10,7 +10,8 @@ const enlaceDeLanzamientos = `https://github.com/${version.repositorio}/releases
 const textos = {
   version: [`versión ${version.nombre}`, tamano(version.tamanoBytes)].filter(Boolean).join(' · '),
   'version-pie': `versión ${version.nombre}`,
-  fecha: formateaFecha(version.fecha)
+  fecha: formateaFecha(version.fecha),
+  'huella-firma': version.huellaFirma ?? '—'
 }
 
 for (const [id, texto] of Object.entries(textos)) {

@@ -44,7 +44,14 @@ data class LibroLeido(val hojas: List<HojaLeida>) {
  */
 object XlsxLector {
 
-    private const val LIMITE_BYTES = 64L * 1024 * 1024
+    /** Lo que pueden sumar descomprimidas todas las partes XML del libro. */
+    internal const val LIMITE_BYTES = 64L * 1024 * 1024
+
+    /**
+     * Partes XML que se aceptan. Un libro real trae una veintena; un zip con
+     * cientos de miles de partes vacias no pesa nada y aun asi llena el mapa.
+     */
+    private const val LIMITE_PARTES = 2_000
 
     class ArchivoInvalido(mensaje: String, causa: Throwable? = null) : Exception(mensaje, causa)
 
@@ -75,6 +82,7 @@ object XlsxLector {
     private fun descomprime(entrada: InputStream): Map<String, ByteArray> {
         val partes = HashMap<String, ByteArray>()
         var total = 0L
+        var leidas = 0
         try {
             ZipInputStream(entrada.buffered()).use { zip ->
                 while (true) {
@@ -85,11 +93,9 @@ object XlsxLector {
                     if (!nombre.endsWith(".xml") && !nombre.endsWith(".rels")) {
                         zip.closeEntry(); continue
                     }
-                    val bytes = zip.readBytes()
+                    if (++leidas > LIMITE_PARTES) throw demasiadoGrande()
+                    val bytes = leeAcotado(zip, LIMITE_BYTES - total)
                     total += bytes.size
-                    if (total > LIMITE_BYTES) {
-                        throw ArchivoInvalido("El archivo es demasiado grande para procesarse en el telefono.")
-                    }
                     partes[nombre] = bytes
                     zip.closeEntry()
                 }
@@ -106,6 +112,32 @@ object XlsxLector {
         }
         return partes
     }
+
+    /**
+     * Lee la parte actual sin pasar de [presupuesto] bytes descomprimidos.
+     *
+     * No vale `readBytes()` y medir despues: una zip bomb cabe en unos KB y se
+     * expande a gigas dentro de una sola parte, asi que el `OutOfMemoryError`
+     * llega antes que la comprobacion. Y como es un `Error` y no una
+     * `Exception`, nadie lo atrapa: la app se cierra en vez de rechazar el
+     * archivo. Aqui se corta en cuanto se rebasa, sin haberlo cargado.
+     */
+    private fun leeAcotado(zip: ZipInputStream, presupuesto: Long): ByteArray {
+        val salida = java.io.ByteArrayOutputStream()
+        val bufer = ByteArray(64 * 1024)
+        var acumulado = 0L
+        while (true) {
+            val n = zip.read(bufer)
+            if (n < 0) break
+            acumulado += n
+            if (acumulado > presupuesto) throw demasiadoGrande()
+            salida.write(bufer, 0, n)
+        }
+        return salida.toByteArray()
+    }
+
+    private fun demasiadoGrande() =
+        ArchivoInvalido("El archivo es demasiado grande para procesarse en el telefono.")
 
     private fun normalizaRuta(destino: String): String {
         val limpio = destino.removePrefix("/")

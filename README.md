@@ -17,6 +17,23 @@ No está en Google Play: el APK se instala a mano, y el sitio explica cómo. La 
 comprueba una vez al día si salió una versión nueva y lo dice en *Acerca de*; se puede
 apagar en Ajustes.
 
+### Comprobar que el APK es el bueno
+
+Todas las versiones van firmadas con la misma llave. Esta es la huella de su certificado,
+y está aquí —en el repositorio, no solo en el sitio— para que se pueda comparar por un
+camino distinto del que trajo el archivo:
+
+SHA-256 del certificado de firma: `047eb6bdc9de0724e50e9b10bf86bd7bd5d31d9c9cb6f48c1d49ac46ceea638a`
+
+```bash
+apksigner verify --print-certs ollin-finanzas-x.y.z.apk
+```
+
+La línea `certificate SHA-256 digest` tiene que decir exactamente eso. Si no coincide, no
+lo instales. En el teléfono, sin computadora, lo comprueba también
+[AppVerifier](https://github.com/soupslurpr/AppVerifier). El flujo de publicación se niega
+a publicar un APK firmado con otra llave.
+
 ---
 
 ## Qué hace
@@ -31,7 +48,7 @@ apagar en Ajustes.
 | **Salud de los datos** | Una pantalla que revisa en continuo: tipos que contradicen al signo del importe, transferencias sin su pareja, movimientos sin categoría, medios incoherentes con la cuenta, y descripciones casi idénticas (Levenshtein ≤ 2). Varios hallazgos se reparan con un botón. |
 | **Presupuesto y analítica** | Meta contra realidad por categoría y tendencia mensual. |
 | **Compromisos** | Lo que ya está comprometido y aún no se paga: mensualidades, suscripciones, la renta, gastos anuales. Cada uno lleva su cuenta, su categoría, su periodicidad —de semanal a anual, o **único** para lo que se paga una sola vez— y la fecha del siguiente pago, y avisa antes de vencer a la hora que elijas en Ajustes. **Registrar** abre la captura ya llena para que corrijas el monto si cambió. El plan nunca avanza solo: se desliza la tarjeta a la derecha y se elige **Cumplir** o **Descartar**, y las dos se deshacen devolviendo el plan justo a donde estaba, incluso uno que cae en día 31. Mientras nadie decida, el pago sigue pendiente aunque se pase de fecha. Lo que ya no pide nada —un pago único resuelto, un plan que llegó a su última mensualidad— se va al **archivo**: el botón de la caja, en la barra superior, cambia la pantalla a la lista de lo cerrado —solo eso, sin mezclarlo con lo pendiente— y la guarda como historia sin que siga avisando. Todo esto —registrar, cumplir, descartar— se hace igual desde el tablero, sin entrar a la lista. |
-| **Importar y exportar .xlsx** | Tu respaldo es un libro de Excel que tú decides dónde guardar, en **Ajustes → Importar y exportar**. La app te lo recuerda cada semana si no lo has hecho, y otra vez cuando sale una versión nueva — que es justo cuando conviene tener una copia; el aviso abre la pantalla directo. |
+| **Importar y exportar .xlsx** | Tu respaldo es un libro de Excel que tú decides dónde guardar, en **Ajustes → Importar y exportar**. La app te lo recuerda cada semana si no lo has hecho —con una notificación y con un aviso arriba del tablero cada vez que la abres, hasta que exportes—, y otra vez cuando sale una versión nueva, que es justo cuando conviene tener una copia; el aviso abre la pantalla directo. |
 
 Todos los importes viven como **centavos en un `Long`**. Nunca como decimal flotante: así
 un saldo cero es cero exacto y las conciliaciones cuadran.

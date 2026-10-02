@@ -16,6 +16,25 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ## [Sin publicar]
 
+### Seguridad
+
+- **Cerrar la app ya no se salta la espera del PIN.** La espera tras varios fallos vivía solo en memoria: cerrar la app desde Recientes después de cada intento daba otro sin esperar. Ahora, al abrir, la app vuelve a cobrar la espera completa que tocan los fallos guardados.
+- **Los avisos no enseñan montos si la app tiene candado.** Con candado puesto, la notificación de un compromiso dice que hay un pago por vencer o vencido, sin nombre ni monto: una notificación se ve en la pantalla de bloqueo, fuera del candado.
+- **Un `.xlsx` manipulado ya no cierra la app.** Un archivo de unos KB que se expandía a gigas al descomprimirse agotaba la memoria antes de que se aplicara el tope de 64 MB. Ahora el tope se aplica mientras se lee, y el archivo se rechaza con un mensaje.
+
+### Añadido
+
+- **El aviso de respaldo, también en el tablero.** Cuando toca respaldar, además de la notificación semanal sale un aviso arriba del tablero cada vez que abres la app, hasta que exportes. Tocarlo lleva a Archivo, y desaparece solo en cuanto exportas. La cruz lo quita por esta vez; vuelve la siguiente vez que abras la app. Se apaga junto con la notificación, en Ajustes.
+- **Informe del último fallo.** Si un error cierra la app, la siguiente vez *Acerca de* enseña el informe —versión, Android y la traza— para leerlo, copiarlo o borrarlo. Se queda en el teléfono; no se manda a ningún lado.
+- **Licencias de terceros** en *Acerca de*, con el aviso de SQLCipher y la lista de bibliotecas bajo Apache 2.0.
+- **La huella del certificado de firma**, en el README, en el sitio y en las notas de cada release, para comprobar que el APK descargado es el bueno. La publicación se niega a salir si el APK va firmado con otra llave.
+
+### Corregido
+
+- **La tarjeta «Empieza por aquí» ya no parpadea al abrir la app.** El tablero decidía si enseñarla antes de que terminara de abrir la base, cuando todavía no había ninguna cuenta: salía un instante en azul y desaparecía en cuanto llegaban los datos. Ahora espera a tener la base y los ajustes leídos.
+- **Las hojas exportadas suman bien aunque un nombre lleve `*`, `?` o empiece con `<`.** Las fórmulas tomaban el nombre de la cuenta o de la categoría como patrón, así que «Ahorro\*» sumaba también «Ahorro 2» al recalcular la hoja. Ahora se compara el nombre literal.
+- *Acerca de* decía que la consulta de versiones se apagaba ahí; el interruptor está en Ajustes.
+
 ## [1.1.0] - 2026-09-20
 
 ### Añadido
