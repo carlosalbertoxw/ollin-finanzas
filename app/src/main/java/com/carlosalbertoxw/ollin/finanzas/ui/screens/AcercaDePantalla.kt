@@ -328,6 +328,7 @@ fun AcercaDePantalla(
         DialogoDeTexto(
             titulo = "Informe del ultimo fallo",
             texto = informe,
+            monoespaciado = true,
             alCerrar = { verFallo = false },
             accion = "Copiar" to {
                 contexto.getSystemService(ClipboardManager::class.java)
@@ -357,12 +358,18 @@ fun AcercaDePantalla(
 /**
  * Un texto largo para leer, con desplazamiento. Lo usan el informe de fallo y
  * las licencias: los dos se leen tal cual, sin formato.
+ *
+ * Monoespaciado solo para el informe, donde las trazas se alinean por columnas.
+ * Las licencias van en letra normal y en parrafos sin saltos fijos: en una
+ * pantalla de telefono, un renglon partido a 76 columnas se vuelve a partir a
+ * la mitad.
  */
 @Composable
 private fun DialogoDeTexto(
     titulo: String,
     texto: String,
     alCerrar: () -> Unit,
+    monoespaciado: Boolean = false,
     accion: Pair<String, () -> Unit>? = null,
     otraAccion: Pair<String, () -> Unit>? = null
 ) {
@@ -372,7 +379,11 @@ private fun DialogoDeTexto(
         text = {
             Text(
                 texto,
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                style = if (monoespaciado) {
+                    MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                } else {
+                    MaterialTheme.typography.bodySmall
+                },
                 modifier = Modifier.verticalScroll(rememberScrollState())
             )
         },
