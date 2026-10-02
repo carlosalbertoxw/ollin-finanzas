@@ -23,8 +23,9 @@ updates:
       # mano por biometric (ver libs.versions.toml) y debe subir con el resto.
       androidx:
         patterns: ["androidx.*"]
-      # Kotlin y KSP van atados: cada KSP se publica para una version exacta
-      # del compilador, y subir uno sin el otro rompe la compilacion.
+      # Kotlin y KSP juntos. Desde KSP 2.3 su version ya no copia la del
+      # compilador, pero cada KSP sigue soportando un rango de Kotlin, y
+      # probarlos por separado deja combinaciones que nadie compilo.
       kotlin:
         patterns:
           - "org.jetbrains.kotlin*"

@@ -10,7 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -228,7 +228,7 @@ fun MovimientosPantalla(
 
         if (movimientos.isEmpty()) {
             EstadoVacio(
-                icono = Icons.Filled.ReceiptLong,
+                icono = Icons.AutoMirrored.Filled.ReceiptLong,
                 titulo = "Nada por aqui",
                 detalle = "Ajusta el filtro, captura un movimiento o importa tu Excel desde " +
                     "Ajustes > Importar y exportar.",

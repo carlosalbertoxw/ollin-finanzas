@@ -23,7 +23,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -291,7 +291,7 @@ private fun DialogoCategoria(
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(abreTipo) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                     )
                     ExposedDropdownMenu(expanded = abreTipo, onDismissRequest = { abreTipo = false }) {
                         TipoCategoria.entries.forEach { opcion ->
@@ -313,7 +313,7 @@ private fun DialogoCategoria(
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(abrePadre) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                         )
                         ExposedDropdownMenu(
                             expanded = abrePadre,

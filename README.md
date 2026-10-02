@@ -174,23 +174,8 @@ cuenta: cuando hay versión nueva, *Acerca de* enseña un botón que abre el sit
 
 ## Compilar
 
-Requiere **JDK 17 a 21** y Android SDK 36. Kotlin 2.1.20 no arranca con JDK 25 ni 26: su
-compilador no sabe leer esas versiones y la compilación muere con un mensaje que es solo
-el número de versión, sin más pista:
-
-```
-* What went wrong:
-26.0.1
-```
-
-Ojo con el JBR que trae Android Studio: en instalaciones recientes ya es 25 y falla igual.
-Fíjalo una sola vez en el `gradle.properties` de tu usuario —`~/.gradle/gradle.properties`,
-no el del proyecto, que sí se versiona— apuntando a un JDK 21; Android Studio suele dejar
-uno en `~/.jdks/`. Ver [el JDK de Gradle](docs/desarrollo.md#el-jdk-de-gradle).
-
-```
-org.gradle.java.home=C:/Users/<usuario>/.jdks/jbr-21.0.11
-```
+Requiere **JDK 17 o superior** (probado con 21 y 26) y el Android SDK 37 instalado. Ver
+[el JDK de Gradle](docs/desarrollo.md#el-jdk-de-gradle).
 
 ```bash
 ./gradlew :app:assembleDebug
@@ -214,7 +199,7 @@ El sitio es un proyecto aparte y no pasa por Gradle:
 cd web && npm install && npm run dev
 ```
 
-- `minSdk` 26 · `targetSdk` 36 · Kotlin 2.1.20 · AGP 8.10.0 · Gradle 8.14.5
+- `minSdk` 26 · `targetSdk` 36 · `compileSdk` 37 · Kotlin 2.4.20 · AGP 9.4.1 · Gradle 9.8.0
 
 Entorno, comandos y convenciones con más detalle en [Desarrollo](docs/desarrollo.md).
 

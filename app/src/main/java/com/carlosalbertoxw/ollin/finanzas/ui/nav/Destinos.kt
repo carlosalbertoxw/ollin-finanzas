@@ -4,7 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.PieChart
-import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -21,7 +21,7 @@ enum class Destino(
     val icono: ImageVector
 ) {
     TABLERO("tablero", "Tablero", Icons.Filled.PieChart),
-    MOVIMIENTOS("movimientos", "Movimientos", Icons.Filled.ReceiptLong),
+    MOVIMIENTOS("movimientos", "Movimientos", Icons.AutoMirrored.Filled.ReceiptLong),
     PRESUPUESTO("presupuesto", "Presupuesto", Icons.Filled.AccountBalanceWallet),
     ANALITICA("analitica", "Analitica", Icons.Filled.Insights)
 }
