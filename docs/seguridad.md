@@ -102,6 +102,12 @@ Las reglas están en [`Respaldos`](../app/src/main/java/com/carlosalbertoxw/olli
 
 Se apaga en `Ajustes → Respaldo`. Encenderlo o apagarlo reinicia la cuenta.
 
+#### También en el tablero
+
+La notificación se pierde entre las demás, y una vez descartada no vuelve hasta la semana siguiente. Por eso, mientras toque respaldar, el mismo aviso sale también **arriba del tablero cada vez que se abre la app**, con el mismo texto y con las mismas reglas: si no saldría la notificación, tampoco sale esto. Tocarlo lleva a Archivo, y **en cuanto se exporta desaparece solo**, porque exportar guarda la fecha del último respaldo y el tablero la está escuchando.
+
+La cruz lo quita **solo por esta vez**: «ahora no» no es «nunca». Vuelve la siguiente vez que se abra la app, que aquí significa arrancarla de cero o regresar después de más de un minuto fuera. Es la misma gracia del candado y por la misma razón: importar y exportar abren el selector de archivos del sistema, que manda la app al fondo, y volver de ahí no es abrirla otra vez. Las reglas están en [`AvisoDeRespaldo`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/notify/AvisoDeRespaldo.kt), que vive en el contenedor para que girar el teléfono no lo traiga de vuelta.
+
 ## Permisos
 
 Solo cuatro, y ninguno da acceso a datos ajenos a la app:
