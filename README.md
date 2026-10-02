@@ -17,6 +17,23 @@ No está en Google Play: el APK se instala a mano, y el sitio explica cómo. La 
 comprueba una vez al día si salió una versión nueva y lo dice en *Acerca de*; se puede
 apagar en Ajustes.
 
+### Comprobar que el APK es el bueno
+
+Todas las versiones van firmadas con la misma llave. Esta es la huella de su certificado,
+y está aquí —en el repositorio, no solo en el sitio— para que se pueda comparar por un
+camino distinto del que trajo el archivo:
+
+SHA-256 del certificado de firma: `047eb6bdc9de0724e50e9b10bf86bd7bd5d31d9c9cb6f48c1d49ac46ceea638a`
+
+```bash
+apksigner verify --print-certs ollin-finanzas-x.y.z.apk
+```
+
+La línea `certificate SHA-256 digest` tiene que decir exactamente eso. Si no coincide, no
+lo instales. En el teléfono, sin computadora, lo comprueba también
+[AppVerifier](https://github.com/soupslurpr/AppVerifier). El flujo de publicación se niega
+a publicar un APK firmado con otra llave.
+
 ---
 
 ## Qué hace

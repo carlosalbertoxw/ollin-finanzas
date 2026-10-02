@@ -101,7 +101,21 @@ function entradilla (markdown) {
   return plano.length > 280 ? `${plano.slice(0, 279).trimEnd()}…` : plano
 }
 
+/**
+ * La huella del certificado de firma, del README.
+ *
+ * Es la que se compara al instalar, y vive en el repositorio y no solo aqui:
+ * si alguien alterara este sitio, la del README seguiria diciendo la verdad.
+ * La pagina la repite para quien no va a ir a GitHub, y el flujo de
+ * publicacion comprueba contra la misma linea que el APK va firmado con ella.
+ */
+function leeHuellaDeFirma () {
+  const texto = readFileSync(resolve(raiz, 'README.md'), 'utf8')
+  return texto.match(/SHA-256 del certificado de firma: `([0-9a-f]{64})`/)?.[1] ?? null
+}
+
 const { nombre, codigo, fecha, resumen } = leeVersion()
+const huellaFirma = leeHuellaDeFirma()
 
 const version = process.env.OLLIN_VERSION?.replace(/^v/, '') || nombre
 const tag = `v${version}`
@@ -140,7 +154,8 @@ export const version = ${JSON.stringify({
   repositorio: REPOSITORIO,
   fecha: paraLaApp.publicada,
   tamanoBytes: paraLaApp.tamanoBytes,
-  sha256: paraLaApp.sha256
+  sha256: paraLaApp.sha256,
+  huellaFirma
 }, null, 2)}
 `
 

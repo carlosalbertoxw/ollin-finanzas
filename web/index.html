@@ -104,6 +104,12 @@
           <li>Listo. Al abrirla, la app siembra un catálogo de ejemplo que puedes renombrar.</li>
         </ol>
         <p class="nota">
+          Todas las versiones van firmadas con la misma llave. Para comprobar que el APK es
+          el bueno, la huella SHA-256 de su certificado tiene que ser
+          <code class="huella" id="huella-firma">—</code>. Está también en el README del
+          repositorio, que es el lugar contra el que conviene compararla.
+        </p>
+        <p class="nota">
           Las versiones anteriores, con sus notas y su suma SHA-256, están en
           <a id="lanzamientos" href="#">la página de lanzamientos</a>.
         </p>
@@ -131,7 +137,7 @@
           <li>
             La app hace <strong>una sola</strong> llamada a internet: preguntarle a este sitio,
             una vez al día, si hay una versión más nueva. Es una petición a un archivo fijo que
-            no manda ningún dato tuyo, y se apaga desde <em>Acerca de</em>.
+            no manda ningún dato tuyo, y se apaga en <em>Ajustes</em>.
           </li>
         </ul>
       </section>
