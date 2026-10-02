@@ -50,10 +50,24 @@ class ControlBloqueo(
 
     init {
         ambito.launch {
+            var primeraLectura = true
             preferencias.collect { actuales ->
                 modo = actuales.modoBloqueo
                 fallosDePin = actuales.pinFallos
                 if (modo == ModoBloqueo.NINGUNO) _bloqueado.value = false
+
+                // La espera vive en el reloj monotono, que no se puede guardar:
+                // se reinicia con el telefono. Por eso al arrancar se vuelve a
+                // cobrar entera la que tocan los fallos guardados. Sin esto,
+                // cerrar la app despues de cada fallo daba un intento gratis
+                // por arranque, y los diez mil PIN volvian a caber en una tarde.
+                // Solo en la primera lectura: las siguientes son el eco de
+                // [guardaFallos], que ya fijo su propia espera.
+                if (primeraLectura) {
+                    primeraLectura = false
+                    val pendiente = esperaMillis(fallosDePin)
+                    if (pendiente > 0) _esperaHasta.value = reloj() + pendiente
+                }
             }
         }
     }

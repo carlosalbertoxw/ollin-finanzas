@@ -19,6 +19,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -116,20 +117,25 @@ private fun DesbloqueoPin(ajustes: Ajustes, bloqueo: ControlBloqueo) {
     var error by remember { mutableStateOf<String?>(null) }
     var verificando by remember { mutableStateOf(false) }
     var espera by remember { mutableIntStateOf(bloqueo.segundosDeEspera()) }
+    val esperaHasta by bloqueo.esperaHasta.collectAsState()
     val ambito = rememberCoroutineScope()
     val colores = LocalColoresOllin.current
 
     // Cuenta regresiva del castigo. Se relee del control en vez de restar aqui,
-    // para que salir y volver a la pantalla no reinicie la espera.
-    LaunchedEffect(espera) {
-        if (espera > 0) {
+    // para que salir y volver a la pantalla no reinicie la espera. Va atada a
+    // [ControlBloqueo.esperaHasta] y no solo al valor inicial: al abrir la app,
+    // la espera que traen los fallos guardados puede llegar despues de que esta
+    // pantalla ya se dibujo.
+    LaunchedEffect(esperaHasta) {
+        espera = bloqueo.segundosDeEspera()
+        while (espera > 0) {
             delay(1_000)
             espera = bloqueo.segundosDeEspera()
         }
     }
 
     val verifica: () -> Unit = {
-        if (!verificando && pin.isNotEmpty() && espera == 0) {
+        if (!verificando && pin.isNotEmpty() && bloqueo.segundosDeEspera() == 0) {
             verificando = true
             error = null
             ambito.launch {

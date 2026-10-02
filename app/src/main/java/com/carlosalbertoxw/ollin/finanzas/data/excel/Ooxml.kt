@@ -75,6 +75,23 @@ object Ooxml {
         return recortado.ifBlank { "Hoja" }
     }
 
+    /**
+     * Criterio de SUMIFS/COUNTIFS que compara el texto de [ref] tal cual.
+     *
+     * Un criterio no es texto literal: `*`, `?` y `~` son comodines, y un
+     * `<`, `>` o `=` al principio es un operador. Una cuenta llamada "Ahorro*"
+     * sumaria tambien "Ahorro 2", y una categoria "<100" compararia numeros.
+     * El valor en cache sale bien porque lo calcula la app; el error aparece
+     * en cuanto la suite recalcula, que con `fullCalcOnLoad` es al abrir.
+     *
+     * El "=" delante obliga a comparar por igualdad aunque el nombre empiece
+     * con un operador, y la tilde escapa los comodines (primero la propia
+     * tilde, para no escapar dos veces). Funciona igual en Excel, LibreOffice,
+     * WPS y Sheets.
+     */
+    fun criterioLiteral(ref: String): String =
+        "\"=\"&SUBSTITUTE(SUBSTITUTE(SUBSTITUTE($ref,\"~\",\"~~\"),\"*\",\"~*\"),\"?\",\"~?\")"
+
     /** Referencia a otra hoja: entrecomilla solo si hace falta. */
     fun refHoja(nombreHoja: String, rango: String): String {
         val necesitaComillas = nombreHoja.any { !it.isLetterOrDigit() && it != '_' }
