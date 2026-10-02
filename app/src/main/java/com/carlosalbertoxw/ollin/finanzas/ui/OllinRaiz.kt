@@ -60,6 +60,7 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
     val ajustes = contenedor.ajustes
     val revisaCalidad = contenedor.revisaCalidad
     val reparaDatos = contenedor.reparaDatos
+    val avisoDeRespaldo = contenedor.avisoDeRespaldo
 
     val nav = rememberNavController()
     val entrada by nav.currentBackStackEntryAsState()
@@ -141,6 +142,7 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
                         repo = repo,
                         ajustes = ajustes,
                         revisaCalidad = revisaCalidad,
+                        avisoDeRespaldo = avisoDeRespaldo,
                         alAbrirCuentas = { nav.navigate(Rutas.CUENTAS) },
                         alAbrirMovimientosDeCuenta = { id ->
                             cuentaParaMovimientos = id
@@ -150,7 +152,8 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
                         alAbrirCompromisos = { nav.navigate(Rutas.COMPROMISOS) },
                         alPagarCompromiso = { id -> nav.navigate(Rutas.capturaDeCompromiso(id)) },
                         alAbrirAjustes = { nav.navigate(Rutas.AJUSTES) },
-                        alAbrirTutoriales = { nav.navigate(Rutas.TUTORIALES) }
+                        alAbrirTutoriales = { nav.navigate(Rutas.TUTORIALES) },
+                        alAbrirArchivo = { nav.navigate(Rutas.ARCHIVO) }
                     )
                 }
 

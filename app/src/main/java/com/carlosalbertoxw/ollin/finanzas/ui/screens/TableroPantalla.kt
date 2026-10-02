@@ -18,7 +18,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.HealthAndSafety
+import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
@@ -56,6 +58,7 @@ import com.carlosalbertoxw.ollin.finanzas.data.db.Compromiso
 import com.carlosalbertoxw.ollin.finanzas.data.db.FlujoMes
 import com.carlosalbertoxw.ollin.finanzas.data.db.MovimientoDetallado
 import com.carlosalbertoxw.ollin.finanzas.data.db.SaldoCuenta
+import com.carlosalbertoxw.ollin.finanzas.data.notify.AvisoDeRespaldo
 import com.carlosalbertoxw.ollin.finanzas.data.notify.Recordatorios
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
@@ -82,8 +85,25 @@ data class EstadoTablero(
     val saldos: List<SaldoCuenta> = emptyList(),
     val flujo: List<FlujoMes> = emptyList(),
     val proximos: List<Pair<Compromiso, LocalDate>> = emptyList(),
-    val hallazgos: List<Hallazgo> = emptyList()
+    val hallazgos: List<Hallazgo> = emptyList(),
+    /**
+     * Si ya llego algo de la base. El estado inicial no trae cuentas, y sin
+     * esta marca "todavia no se leyo" y "el libro esta vacio" se ven igual.
+     */
+    val cargado: Boolean = false
 ) {
+    /**
+     * La tarjeta de "Empieza por aqui": solo con el libro en blanco de verdad.
+     *
+     * Hasta la 1.1.0 se decidia sobre el estado inicial, que no tiene cuentas
+     * porque la base cifrada aun no termino de abrir: la tarjeta salia un
+     * instante al entrar y desaparecia en cuanto llegaban los datos. Por eso
+     * exige [cargado], y el interruptor de los tutoriales ya leido del disco
+     * (nulo mientras no).
+     */
+    fun muestraBienvenida(muestraTutoriales: Boolean?): Boolean =
+        cargado && muestraTutoriales == true && saldos.none { it.movimientos > 0 }
+
     /**
      * Las cuentas marcadas como fuera del patrimonio no entran a ninguna cifra
      * agregada. Sirven para llevar el registro de dinero que pasa por tus manos
@@ -131,7 +151,8 @@ data class EstadoTablero(
 class TableroVm(
     private val repo: FinanzasRepositorio,
     private val ajustes: AjustesRepositorio,
-    private val revisaCalidad: RevisaCalidad
+    private val revisaCalidad: RevisaCalidad,
+    private val avisoDeRespaldo: AvisoDeRespaldo
 ) : ViewModel() {
 
     private val hallazgos = MutableStateFlow<List<Hallazgo>>(emptyList())
@@ -146,7 +167,8 @@ class TableroVm(
             saldos = saldos,
             flujo = flujo,
             proximos = Recordatorios.porVencer(compromisos.map { it.copy(avisarDiasAntes = 45) }),
-            hallazgos = problemas
+            hallazgos = problemas,
+            cargado = true
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EstadoTablero())
 
@@ -170,10 +192,31 @@ class TableroVm(
         viewModelScope.launch { repo.restauraPagoCompromiso(id) }
     }
 
-    /** Manda si el tablero enseña o no sus atajos de ayuda. */
-    val muestraTutoriales: StateFlow<Boolean> = ajustes.ajustes
-        .map { it.muestraTutoriales }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+    /**
+     * El texto del aviso de respaldo, o nulo si no toca.
+     *
+     * La hora se toma al combinar. No hace falta un reloj que avise: al irse
+     * la app al fondo se deja de escuchar, y al volver se recalcula con la hora
+     * de ese momento. Exportar escribe el ultimo respaldo en DataStore, y eso
+     * basta para que el aviso desaparezca solo.
+     */
+    val avisoRespaldo: StateFlow<String?> = combine(
+        ajustes.ajustes,
+        avisoDeRespaldo.descartado
+    ) { preferencias, descartado ->
+        AvisoDeRespaldo.texto(preferencias, descartado, System.currentTimeMillis())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun descartaAvisoRespaldo() = avisoDeRespaldo.descarta()
+
+    /**
+     * Manda si el tablero enseña o no sus atajos de ayuda. Nulo mientras no se
+     * lee del disco: partir de `true` dibujaba la ayuda un instante a quien la
+     * tiene apagada.
+     */
+    val muestraTutoriales: StateFlow<Boolean?> = ajustes.ajustes
+        .map<_, Boolean?> { it.muestraTutoriales }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     init {
         revisaCalidad()
@@ -191,16 +234,19 @@ fun TableroPantalla(
     repo: FinanzasRepositorio,
     ajustes: AjustesRepositorio,
     revisaCalidad: RevisaCalidad,
+    avisoDeRespaldo: AvisoDeRespaldo,
     alAbrirCuentas: () -> Unit,
     alAbrirMovimientosDeCuenta: (Long) -> Unit,
     alAbrirCalidad: () -> Unit,
     alAbrirCompromisos: () -> Unit,
     alPagarCompromiso: (Long) -> Unit,
     alAbrirAjustes: () -> Unit,
-    alAbrirTutoriales: () -> Unit
+    alAbrirTutoriales: () -> Unit,
+    alAbrirArchivo: () -> Unit
 ) {
-    val vm = recuerdaVm("tablero") { TableroVm(repo, ajustes, revisaCalidad) }
+    val vm = recuerdaVm("tablero") { TableroVm(repo, ajustes, revisaCalidad, avisoDeRespaldo) }
     val estado by vm.estado.collectAsStateWithLifecycle()
+    val avisoRespaldo by vm.avisoRespaldo.collectAsStateWithLifecycle()
     val muestraTutoriales by vm.muestraTutoriales.collectAsStateWithLifecycle()
     val colores = LocalColoresOllin.current
 
@@ -226,6 +272,18 @@ fun TableroPantalla(
         contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 16.dp, 16.dp, 96.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        // Lo primero de todo: es lo unico del tablero que, si se ignora, puede
+        // costar el libro entero.
+        avisoRespaldo?.let { texto ->
+            item(key = "aviso-respaldo") {
+                AvisoRespaldo(
+                    texto = texto,
+                    alExportar = alAbrirArchivo,
+                    alQuitar = vm::descartaAvisoRespaldo
+                )
+            }
+        }
+
         item {
             Row(
                 Modifier.fillMaxWidth(),
@@ -240,7 +298,7 @@ fun TableroPantalla(
                     )
                 }
                 Row {
-                    if (muestraTutoriales) {
+                    if (muestraTutoriales == true) {
                         IconButton(onClick = alAbrirTutoriales) {
                             Icon(
                                 Icons.AutoMirrored.Filled.HelpOutline,
@@ -257,7 +315,7 @@ fun TableroPantalla(
 
         // La tarjeta grande solo mientras el libro esta en blanco: quien ya captura
         // a diario no necesita que le expliquen cada vez que abre la app.
-        if (muestraTutoriales && estado.saldos.none { it.movimientos > 0 }) {
+        if (estado.muestraBienvenida(muestraTutoriales)) {
             item {
                 Card(
                     Modifier.fillMaxWidth().clickable(onClick = alAbrirTutoriales),
@@ -503,6 +561,39 @@ fun TableroPantalla(
 }
 
 /** Renglon compartido por el tablero y la lista de movimientos. */
+/**
+ * La tarjeta del aviso de respaldo. Toda ella lleva a Archivo, igual que la
+ * notificacion; la cruz la quita hasta la siguiente vez que se abra la app.
+ */
+@Composable
+private fun AvisoRespaldo(texto: String, alExportar: () -> Unit, alQuitar: () -> Unit) {
+    Card(
+        Modifier.fillMaxWidth().clickable(onClick = alExportar),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+        )
+    ) {
+        Row(
+            Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(Icons.Filled.SaveAlt, contentDescription = null)
+            Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
+                Text("Respalda tu libro", style = MaterialTheme.typography.titleSmall)
+                Text(texto, style = MaterialTheme.typography.bodySmall)
+                TextButton(
+                    onClick = alExportar,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                ) { Text("Exportar ahora") }
+            }
+            IconButton(onClick = alQuitar, modifier = Modifier.align(Alignment.Top)) {
+                Icon(Icons.Filled.Close, contentDescription = "Quitar el aviso")
+            }
+        }
+    }
+}
+
 @Composable
 fun RenglonMovimiento(
     detalle: MovimientoDetallado,
