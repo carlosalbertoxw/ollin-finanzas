@@ -9,6 +9,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.Resultado
+import com.carlosalbertoxw.ollin.finanzas.data.diagnostico.RegistroDeFallos
 import com.carlosalbertoxw.ollin.finanzas.data.notify.Recordatorios
 import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
 
@@ -38,6 +39,9 @@ class OllinApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Lo primero, para que tambien quede rastro de un fallo al construir
+        // el contenedor o al abrir la base.
+        RegistroDeFallos.instala(this, BuildConfig.VERSION_NAME)
         contenedor = Contenedor(this)
         Recordatorios.creaCanal(this)
 

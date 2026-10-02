@@ -109,6 +109,19 @@ class ExcelRoundTripTest {
         }
     }
 
+    /**
+     * Un nombre con comodines u operadores no puede convertirse en un patron:
+     * "Ahorro*" sumaria tambien "Ahorro 2" al recalcular la hoja. El criterio
+     * fuerza la igualdad y escapa la tilde antes que los comodines.
+     */
+    @Test
+    fun `el criterio de SUMIFS compara el nombre literal`() {
+        assertEquals(
+            "\"=\"&SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(\$A5,\"~\",\"~~\"),\"*\",\"~*\"),\"?\",\"~?\")",
+            Ooxml.criterioLiteral("\$A5")
+        )
+    }
+
     @Test
     fun `los importes en centavos no acumulan error`() {
         assertEquals(100000L, Dinero.parsea("1,000.00"))

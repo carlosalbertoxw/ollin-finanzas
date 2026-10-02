@@ -64,7 +64,7 @@ Los índices de estilo de `Estilo` deben coincidir en orden exacto con `cellXfs`
 
 Excel cuenta los días desde el 30/12/1899 (desplazamiento 25 569): `2026-01-01` es el serial 46023. Si eso cambia, todas las fechas exportadas se corren, y por eso tiene prueba propia.
 
-El lector carga el paquete completo en memoria porque `sharedStrings.xml` puede venir después de las hojas dentro del ZIP; para un libro de finanzas personales el costo es irrelevante y evita necesitar acceso aleatorio. Hay un tope de 64 MB por archivo.
+El lector carga el paquete completo en memoria porque `sharedStrings.xml` puede venir después de las hojas dentro del ZIP; para un libro de finanzas personales el costo es irrelevante y evita necesitar acceso aleatorio. Hay un tope de 64 MB para lo que suman las partes XML **ya descomprimidas**, y se aplica mientras se lee cada parte, no al terminarla: una zip bomb cabe en unos KB y se expande a gigas dentro de una sola parte, y medirla después de cargarla agotaba la memoria antes de rechazarla. También se acepta un máximo de 2 000 partes.
 
 ## Importación
 
