@@ -29,6 +29,10 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 - **Licencias de terceros** en *Acerca de*, con el aviso de SQLCipher y la lista de bibliotecas bajo Apache 2.0.
 - **La huella del certificado de firma**, en el README, en el sitio y en las notas de cada release, para comprobar que el APK descargado es el bueno. La publicación se niega a salir si el APK va firmado con otra llave.
 
+### Cambiado
+
+- **Herramientas y bibliotecas al día.** Android Gradle Plugin 9.4.1 —que ya compila Kotlin por sí mismo—, Gradle 9.8, Kotlin 2.4.20, Compose BOM 2026.09, Room 2.8, Navigation 2.10 y SQLCipher 4.19, entre otras. La base cifrada que dejó la 1.1.0 abre igual con el SQLCipher nuevo. La app se compila contra la API 37 de Android, pero se sigue portando como en la 36: subir el `targetSdk` cambia el comportamiento en el teléfono y va aparte. Ya no hace falta un JDK 21 para compilar; sirve cualquiera desde el 17.
+
 ### Corregido
 
 - **La tarjeta «Empieza por aquí» ya no parpadea al abrir la app.** El tablero decidía si enseñarla antes de que terminara de abrir la base, cuando todavía no había ninguna cuenta: salía un instante en azul y desaparecía en cuanto llegaban los datos. Ahora espera a tener la base y los ajustes leídos.

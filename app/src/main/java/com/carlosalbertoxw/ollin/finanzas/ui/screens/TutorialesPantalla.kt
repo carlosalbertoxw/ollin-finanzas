@@ -22,7 +22,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.NoteAdd
+import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.SwapVert
@@ -87,7 +87,7 @@ val TUTORIALES: List<Tutorial> = listOf(
         clave = "captura",
         titulo = "Capturar un movimiento",
         resumen = "Lo que entra y lo que sale, en menos de treinta segundos.",
-        icono = Icons.Filled.NoteAdd,
+        icono = Icons.AutoMirrored.Filled.NoteAdd,
         pasos = listOf(
             "Toca el boton Capturar, que esta en cualquiera de las pestañas de abajo.",
             "Elige el tipo: entrada si el dinero llega, salida si se va.",

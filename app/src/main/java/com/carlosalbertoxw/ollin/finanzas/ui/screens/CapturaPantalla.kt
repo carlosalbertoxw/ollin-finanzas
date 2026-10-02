@@ -761,7 +761,7 @@ fun SelectorDesplegable(
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = abierto) },
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryNotEditable)
+                .menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable)
         )
         ExposedDropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
             opciones.forEach { (id, texto) ->

@@ -103,8 +103,12 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
                             onClick = { vaAPestana(destino) },
                             icon = { Icon(destino.icono, contentDescription = destino.titulo) },
                             label = { Text(destino.titulo) },
+                            // La etiqueta se fija a mano: Material 3 cambio su color
+                            // por omision al secundario (anil, en este tema), y la
+                            // pestaña elegida ya se distingue por el indicador.
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                selectedTextColor = MaterialTheme.colorScheme.onSurface,
                                 indicatorColor = MaterialTheme.colorScheme.primaryContainer
                             )
                         )

@@ -4,29 +4,24 @@
 
 | Pieza | Versión |
 |---|---|
-| Gradle wrapper | 8.14.5 |
-| Android Gradle Plugin | 8.10.0 |
-| Kotlin / KSP | 2.1.20 / 2.1.20-2.0.1 |
-| Compose BOM | 2025.04.01 |
-| Room | 2.7.1 |
-| SQLCipher | 4.6.1 |
+| Gradle wrapper | 9.8.0 |
+| Android Gradle Plugin | 9.4.1 (con Kotlin integrado) |
+| Kotlin / KSP | 2.4.20 / 2.3.12 |
+| Compose BOM | 2026.09.00 |
+| Room | 2.8.5 |
+| SQLCipher | 4.19.0 |
 | JDK del proyecto | 17 (`sourceCompatibility`, `jvmTarget`) |
-| JDK para correr Gradle | **17 a 21** |
-| compileSdk / targetSdk / minSdk | 36 / 36 / 26 |
+| JDK para correr Gradle | 17 o superior (probado con 21 y 26) |
+| compileSdk / targetSdk / minSdk | 37 / 36 / 26 |
 | Node (solo para el sitio) | 22 |
 
 ### El JDK de Gradle
 
-Kotlin 2.1.20 no arranca con JDK 25 ni 26: su compilador no sabe leer esas versiones y la compilación muere con un mensaje que es solo el número de versión, sin más pista:
+Cualquier JDK desde el 17 sirve; está probado con el 21 —el que usan los flujos de GitHub— y con el 26.
 
-```
-* What went wrong:
-26.0.1
-```
+Hasta octubre de 2026 no era así. Kotlin 2.1.20 no arrancaba con JDK 25 ni 26: su compilador no sabía leer esas versiones y la compilación moría con un mensaje que era solo el número de versión, sin más pista (`* What went wrong: 26.0.1`). Desde Kotlin 2.4 y Gradle 9.8 eso quedó atrás. Si vuelve a pasar con un JDK más nuevo que el compilador, el síntoma es ese mismo.
 
-Ojo con el JBR que trae Android Studio: en instalaciones recientes ya es 25 y falla igual. Hay que apuntar Gradle a un JDK 21 — Android Studio suele dejar uno en `~/.jdks/`.
-
-**Se fija una sola vez, en el `gradle.properties` del usuario** (`~/.gradle/gradle.properties`), y vale para todos los proyectos de la máquina:
+Para fijar el JDK, si hace falta, **se pone una sola vez en el `gradle.properties` del usuario** (`~/.gradle/gradle.properties`), y vale para todos los proyectos de la máquina:
 
 ```
 org.gradle.java.home=C:/Users/<usuario>/.jdks/jbr-21.0.11

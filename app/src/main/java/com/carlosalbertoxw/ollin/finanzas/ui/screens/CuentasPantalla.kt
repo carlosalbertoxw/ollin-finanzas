@@ -258,7 +258,7 @@ private fun DialogoCuenta(
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(abierto) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryNotEditable)
+                            .menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                     )
                     ExposedDropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
                         TipoCuenta.entries.forEach { opcion ->
