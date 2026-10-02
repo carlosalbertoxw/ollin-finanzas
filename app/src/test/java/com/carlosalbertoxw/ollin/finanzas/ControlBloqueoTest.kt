@@ -237,6 +237,38 @@ class ControlBloqueoTest {
         )
     }
 
+    /**
+     * Cerrar la app desde Recientes despues de cada fallo no debe regalar un
+     * intento: con los fallos ya guardados, el control nuevo arranca cobrando
+     * la espera que les toca.
+     */
+    @Test
+    fun `reabrir la app con fallos guardados arranca con la espera puesta`() = runTest {
+        preferencias.value = Ajustes(modoBloqueo = ModoBloqueo.PIN, pinFallos = 6)
+
+        val bloqueo = control()
+
+        assertEquals(
+            (ControlBloqueo.esperaMillis(6) / 1000L).toInt(),
+            bloqueo.segundosDeEspera()
+        )
+
+        ahora += ControlBloqueo.esperaMillis(6)
+        assertEquals("Cumplida la espera, se puede volver a intentar", 0, bloqueo.segundosDeEspera())
+    }
+
+    @Test
+    fun `reabrir con fallos dentro de la gracia no cobra espera`() = runTest {
+        preferencias.value = Ajustes(
+            modoBloqueo = ModoBloqueo.PIN,
+            pinFallos = ControlBloqueo.FALLOS_DE_GRACIA
+        )
+
+        val bloqueo = control()
+
+        assertEquals(0, bloqueo.segundosDeEspera())
+    }
+
     @Test
     fun `un libro recien instalado no arranca con espera`() = runTest {
         val bloqueo = control()

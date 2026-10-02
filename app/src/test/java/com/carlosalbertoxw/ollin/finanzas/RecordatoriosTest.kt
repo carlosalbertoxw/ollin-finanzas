@@ -4,6 +4,7 @@ import com.carlosalbertoxw.ollin.finanzas.data.db.Compromiso
 import com.carlosalbertoxw.ollin.finanzas.data.notify.Recordatorios
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Periodicidad
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -253,5 +254,36 @@ class RecordatoriosTest {
 
         val doce = Recordatorios.formateaHora(21, 30, de24Horas = false)
         assertTrue("Debe salir en formato de 12 horas, salio: $doce", doce.startsWith("9:30"))
+    }
+
+    // ---------------------------------------------------- texto del aviso
+
+    @Test
+    fun `sin candado el aviso dice que, cuanto y cuando`() {
+        val hoy = LocalDate.of(2026, 8, 21)
+        val c = compromiso(nombre = "Renta", primerPago = hoy.plusDays(2))
+
+        val (titulo, texto) = Recordatorios.textoDelAviso(c, hoy.plusDays(2), hoy, discreto = false)
+
+        assertEquals("Renta", titulo)
+        assertTrue("Debe llevar el monto: $texto", texto.contains("299"))
+    }
+
+    /**
+     * Con candado puesto el aviso no puede saltarselo: ni el nombre ni el monto
+     * del compromiso salen a la pantalla de bloqueo.
+     */
+    @Test
+    fun `con candado el aviso no ensena ni nombre ni monto`() {
+        val hoy = LocalDate.of(2026, 8, 21)
+        val c = compromiso(nombre = "Psicologo", primerPago = hoy.minusDays(1))
+
+        val (titulo, texto) = Recordatorios.textoDelAviso(c, hoy.minusDays(1), hoy, discreto = true)
+
+        assertEquals("Tienes un pago vencido", titulo)
+        listOf(titulo, texto).forEach {
+            assertFalse("Se colo el nombre: $it", it.contains("Psicologo"))
+            assertFalse("Se colo el monto: $it", it.contains("299"))
+        }
     }
 }

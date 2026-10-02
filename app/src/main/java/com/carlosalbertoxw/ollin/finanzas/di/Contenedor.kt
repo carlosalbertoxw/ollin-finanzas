@@ -6,6 +6,7 @@ import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.ComprobadorActual
 import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.Version
 import com.carlosalbertoxw.ollin.finanzas.data.db.OllinDatabase
 import com.carlosalbertoxw.ollin.finanzas.data.db.Sembrador
+import com.carlosalbertoxw.ollin.finanzas.data.notify.AvisoDeRespaldo
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ControlBloqueo
@@ -50,6 +51,7 @@ class Contenedor(contexto: Context) {
         ControlBloqueo(ajustes.ajustes, ajustes::guardaFallosDePin)
     }
 
+    val avisoDeRespaldo: AvisoDeRespaldo by lazy { AvisoDeRespaldo() }
 
     val revisaCalidad: RevisaCalidad by lazy { RevisaCalidad(repositorio) }
 

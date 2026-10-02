@@ -1,0 +1,47 @@
+# Actualizaciones de dependencias, pequenas y cada semana.
+#
+# Las alertas de seguridad ya estaban encendidas en el repositorio, pero solo
+# avisan cuando hay una vulnerabilidad publicada. Esto propone tambien las
+# actualizaciones de rutina: es mas facil revisar un salto de una version
+# menor cada semana que diez mayores juntas el dia que una se vuelve urgente.
+#
+# Las acciones de los flujos van fijadas por SHA (ver .github/workflows): sin
+# esto se quedarian congeladas para siempre. Dependabot entiende el comentario
+# `# vX.Y.Z` y lo actualiza junto con el SHA.
+version: 2
+
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Todo lo de Compose sale del BOM y de AndroidX: subirlo por separado
+      # deja combinaciones que nadie probo. Incluye fragment, que se fija a
+      # mano por biometric (ver libs.versions.toml) y debe subir con el resto.
+      androidx:
+        patterns: ["androidx.*"]
+      # Kotlin y KSP van atados: cada KSP se publica para una version exacta
+      # del compilador, y subir uno sin el otro rompe la compilacion.
+      kotlin:
+        patterns:
+          - "org.jetbrains.kotlin*"
+          - "com.google.devtools.ksp"
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      acciones:
+        patterns: ["*"]

@@ -232,12 +232,12 @@ class ExportadorExcel(
                 filas += listOf(
                     Celda.Texto(cuenta.nombre),
                     Celda.Formula(
-                        "SUMIFS(${rango(colCantidad)},${rango(colCuenta)},\$A${filas.size + 1})",
+                        "SUMIFS(${rango(colCantidad)},${rango(colCuenta)},${Ooxml.criterioLiteral("\$A${filas.size + 1}")})",
                         cache = centavosADouble(saldo),
                         estilo = if (saldo < 0) Estilo.DINERO_NEGATIVO else Estilo.DINERO
                     ),
                     Celda.Formula(
-                        "COUNTIFS(${rango(colCuenta)},\$A${filas.size + 1})",
+                        "COUNTIFS(${rango(colCuenta)},${Ooxml.criterioLiteral("\$A${filas.size + 1}")})",
                         cache = datos.movimientos.count {
                             datos.nombreCuenta(it.cuentaId) == cuenta.nombre
                         }.toDouble(),
@@ -563,11 +563,11 @@ class ExportadorExcel(
             filas += listOf(
                 Celda.Texto(cuenta.nombre),
                 Celda.Formula(
-                    "SUMIFS(${rango(colCantidad)},${rango(colCuenta)},\$A$f,${rango(colTipo)},\"${TipoMovimiento.TRANSFERENCIA_ENTRADA.etiqueta}\")",
+                    "SUMIFS(${rango(colCantidad)},${rango(colCuenta)},${Ooxml.criterioLiteral("\$A$f")},${rango(colTipo)},\"${TipoMovimiento.TRANSFERENCIA_ENTRADA.etiqueta}\")",
                     cache = centavosADouble(entradas), estilo = Estilo.DINERO
                 ),
                 Celda.Formula(
-                    "SUMIFS(${rango(colCantidad)},${rango(colCuenta)},\$A$f,${rango(colTipo)},\"${TipoMovimiento.TRANSFERENCIA_SALIDA.etiqueta}\")",
+                    "SUMIFS(${rango(colCantidad)},${rango(colCuenta)},${Ooxml.criterioLiteral("\$A$f")},${rango(colTipo)},\"${TipoMovimiento.TRANSFERENCIA_SALIDA.etiqueta}\")",
                     cache = centavosADouble(salidas), estilo = Estilo.DINERO
                 ),
                 Celda.Formula("B$f+C$f", cache = centavosADouble(entradas + salidas), estilo = Estilo.DINERO)
@@ -674,7 +674,7 @@ class ExportadorExcel(
     /** SUMIFS por grupo + tipo + mes, con criterios de fecha independientes del idioma. */
     private fun sumifsMes(criterioGrupo: String, tipo: TipoMovimiento, ym: YearMonth): String =
         "SUMIFS(${rango(colCantidad)}," +
-            "${rango(colGrupo)},$criterioGrupo," +
+            "${rango(colGrupo)},${Ooxml.criterioLiteral(criterioGrupo)}," +
             "${rango(colTipo)},\"${tipo.etiqueta}\"," +
             "${rango(colFecha)},\">=\"&DATE(${ym.year},${ym.monthValue},1)," +
             "${rango(colFecha)},\"<=\"&DATE(${ym.year},${ym.monthValue},${ym.lengthOfMonth()}))"

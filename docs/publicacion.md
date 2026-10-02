@@ -31,7 +31,13 @@ Un número escrito a mano en el build se olvida: se publica la 1.2.0 con el buil
 
 ## Los secretos
 
-El flujo necesita cuatro, en *Settings → Secrets and variables → Actions*, **como secretos del repositorio y no de un entorno**: el job que firma no declara `environment:`, así que un secreto de entorno le llega vacío.
+El flujo necesita cuatro, en *Settings → Secrets and variables → Actions*. El job que firma declara `environment: release`, así que pueden ser secretos del repositorio o del environment `release`, y conviene lo segundo:
+
+1. En *Settings → Environments → release*, agrega los cuatro como secretos del environment.
+2. En *Deployment branches and tags*, limita el environment a los tags `v*`.
+3. Borra los cuatro de los secretos del repositorio.
+
+Así las contraseñas del almacén solo existen para el job que firma y solo cuando corre sobre una etiqueta: ningún otro flujo —ni un pull request que modifique un workflow— puede leerlas. Si se quiere un paso más, *Required reviewers* obliga a aprobar a mano cada publicación antes de que el job vea los secretos.
 
 | Secreto | Qué es |
 |---|---|
@@ -60,7 +66,9 @@ En el flujo de publicación eso sería un desastre silencioso —una release con
 
 En el mismo paso se abre el almacén con `keytool` para comprobar que el base64 corresponde a un `.jks` de verdad, que la contraseña lo abre y que el alias existe. Tarda un segundo y ahorra los dos minutos que R8 necesita para llegar al momento de firmar y descubrirlo. La contraseña va por `-storepass:env`, nunca por la línea de comandos.
 
-**Después de compilar** se pasa `apksigner verify --print-certs` sobre el APK, antes de crear la release.
+**Después de compilar** se pasa `apksigner verify --print-certs` sobre el APK, antes de crear la release, y la huella SHA-256 del certificado se compara con la que publica el [README](../README.md#comprobar-que-el-apk-es-el-bueno). Firmado no basta: tiene que ser con *la* llave. Un almacén equivocado en los secretos produciría un APK que se instala limpio en un teléfono nuevo y que no puede actualizar a nadie que ya tenga la app. Si las huellas no coinciden, no se publica.
+
+La misma huella se agrega al final de las notas de la release, para que quien descarga pueda compararla por un camino distinto del sitio.
 
 ## Qué se publica
 
@@ -89,6 +97,28 @@ La prueba de actualización nació para ese grupo, después de que la 1.0.1 sali
 Estuvo fuera del 3 al 9 de septiembre de 2026: al ponerla a bloquear dio tres falsos negativos seguidos contra la 1.0.3, una versión que abre perfectamente en un teléfono real, y un trabajo invocado con `uses:` no admite `continue-on-error`, así que dejarla dentro sin bloquear teñía de rojo publicaciones que habían salido bien. Los tres eran fallos del andamiaje; arreglados, volvió a `needs` el día que se la vio pasar en verde contra la 1.0.3. Ver [desarrollo](desarrollo.md#la-prueba-de-actualización).
 
 El esquema sigue en su versión inicial, así que no hay ninguna migración que ejecutar: el hueco está reservado en [`publicacion.yml`](../.github/workflows/publicacion.yml) con lo que tiene que ir ahí, y mientras tanto [`EsquemaDeBaseTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EsquemaDeBaseTest.kt) vigila en la JVM que la cadena no tenga huecos. Ver [modelo de datos](modelo-de-datos.md#migraciones).
+
+## Cuando algo sale mal
+
+### Una versión publicada con un error
+
+Android no permite instalar una versión anterior encima de una más nueva: un `versionCode` menor se rechaza. No hay vuelta atrás; hay vuelta adelante.
+
+1. Marca la release mala como *pre-release* en GitHub, para que deje de ser la «última». Con eso `sitio.yml`, relanzado a mano, vuelve a anunciar la anterior a quien no haya actualizado.
+2. Corrige en `main`, agrega la entrada en `[Sin publicar]`, renómbrala a la versión de parche siguiente y etiqueta. El flujo normal hace el resto, y quien ya instaló la mala recibe el aviso de la nueva al día siguiente.
+3. No borres la release mala: quien la tiene instalada necesita poder leer qué traía.
+
+### La llave de firma, filtrada
+
+Quien tenga el `.jks` y sus contraseñas puede publicar una «actualización» que todos los teléfonos aceptarían. No se puede revocar: Android no consulta listas de revocación para apps instaladas fuera de Play.
+
+1. Borra en el acto los cuatro secretos de GitHub y revisa en *Actions* qué corrió en los últimos días.
+2. Avisa en el sitio y en el README: que nadie instale nada que no venga de las releases de este repositorio, y que comparen la huella.
+3. La salida de fondo es una llave nueva, y con ella otro `applicationId`: para Android sería otra app. La gente tendría que exportar su libro, instalar la nueva e importarlo. Escríbelo como versión con su propia entrada en el CHANGELOG, explicando el porqué.
+
+### La llave de firma, perdida
+
+Sin el `.jks` no se puede volver a publicar una actualización de esta app. Es el mismo final que una llave filtrada —otra app, exportar e importar—, sin la urgencia. Por eso debe haber **una copia del almacén y de sus contraseñas fuera de este equipo**, en un gestor de contraseñas o en un medio cifrado sin conexión. El secreto de Actions no sirve de respaldo: GitHub no deja leerlo.
 
 ## La identidad de la app
 

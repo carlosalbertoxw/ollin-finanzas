@@ -7,6 +7,7 @@
         <!-- Envoltura de la llave y huella del PIN: nada de esto sale del telefono. -->
         <exclude domain="sharedpref" path="ollin_llave.xml" />
         <exclude domain="file" path="datastore/ollin_ajustes.preferences_pb" />
+        <exclude domain="file" path="ultimo-fallo.txt" />
     </cloud-backup>
 
     <!-- Tampoco en el traspaso a un telefono nuevo. La base va cifrada con una
@@ -18,5 +19,6 @@
         <exclude domain="database" path="ollin.db-shm" />
         <exclude domain="sharedpref" path="ollin_llave.xml" />
         <exclude domain="file" path="datastore/ollin_ajustes.preferences_pb" />
+        <exclude domain="file" path="ultimo-fallo.txt" />
     </device-transfer>
 </data-extraction-rules>

@@ -23,6 +23,7 @@ import com.carlosalbertoxw.ollin.finanzas.R
 import com.carlosalbertoxw.ollin.finanzas.data.db.Compromiso
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.HORA_AVISO_PREDETERMINADA
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.MINUTO_AVISO_PREDETERMINADO
+import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -184,16 +185,56 @@ object Recordatorios {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Lo que ensena la pantalla de bloqueo cuando la persona eligio en
+        // Android "ocultar contenido sensible": sin version publica, el sistema
+        // pondria un "contenido oculto" sin decir de que app. Con el ajuste de
+        // fabrica ("mostrar todo") Android ignora esta version y ensena el aviso
+        // completo; por eso, con candado puesto, el aviso ya viene sin montos
+        // desde [textoDelAviso].
+        val publico = NotificationCompat.Builder(contexto, CANAL)
+            .setSmallIcon(R.drawable.ic_stat_ollin)
+            .setContentTitle(contexto.getString(R.string.app_name))
+            .setContentText("Tienes un aviso pendiente.")
+            .build()
+
         val aviso = NotificationCompat.Builder(contexto, CANAL)
             .setSmallIcon(R.drawable.ic_stat_ollin)
             .setContentTitle(titulo)
             .setContentText(texto)
             .setStyle(NotificationCompat.BigTextStyle().bigText(texto))
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(publico)
             .setContentIntent(abrir)
             .setAutoCancel(true)
             .build()
 
         runCatching { NotificationManagerCompat.from(contexto).notify(id, aviso) }
+    }
+
+    /**
+     * Titulo y texto del aviso de un compromiso.
+     *
+     * [discreto] va encendido cuando la app tiene candado. Una notificacion
+     * vive fuera del candado: la ve quien mire la pantalla de bloqueo o baje la
+     * cortina, y Android solo oculta el contenido si la persona eligio "ocultar
+     * contenido sensible", que no es lo que viene de fabrica. Quien le puso
+     * candado a sus finanzas no deberia encontrarse "Renta · $8,500" en la
+     * pantalla del telefono, asi que el aviso dice que hay un pago y nada mas.
+     */
+    fun textoDelAviso(
+        compromiso: Compromiso,
+        fecha: LocalDate,
+        hoy: LocalDate,
+        discreto: Boolean
+    ): Pair<String, String> {
+        val vencido = fecha.isBefore(hoy)
+        if (discreto) {
+            return (if (vencido) "Tienes un pago vencido" else "Tienes un pago por vencer") to
+                "Abre Ollin Finanzas para verlo."
+        }
+        val texto = formateaFecha(fecha)
+        val cuando = if (vencido) "vencio el $texto" else "el $texto"
+        return compromiso.nombre to "${Dinero.formatea(compromiso.montoCentavos)} $cuando"
     }
 
     /**
@@ -221,17 +262,12 @@ class RecordatorioReceiver : BroadcastReceiver() {
             try {
                 avisaDeRespaldoSiToca(contexto, app)
 
+                val discreto = app.contenedor.ajustes.ajustes.first().modoBloqueo != ModoBloqueo.NINGUNO
                 val compromisos = app.contenedor.repositorio.listaCompromisos()
                 val hoy = LocalDate.now()
                 Recordatorios.porVencer(compromisos).forEachIndexed { i, (compromiso, fecha) ->
-                    val texto = Recordatorios.formateaFecha(fecha)
-                    val cuando = if (fecha.isBefore(hoy)) "vencio el $texto" else "el $texto"
-                    Recordatorios.notifica(
-                        contexto,
-                        id = 2000 + i,
-                        titulo = compromiso.nombre,
-                        texto = "${Dinero.formatea(compromiso.montoCentavos)} $cuando"
-                    )
+                    val (titulo, texto) = Recordatorios.textoDelAviso(compromiso, fecha, hoy, discreto)
+                    Recordatorios.notifica(contexto, id = 2000 + i, titulo = titulo, texto = texto)
                 }
             } finally {
                 pendiente.finish()

@@ -89,6 +89,34 @@ class XlsxLectorSeguridadTest {
         assertEquals("Hola", leido.hoja("Registros")!!.filas[0][0].comoTexto())
     }
 
+    /**
+     * La zip bomb: unos KB comprimidos que se expanden a mas que el limite
+     * dentro de **una sola** parte. Antes se leia la parte entera y se media
+     * despues; con una bomba de gigas, el `OutOfMemoryError` llegaba primero y
+     * cerraba la app. Tiene que salir como archivo invalido, con mensaje legible.
+     */
+    @Test
+    fun `una parte que se expande por encima del limite se rechaza`() {
+        val bomba = ByteArrayOutputStream()
+        ZipOutputStream(bomba).use { zip ->
+            zip.putNextEntry(ZipEntry("xl/worksheets/sheet1.xml"))
+            val ceros = ByteArray(1024 * 1024)
+            repeat((XlsxLector.LIMITE_BYTES / ceros.size).toInt() + 1) { zip.write(ceros) }
+            zip.closeEntry()
+        }
+        assertTrue(
+            "La bomba tiene que caber en poco: es lo que la hace peligrosa",
+            bomba.size() < 1024 * 1024
+        )
+
+        try {
+            XlsxLector.lee(ByteArrayInputStream(bomba.toByteArray()))
+            fail("Una parte mas grande que el limite no debe leerse")
+        } catch (e: XlsxLector.ArchivoInvalido) {
+            assertTrue(e.message!!.contains("demasiado grande"))
+        }
+    }
+
     /** `<!doctype` en minusculas es igual de valido para XML, y hay que atajarlo. */
     @Test
     fun `el DOCTYPE se detecta sin importar mayusculas`() {

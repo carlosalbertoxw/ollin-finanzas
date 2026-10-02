@@ -222,6 +222,11 @@ code {
   font-size: 0.9rem;
 }
 
+/* 64 caracteres sin espacios: sin esto, en un telefono empujan la pagina de lado. */
+.huella {
+  overflow-wrap: anywhere;
+}
+
 /* ----------------------------------------------------------------- pie */
 
 .pie {

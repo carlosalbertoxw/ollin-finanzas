@@ -2,7 +2,7 @@
 
 Ollin Finanzas no manda a ningún servidor nada de lo que capturas: no hay cuenta, no hay nube, no hay analítica y no hay publicidad.
 
-Hace **una** llamada a internet, y conviene decirla completa: le pregunta al sitio del proyecto, una vez al día, si existe una versión más nueva. Es un `GET` a un archivo estático que no lleva ningún dato tuyo —ni identificador, ni qué versión traes— y se apaga desde *Acerca de*. La app no se instala desde Google Play, así que sin eso nadie se enteraría nunca de una actualización. Los detalles están en [publicación](publicacion.md#cómo-se-entera-la-app).
+Hace **una** llamada a internet, y conviene decirla completa: le pregunta al sitio del proyecto, una vez al día, si existe una versión más nueva. Es un `GET` a un archivo estático que no lleva ningún dato tuyo —ni identificador, ni qué versión traes— y se apaga en *Ajustes*. La app no se instala desde Google Play, así que sin eso nadie se enteraría nunca de una actualización. Los detalles están en [publicación](publicacion.md#cómo-se-entera-la-app).
 
 ## Cifrado de la base
 
@@ -12,10 +12,12 @@ La base va cifrada con **AES-256 (SQLCipher)**. No hay camino sin cifrar: si SQL
 frase aleatoria de 32 bytes (hex)
         │  envuelta con AES/GCM
         ▼
-llave maestra en AndroidKeyStore  ──►  no sale del dispositivo, ni con root
+llave maestra en AndroidKeyStore  ──►  no se puede copiar fuera del teléfono
 ```
 
 [`LlaveBase`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/seguridad/LlaveBase.kt) genera la frase una sola vez al azar y la guarda envuelta en `SharedPreferences` (`ollin_llave`). La app pide desenvolverla; nunca ve la llave maestra. Copiar el archivo `ollin.db` por adb o sacarlo de un respaldo no revela un solo importe.
+
+Lo que el Keystore **no** promete: en un teléfono con root, quien controla el sistema puede pedirle que desenvuelva la frase haciéndose pasar por la app, y con ella abrir la base ahí mismo. La llave no sale, pero se puede usar. Contra eso no hay defensa desde la app; el cifrado protege la base fuera del teléfono, no dentro de uno comprometido.
 
 Tres detalles que no son evidentes:
 
@@ -66,7 +68,9 @@ PBKDF2 encarece cada intento, pero por sí solo no impide que alguien con el tel
 - A partir del quinto la espera **duplica** —1 s, 2 s, 4 s…— hasta un tope de 5 minutos. Más allá, castigar más solo estorbaría al dueño.
 - Acertar limpia la cuenta: el freno es contra quien adivina, no contra ti.
 
-**El contador vive en DataStore, no en memoria.** Si viviera en el proceso, cerrar la app de un manotazo lo reiniciaría y probar diez mil PIN volvería a ser gratis. La espera en curso sí es de memoria y usa el reloj monótono, así que se reinicia al reabrir la app —pero su duración la fija el número de fallos, que sí persiste.
+**El contador vive en DataStore, no en memoria.** Si viviera en el proceso, cerrar la app de un manotazo lo reiniciaría y probar diez mil PIN volvería a ser gratis.
+
+**Y al arrancar se vuelve a cobrar la espera.** La espera en curso usa el reloj monótono, que no se puede guardar porque se reinicia con el teléfono. Hasta la 1.1.0 eso dejaba un hueco: cerrar la app desde Recientes después de cada fallo daba un intento sin esperar. Ahora, en cuanto el control lee los fallos guardados, fija la espera completa que les toca, contada desde ese momento. Es más estricto que retomar la que quedaba, y no se puede esquivar. La pantalla del candado escucha esa espera en vez de leerla una sola vez, porque las preferencias pueden llegar después de que la pantalla ya se dibujó.
 
 El control recibe el flujo de preferencias y la función que guarda los fallos, no el `AjustesRepositorio` entero: es código de seguridad y sus reglas tienen que poder probarse sin levantar DataStore. El reloj también se inyecta, así que las pruebas de espera no cuestan tiempo real.
 
@@ -98,6 +102,12 @@ Las reglas están en [`Respaldos`](../app/src/main/java/com/carlosalbertoxw/olli
 
 Se apaga en `Ajustes → Respaldo`. Encenderlo o apagarlo reinicia la cuenta.
 
+#### También en el tablero
+
+La notificación se pierde entre las demás, y una vez descartada no vuelve hasta la semana siguiente. Por eso, mientras toque respaldar, el mismo aviso sale también **arriba del tablero cada vez que se abre la app**, con el mismo texto y con las mismas reglas: si no saldría la notificación, tampoco sale esto. Tocarlo lleva a Archivo, y **en cuanto se exporta desaparece solo**, porque exportar guarda la fecha del último respaldo y el tablero la está escuchando.
+
+La cruz lo quita **solo por esta vez**: «ahora no» no es «nunca». Vuelve la siguiente vez que se abra la app, que aquí significa arrancarla de cero o regresar después de más de un minuto fuera. Es la misma gracia del candado y por la misma razón: importar y exportar abren el selector de archivos del sistema, que manda la app al fondo, y volver de ahí no es abrirla otra vez. Las reglas están en [`AvisoDeRespaldo`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/notify/AvisoDeRespaldo.kt), que vive en el contenedor para que girar el teléfono no lo traiga de vuelta.
+
 ## Permisos
 
 Solo cuatro, y ninguno da acceso a datos ajenos a la app:
@@ -117,6 +127,22 @@ La alarma de los recordatorios es **inexacta** a propósito: un recordatorio de 
 
 Se pide con la app ya desbloqueada y no al arrancar: un diálogo del sistema encima de la pantalla del candado no se entiende, porque todavía no se ha visto de qué app viene. Si no se concede, la app simplemente no notifica — todo lo demás funciona igual.
 
+## Notificaciones
+
+Una notificación vive fuera del candado: la ve quien mire la pantalla de bloqueo o baje la cortina. Android solo oculta su contenido si la persona eligió *ocultar contenido sensible*, y eso no es lo que viene de fábrica.
+
+Por eso, **con candado puesto, los avisos de compromisos no dicen ni el nombre ni el monto**: solo «Tienes un pago por vencer» o «Tienes un pago vencido». Quien le puso candado a sus finanzas no debería encontrarse «Renta · $8,500» en la pantalla del teléfono. Sin candado, el aviso dice qué, cuánto y cuándo, como siempre. Ver [`Recordatorios.textoDelAviso`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/notify/Recordatorios.kt).
+
+Además, todos los avisos llevan una versión pública genérica, que es la que enseña la pantalla de bloqueo cuando sí se eligió ocultar el contenido sensible.
+
 ## Manejo de errores
 
 Los mensajes que ve el usuario ocultan los internos a propósito: el texto crudo de una excepción habla de rutas, clases y consultas, no le sirve de nada y de paso enseña cómo está hecha la app. El fallo real va a logcat, sin datos del usuario.
+
+### El informe del último fallo
+
+No hay reporte de fallos, ni lo habrá: nada sale del teléfono. Pero sin ningún rastro, una app que se cierra al abrirse —como la 1.0.1 en los teléfonos que venían de la 1.0.0— solo se descubre cuando alguien lo cuenta, y entonces no hay con qué diagnosticar.
+
+[`RegistroDeFallos`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/diagnostico/RegistroDeFallos.kt) se instala lo primero en `OllinApp.onCreate()` y, si un error cierra la app, guarda el último en `ultimo-fallo.txt`, en el almacenamiento privado: versión de la app, versión de Android, fecha y la traza, recortada a 16 KB. Nada más del teléfono. Se encadena delante del manejador que ya hubiera, así que el sistema sigue cerrando el proceso como siempre.
+
+*Acerca de* lo enseña tal cual, y la persona decide si lo copia para reportarlo o lo borra. Está excluido del respaldo del sistema, igual que la base.
