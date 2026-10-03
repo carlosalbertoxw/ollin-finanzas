@@ -16,6 +16,10 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ## [Sin publicar]
 
+## [1.2.0] - 2026-10-03
+
+Un candado más difícil de saltar, avisos que no enseñan montos con la app cerrada, el recordatorio de respaldo también en el tablero y las herramientas al día.
+
 ### Seguridad
 
 - **El candado del teléfono ya no se puede abrir fingiendo el diálogo.** Al desbloquear con huella, patrón o PIN del teléfono, la app ya no se fía del aviso del diálogo: exige que una llave del Keystore, que solo se habilita tras una autenticación real, funcione. Como las huellas débiles no pueden habilitarla, ahora se pide huella de clase fuerte; con una débil se entra con el patrón o el PIN.
@@ -111,7 +115,8 @@ Primera versión pública.
 - **Aviso de actualizaciones.** Ollin consulta una vez al día si hay una versión más nueva publicada y lo enseña en *Acerca de*. Se apaga en Ajustes. Ver [seguridad y privacidad](https://github.com/carlosalbertoxw/ollin-finanzas/blob/main/docs/seguridad.md).
 - **Sitio de descarga** en GitHub Pages, con el APK firmado, su huella y las instrucciones de instalación fuera de la tienda.
 
-[Sin publicar]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.1.0...HEAD
+[Sin publicar]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.1...v1.0.2
