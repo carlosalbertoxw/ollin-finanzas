@@ -76,7 +76,15 @@ El control recibe el flujo de preferencias y la función que guarda los fallos, 
 
 ### La credencial del sistema
 
-[`CredencialDelSistema`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/seguridad/CredencialDelSistema.kt) pide huella, patrón o PIN del teléfono. Desde Android 11 usa `BiometricPrompt` con `BIOMETRIC_WEAK or DEVICE_CREDENTIAL`; antes, el diálogo unificado no admite credencial del dispositivo, así que abre la pantalla de desbloqueo del sistema.
+[`CredencialDelSistema`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/seguridad/CredencialDelSistema.kt) pide huella, patrón o PIN del teléfono. Desde Android 11 usa `BiometricPrompt` con `BIOMETRIC_STRONG or DEVICE_CREDENTIAL`; antes, el diálogo unificado no admite credencial del dispositivo, así que abre la pantalla de desbloqueo del sistema.
+
+**El éxito no se cree por el callback.** El diálogo avisa con `onAuthenticationSucceeded`, y en un teléfono con root alguien puede invocar esa función a mano —con Frida, por ejemplo— y abrir el candado sin poner el dedo. Por eso el diálogo recibe un cifrador de [`LlaveDeDesbloqueo`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/seguridad/LlaveDeDesbloqueo.kt): una llave del Keystore que solo se puede usar justo después de una autenticación real (`setUserAuthenticationParameters(0, …)`), y quien lo comprueba es el hardware. Al volver, la app intenta cifrar con ese cifrador; si no puede, nadie se autenticó, diga lo que diga el callback.
+
+Eso obliga a pedir huella de **clase fuerte**: las débiles no pueden habilitar una llave del Keystore. Quien solo tenga una débil —algunos desbloqueos con la cara— entra con el patrón o el PIN del teléfono.
+
+Si una huella nueva o un cambio del bloqueo del teléfono invalida la llave, se crea otra y basta con autenticarse de nuevo. Y si en algún teléfono el Keystore no deja preparar la llave, se cae a la pantalla de desbloqueo del sistema en vez de dejar a nadie fuera de su libro.
+
+La llave no protege la base, que va con la suya y sin exigir autenticación (ver [cifrado de la base](#cifrado-de-la-base)): solo vuelve inútil el atajo de saltarse el diálogo.
 
 Se usa en dos lugares: para entrar, y en Ajustes para confirmar antes de cambiar o quitar el candado.
 

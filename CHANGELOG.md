@@ -18,6 +18,7 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ### Seguridad
 
+- **El candado del teléfono ya no se puede abrir fingiendo el diálogo.** Al desbloquear con huella, patrón o PIN del teléfono, la app ya no se fía del aviso del diálogo: exige que una llave del Keystore, que solo se habilita tras una autenticación real, funcione. Como las huellas débiles no pueden habilitarla, ahora se pide huella de clase fuerte; con una débil se entra con el patrón o el PIN.
 - **Cerrar la app ya no se salta la espera del PIN.** La espera tras varios fallos vivía solo en memoria: cerrar la app desde Recientes después de cada intento daba otro sin esperar. Ahora, al abrir, la app vuelve a cobrar la espera completa que tocan los fallos guardados.
 - **Los avisos no enseñan montos si la app tiene candado.** Con candado puesto, la notificación de un compromiso dice que hay un pago por vencer o vencido, sin nombre ni monto: una notificación se ve en la pantalla de bloqueo, fuera del candado.
 - **Un `.xlsx` manipulado ya no cierra la app.** Un archivo de unos KB que se expandía a gigas al descomprimirse agotaba la memoria antes de que se aplicara el tope de 64 MB. Ahora el tope se aplica mientras se lee, y el archivo se rechaza con un mensaje.
