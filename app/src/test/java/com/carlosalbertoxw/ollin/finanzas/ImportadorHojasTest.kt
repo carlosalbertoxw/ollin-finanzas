@@ -1,6 +1,5 @@
 package com.carlosalbertoxw.ollin.finanzas
 
-import kotlinx.coroutines.test.runTest
 import com.carlosalbertoxw.ollin.finanzas.data.db.Categoria
 import com.carlosalbertoxw.ollin.finanzas.data.db.Compromiso
 import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
@@ -23,6 +22,7 @@ import com.carlosalbertoxw.ollin.finanzas.domain.model.Periodicidad
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCategoria
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCuenta
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoMovimiento
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -168,7 +168,7 @@ class ImportadorHojasTest : BaseEnMemoria() {
         val compromisos = compromisoDao.todos().associateBy { it.nombre }
         val msi = compromisos.getValue("Refrigerador MSI")
         assertEquals(125000L, msi.montoCentavos)
-        assertEquals(LocalDate.of(2026, 3, 5), msi.fechaPrimerPago)  // 1er pago + 2 pagados
+        assertEquals(LocalDate.of(2026, 3, 5), msi.fechaPrimerPago) // 1er pago + 2 pagados
         assertEquals(10, msi.totalPagos)
         assertEquals(cuentas.getValue("Banorte").id, msi.cuentaId)
         // La hoja lleva la categoria del compromiso, asi que vuelve clasificado.

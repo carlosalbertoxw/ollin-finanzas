@@ -2,16 +2,16 @@ package com.carlosalbertoxw.ollin.finanzas
 
 import android.app.Application
 import android.util.Log
+import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.Resultado
+import com.carlosalbertoxw.ollin.finanzas.data.diagnostico.RegistroDeFallos
+import com.carlosalbertoxw.ollin.finanzas.data.notify.Recordatorios
+import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.Resultado
-import com.carlosalbertoxw.ollin.finanzas.data.diagnostico.RegistroDeFallos
-import com.carlosalbertoxw.ollin.finanzas.data.notify.Recordatorios
-import com.carlosalbertoxw.ollin.finanzas.di.Contenedor
 
 class OllinApp : Application() {
 

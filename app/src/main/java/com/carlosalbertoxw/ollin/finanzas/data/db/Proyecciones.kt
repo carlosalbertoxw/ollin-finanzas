@@ -16,7 +16,7 @@ data class SaldoCuenta(
 
 /** Un mes de flujo, ya separando consumo real de compra de patrimonio. */
 data class FlujoMes(
-    val periodo: String,          // "2026-01"
+    val periodo: String, // "2026-01"
     val ingresosCentavos: Long,
     val gastoConsumoCentavos: Long,
     val compraPatrimonioCentavos: Long

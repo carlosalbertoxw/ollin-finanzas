@@ -13,10 +13,6 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.MainActivity
 import com.carlosalbertoxw.ollin.finanzas.OllinApp
 import com.carlosalbertoxw.ollin.finanzas.R
@@ -25,6 +21,10 @@ import com.carlosalbertoxw.ollin.finanzas.data.prefs.HORA_AVISO_PREDETERMINADA
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.MINUTO_AVISO_PREDETERMINADO
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime

@@ -14,6 +14,30 @@ trim_trailing_whitespace = true
 
 [*.{kt,kts}]
 max_line_length = 100
+# ktlint (./gradlew ktlintCheck) con el estilo de IntelliJ, que es el que
+# Kotlin llama "official". Las reglas de abajo se apagan porque piden un
+# acomodo de lineas distinto del que el proyecto usa a proposito y de forma
+# pareja: argumentos en la misma linea que el parentesis, `if` de una linea sin
+# llaves, lambdas cortas en una linea, cuerpos de expresion en la linea de
+# abajo. Lo demas --sangria, imports, espacios, largo de linea-- si se vigila.
+ktlint_code_style = intellij_idea
+ktlint_standard_argument-list-wrapping = disabled
+ktlint_standard_parameter-list-wrapping = disabled
+ktlint_standard_function-signature = disabled
+ktlint_standard_class-signature = disabled
+ktlint_standard_multiline-if-else = disabled
+ktlint_standard_function-literal = disabled
+ktlint_standard_statement-wrapping = disabled
+ktlint_standard_wrapping = disabled
+ktlint_standard_binary-expression-wrapping = disabled
+ktlint_standard_property-wrapping = disabled
+ktlint_standard_blank-line-between-when-conditions = disabled
+# Dependen de `wrapping`: sin ella ktlint se niega a arrancar. Las comas
+# finales ya las prohiben los ij_kotlin_allow_trailing_comma de abajo.
+ktlint_standard_trailing-comma-on-call-site = disabled
+ktlint_standard_trailing-comma-on-declaration-site = disabled
+# Los @Composable se nombran como clases, que es la convencion de Compose.
+ktlint_function_naming_ignore_when_annotated_with = Composable
 ij_kotlin_allow_trailing_comma = false
 ij_kotlin_allow_trailing_comma_on_call_site = false
 # Los imports van uno por uno: un comodin esconde de donde sale cada nombre.

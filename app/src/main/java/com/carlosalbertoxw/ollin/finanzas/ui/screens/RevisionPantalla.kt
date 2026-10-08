@@ -35,13 +35,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.data.db.Categoria
 import com.carlosalbertoxw.ollin.finanzas.data.db.MovimientoDetallado
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
@@ -51,8 +44,15 @@ import com.carlosalbertoxw.ollin.finanzas.domain.usecase.RevisaCalidad
 import com.carlosalbertoxw.ollin.finanzas.ui.components.EstadoVacio
 import com.carlosalbertoxw.ollin.finanzas.ui.detalle
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
-import com.carlosalbertoxw.ollin.finanzas.ui.titulo
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
+import com.carlosalbertoxw.ollin.finanzas.ui.titulo
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
  * La lista concreta detras de un hallazgo de Salud de los datos.
@@ -66,7 +66,6 @@ class RevisionVm(
     private val revisaCalidad: RevisaCalidad,
     private val clave: String
 ) : ViewModel() {
-
 
     private val _hallazgo = MutableStateFlow<Hallazgo?>(null)
     val hallazgo: StateFlow<Hallazgo?> = _hallazgo

@@ -97,6 +97,7 @@ enum class Contraparte(val codigo: Int, val etiqueta: String) {
 enum class TipoCategoria(val etiqueta: String) {
     GASTO("Gasto"),
     INGRESO("Ingreso"),
+
     /**
      * Salidas de dinero que no son consumo: terreno, cripto, bienes duraderos.
      * Se excluyen del gasto en los tableros y se contabilizan como traslado
@@ -137,6 +138,7 @@ enum class Periodicidad(val etiqueta: String, val meses: Int = 0, val dias: Int 
      */
     UNICO("Unico"),
     SEMANAL("Semanal", dias = 7),
+
     /** Cada quince dias, tal cual: no es "dos veces al mes" con dia fijo. */
     QUINCENAL("Quincenal", dias = 15),
     MENSUAL("Mensual", meses = 1),

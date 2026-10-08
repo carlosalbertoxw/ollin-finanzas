@@ -29,10 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
 import com.carlosalbertoxw.ollin.finanzas.data.db.Categoria
 import com.carlosalbertoxw.ollin.finanzas.data.db.FlujoMes
 import com.carlosalbertoxw.ollin.finanzas.data.db.MovimientoDetallado
@@ -46,6 +42,10 @@ import com.carlosalbertoxw.ollin.finanzas.ui.components.SeccionTitulo
 import com.carlosalbertoxw.ollin.finanzas.ui.components.TarjetaCifra
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlin.math.abs
 
 data class GrupoGasto(
@@ -56,7 +56,6 @@ data class GrupoGasto(
 )
 
 class AnaliticaVm(private val repo: FinanzasRepositorio) : ViewModel() {
-
 
     val flujo: StateFlow<List<FlujoMes>> = repo.observaFlujoMensual()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

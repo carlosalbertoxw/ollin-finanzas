@@ -1,6 +1,5 @@
 package com.carlosalbertoxw.ollin.finanzas
 
-import kotlinx.coroutines.test.runTest
 import com.carlosalbertoxw.ollin.finanzas.data.db.Categoria
 import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
 import com.carlosalbertoxw.ollin.finanzas.data.db.Movimiento
@@ -20,6 +19,7 @@ import com.carlosalbertoxw.ollin.finanzas.domain.model.Medio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCategoria
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCuenta
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoMovimiento
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

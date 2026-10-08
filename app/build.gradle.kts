@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.cyclonedx)
+    alias(libs.plugins.ktlint)
 }
 
 /**
@@ -251,4 +252,18 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+}
+
+/*
+ * ktlint: sangria, imports, espacios y largo de linea. Las reglas que piden
+ * otro acomodo de lineas estan apagadas en .editorconfig, con su motivo.
+ *
+ * El baseline congela lo que ya habia cuando se agrego --casi todo, lineas de
+ * mas de 100 caracteres--: CI falla solo con infracciones nuevas. Se encoge
+ * arreglando y regenerandolo con `./gradlew ktlintGenerateBaseline`, nunca
+ * regenerandolo para tapar una nueva. Ver docs/desarrollo.md.
+ */
+ktlint {
+    version.set(libs.versions.ktlint)
+    baseline.set(file("ktlint-baseline.xml"))
 }

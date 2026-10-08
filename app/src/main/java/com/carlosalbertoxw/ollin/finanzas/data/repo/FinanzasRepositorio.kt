@@ -3,10 +3,6 @@ package com.carlosalbertoxw.ollin.finanzas.data.repo
 import android.content.ContentResolver
 import android.net.Uri
 import androidx.room.withTransaction
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.withContext
 import com.carlosalbertoxw.ollin.finanzas.data.db.Categoria
 import com.carlosalbertoxw.ollin.finanzas.data.db.Compromiso
 import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
@@ -27,6 +23,10 @@ import com.carlosalbertoxw.ollin.finanzas.data.excel.ResultadoImportacion
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Contraparte
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoMovimiento
 import com.carlosalbertoxw.ollin.finanzas.domain.model.normalizaClave
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.withContext
 import java.io.OutputStream
 import java.time.LocalDate
 import java.util.UUID
@@ -124,6 +124,7 @@ class FinanzasRepositorio(
     suspend fun cuenta(id: Long): Cuenta? = cuentas.porId(id)
     suspend fun categoria(id: Long): Categoria? = categorias.porId(id)
     suspend fun movimiento(id: Long): Movimiento? = movimientos.porId(id)
+
     /** Las dos patas de una transferencia, para poder editarla como una sola cosa. */
     suspend fun movimientosDeGrupo(grupo: String): List<Movimiento> = movimientos.porGrupo(grupo)
     suspend fun balanceInicialDe(cuentaId: Long): Movimiento? = movimientos.balanceInicialDe(cuentaId)

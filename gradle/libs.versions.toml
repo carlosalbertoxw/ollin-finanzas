@@ -23,6 +23,8 @@ espressoCore = "3.7.0"
 androidxTestCore = "1.7.0"
 robolectric = "4.17"
 cyclonedx = "3.4.1"
+ktlintGradle = "14.2.0"
+ktlint = "1.8.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -62,3 +64,4 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 cyclonedx = { id = "org.cyclonedx.bom", version.ref = "cyclonedx" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }

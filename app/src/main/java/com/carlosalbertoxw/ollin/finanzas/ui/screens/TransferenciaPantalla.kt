@@ -34,16 +34,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -71,6 +71,7 @@ class TransferenciaVm(
         private set
     var cargado by mutableStateOf(movimientoId == null)
         private set
+
     /** Cierto cuando lo que se abrio no era un par sano: falta una pata o sobran. */
     var aMedias by mutableStateOf(false)
         private set
@@ -81,6 +82,7 @@ class TransferenciaVm(
     private var grupo: String? = null
     private var idsSueltos: List<Long> = emptyList()
     private var nota: String? = null
+
     /** Se conserva tal cual: una compra de patrimonio viaja con su propia categoria. */
     private var categoriaId: Long? = null
 

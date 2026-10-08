@@ -18,8 +18,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
 import com.carlosalbertoxw.ollin.finanzas.ui.OllinRaiz
-import com.carlosalbertoxw.ollin.finanzas.ui.nav.Rutas
 import com.carlosalbertoxw.ollin.finanzas.ui.PideAvisos
+import com.carlosalbertoxw.ollin.finanzas.ui.nav.Rutas
 import com.carlosalbertoxw.ollin.finanzas.ui.screens.BloqueoPantalla
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.TemaOllin
 
