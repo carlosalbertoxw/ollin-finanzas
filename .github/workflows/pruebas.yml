@@ -89,6 +89,14 @@ jobs:
         working-directory: web
         run: npm ci
 
+      # Las dependencias del sitio son solo de compilacion, pero corren en el
+      # runner que lo despliega. Dependabot avisa por correo; esto lo hace
+      # imposible de pasar por alto, porque un PR con una vulnerabilidad alta
+      # conocida no queda en verde.
+      - name: Auditar dependencias
+        working-directory: web
+        run: npm audit --audit-level=high
+
       # Compilar el sitio tambien valida el CHANGELOG: genera-version.mjs se
       # niega si no encuentra un encabezado `## [x.y.z]`, que es exactamente lo
       # que el build de la app necesita para saber su version.

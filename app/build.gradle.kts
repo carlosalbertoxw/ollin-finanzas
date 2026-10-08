@@ -1,3 +1,5 @@
+import org.cyclonedx.gradle.CyclonedxDirectTask
+import org.cyclonedx.model.Component
 import java.util.Properties
 
 plugins {
@@ -6,6 +8,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.cyclonedx)
 }
 
 /**
@@ -186,6 +189,26 @@ android {
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+/*
+ * El inventario de lo que viaja dentro del APK (SBOM, en CycloneDX).
+ *
+ * Solo `releaseRuntimeClasspath`: lo que compila, prueba o depura no llega al
+ * telefono, y meterlo en el inventario esconderia lo que importa entre cientos
+ * de bibliotecas de Gradle y de pruebas. El flujo de publicacion lo adjunta a
+ * cada release, para que ante una alerta futura --SQLite dentro de SQLCipher,
+ * algo que arrastre AndroidX-- se pueda saber que version exacta llevaba cada
+ * APK sin reconstruirlo.
+ */
+tasks.named<CyclonedxDirectTask>("cyclonedxDirectBom") {
+    includeConfigs = listOf("releaseRuntimeClasspath")
+    projectType = Component.Type.APPLICATION
+    componentGroup = "com.carlosalbertoxw"
+    componentName = "ollin-finanzas"
+    componentVersion = nombreDeVersion
+    jsonOutput = layout.buildDirectory.file("reports/sbom/ollin-finanzas.cdx.json")
+    xmlOutput.unsetConvention()
 }
 
 dependencies {

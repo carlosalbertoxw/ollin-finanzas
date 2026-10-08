@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "web", "run", "dev"],
       "port": 5173
+    },
+    {
+      "name": "sitio-compilado",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "web", "run", "preview", "--", "--port", "4173", "--strictPort"],
+      "port": 4173
     }
   ]
 }
