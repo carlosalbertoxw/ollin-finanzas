@@ -4,6 +4,19 @@ Ollin Finanzas no manda a ningún servidor nada de lo que capturas: no hay cuent
 
 Hace **una** llamada a internet, y conviene decirla completa: le pregunta al sitio del proyecto, una vez al día, si existe una versión más nueva. Es un `GET` a un archivo estático que no lleva ningún dato tuyo —ni identificador, ni qué versión traes— y se apaga en *Ajustes*. La app no se instala desde Google Play, así que sin eso nadie se enteraría nunca de una actualización. Los detalles están en [publicación](publicacion.md#cómo-se-entera-la-app).
 
+## Por dónde podría entrar alguien
+
+Lo que se protege es el libro: importes, cuentas, a quién se paga y cuándo. Y, porque la app se distribuye fuera de la tienda, también la confianza en que lo que se instala salió de este repositorio. Estas son las puertas, qué las cierra y qué riesgo se acepta a sabiendas. Cuando se agregue una puerta nueva —un intent que reciba archivos, otra llamada a la red, una dependencia que toque los datos—, va aquí antes que en el código.
+
+| Entrada | Quién | Qué lo detiene | Riesgo aceptado |
+|---|---|---|---|
+| El teléfono en otras manos, desbloqueado | Alguien cercano | Candado con PIN propio o credencial del sistema; se vuelve a cerrar tras un minuto fuera; `FLAG_SECURE` sin capturas ni miniatura; freno con espera creciente para todo PIN, también el de *Ajustes* | Dentro del minuto de gracia la app sigue abierta: es lo que permite elegir un archivo sin que te expulse |
+| El teléfono en otras manos, con root o por adb | Alguien con tiempo y herramientas | Base cifrada con una llave del Keystore; huella del PIN sellada con otra; nada de eso entra al respaldo | Con root se puede *usar* el Keystore aunque no copiarlo: dentro de un teléfono comprometido no hay defensa desde la app |
+| Un `.xlsx` ajeno que se importa | Quien te mande un «respaldo» | Sin `DOCTYPE` (bomba de entidades); tope de bytes por parte y de partes (zip bomb); tope de filas, columnas y celdas; la importación entera va en una transacción | Lo que el archivo diga se importa: si alguien te convence de importar datos falsos, quedan en tu libro |
+| El aviso de versión nueva (`version.json`) | Quien controle la red o el dominio | Solo `https`; un salto como mucho, y solo hacia el sitio; el enlace solo puede ir a las releases de este repositorio o al sitio; la app nunca descarga ni instala | Quien tome la cuenta de GitHub controla las releases y el sitio a la vez; ver la fila siguiente |
+| La cadena de publicación | Quien tome la cuenta de GitHub o una acción de terceros | Acciones fijadas por SHA; los secretos de firma van solo en el environment `release`, limitado a tags `v*` (ver [publicación](publicacion.md#los-secretos)); la huella del certificado se comprueba contra el README antes de publicar | La cuenta de GitHub (2FA) y el `.jks` con sus contraseñas son la raíz de todo: con ellos se publica una actualización que Android acepta |
+| Las dependencias | Un mantenedor comprometido | Pocas y justificadas; Dependabot; CodeQL; `npm audit` en CI; versiones mínimas forzadas en el build; SBOM de cada release | Lo que llegue firmado por un mantenedor legítimo se compila |
+
 ## Cifrado de la base
 
 La base va cifrada con **AES-256 (SQLCipher)**. No hay camino sin cifrar: si SQLCipher no arranca, la app no abre. Es preferible a que un libro de finanzas funcione en claro sin avisar.
@@ -58,11 +71,15 @@ Un PIN de cuatro dígitos tiene diez mil combinaciones; sin un derivado lento ba
 
 La comparación es en tiempo constante (`MessageDigest.isEqual`): un `==` normal corta en el primer byte distinto, y ese tiempo de más revela cuánto del PIN se acertó.
 
+**La huella va sellada con una llave del Keystore.** Diez mil combinaciones siguen siendo pocas: con el archivo de preferencias en la mano —un teléfono con root— ni seiscientas mil iteraciones aguantarían más que unos minutos. Por eso, además de PBKDF2, la huella pasa por un HMAC-SHA256 cuya llave vive en el Keystore ([`LlaveDelPin`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/seguridad/LlaveDelPin.kt), alias `ollin_pin`) y no se puede extraer. Sin el teléfono no se puede calcular; en el teléfono, cada intento pasa por la app y su freno. Las huellas selladas llevan el prefijo `ks1:`.
+
+Las de la 1.2.0 y anteriores son PBKDF2 a secas. Siguen abriendo, y en cuanto su dueño acierta se guardan selladas con la misma sal, sin pedirle nada. Si la llave del sello se perdiera, la huella dejaría de coincidir, igual que la base dejaría de abrir: las dos viven y mueren con el Keystore de la app.
+
 **Si eliges PIN propio y lo olvidas, no hay forma de recuperarlo.** Habría que reinstalar la app, y con ella se van los datos que no se hayan exportado.
 
 #### El freno contra la fuerza bruta
 
-PBKDF2 encarece cada intento, pero por sí solo no impide que alguien con el teléfono en la mano siga probando. [`ControlBloqueo`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/seguridad/ControlBloqueo.kt) lleva la cuenta de fallos seguidos:
+PBKDF2 encarece cada intento, pero por sí solo no impide que alguien con el teléfono en la mano siga probando. [`ControlBloqueo`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/seguridad/ControlBloqueo.kt) lleva la cuenta de fallos seguidos, y **todo PIN que se teclea en la app pasa por su `intentaPin`**: el de la pantalla de bloqueo y también el que pide *Ajustes* antes de cambiarlo o quitarlo. Hasta la 1.2.0 ese segundo diálogo lo comprobaba por su cuenta y sin espera, así que quien encontrara la app abierta podía probar los diez mil ahí:
 
 - Los primeros cuatro salen gratis: teclear mal el PIN es normal.
 - A partir del quinto la espera **duplica** —1 s, 2 s, 4 s…— hasta un tope de 5 minutos. Más allá, castigar más solo estorbaría al dueño.
@@ -72,7 +89,9 @@ PBKDF2 encarece cada intento, pero por sí solo no impide que alguien con el tel
 
 **Y al arrancar se vuelve a cobrar la espera.** La espera en curso usa el reloj monótono, que no se puede guardar porque se reinicia con el teléfono. Hasta la 1.1.0 eso dejaba un hueco: cerrar la app desde Recientes después de cada fallo daba un intento sin esperar. Ahora, en cuanto el control lee los fallos guardados, fija la espera completa que les toca, contada desde ese momento. Es más estricto que retomar la que quedaba, y no se puede esquivar. La pantalla del candado escucha esa espera en vez de leerla una sola vez, porque las preferencias pueden llegar después de que la pantalla ya se dibujó.
 
-El control recibe el flujo de preferencias y la función que guarda los fallos, no el `AjustesRepositorio` entero: es código de seguridad y sus reglas tienen que poder probarse sin levantar DataStore. El reloj también se inyecta, así que las pruebas de espera no cuestan tiempo real.
+Los intentos van de uno en uno (un `Mutex`): sin eso, dos toques seguidos leerían los dos que no hay espera antes de que el primero registrara su fallo. En espera no se comprueba nada, ni siquiera el PIN correcto.
+
+El control recibe el flujo de preferencias, la función que guarda los fallos, el sello y la que guarda la huella migrada, no el `AjustesRepositorio` entero: es código de seguridad y sus reglas tienen que poder probarse sin levantar DataStore. El reloj también se inyecta, así que las pruebas de espera no cuestan tiempo real.
 
 ### La credencial del sistema
 
