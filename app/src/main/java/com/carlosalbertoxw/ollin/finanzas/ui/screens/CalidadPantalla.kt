@@ -35,18 +35,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import com.carlosalbertoxw.ollin.finanzas.domain.usecase.ReparaDatos
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.GravedadHallazgo
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.Hallazgo
+import com.carlosalbertoxw.ollin.finanzas.domain.usecase.ReparaDatos
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.RevisaCalidad
 import com.carlosalbertoxw.ollin.finanzas.ui.components.EstadoVacio
 import com.carlosalbertoxw.ollin.finanzas.ui.detalle
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
-import com.carlosalbertoxw.ollin.finanzas.ui.titulo
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
+import com.carlosalbertoxw.ollin.finanzas.ui.titulo
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 class CalidadVm(
     private val revisaCalidad: RevisaCalidad,

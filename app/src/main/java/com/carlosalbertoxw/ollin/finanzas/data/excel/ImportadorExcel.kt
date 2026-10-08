@@ -1,5 +1,6 @@
 package com.carlosalbertoxw.ollin.finanzas.data.excel
 
+import androidx.room.withTransaction
 import com.carlosalbertoxw.ollin.finanzas.data.db.Categoria
 import com.carlosalbertoxw.ollin.finanzas.data.db.CategoriaDao
 import com.carlosalbertoxw.ollin.finanzas.data.db.Compromiso
@@ -7,7 +8,6 @@ import com.carlosalbertoxw.ollin.finanzas.data.db.CompromisoDao
 import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
 import com.carlosalbertoxw.ollin.finanzas.data.db.CuentaDao
 import com.carlosalbertoxw.ollin.finanzas.data.db.MapeoDescripcionDao
-import androidx.room.withTransaction
 import com.carlosalbertoxw.ollin.finanzas.data.db.Movimiento
 import com.carlosalbertoxw.ollin.finanzas.data.db.MovimientoDao
 import com.carlosalbertoxw.ollin.finanzas.data.db.OllinDatabase
@@ -119,6 +119,7 @@ data class DiagnosticoAgrupado(
  * completo y volver a importarlo devuelve el catalogo de cuentas y categorias,
  * las metas del mes y los pagos por venir, no solo los movimientos.
  */
+
 /**
  * Recibe la base entera y no sus DAOs sueltos porque necesita abrir una
  * transaccion: importar reemplazando borra todo antes de escribir, y sin
@@ -360,7 +361,7 @@ class ImportadorExcel(private val db: OllinDatabase) {
         }
 
         // ---- 2. Emparejar transferencias ------------------------------------
-        val grupos = HashMap<Int, String>()   // numeroFila -> uuid
+        val grupos = HashMap<Int, String>() // numeroFila -> uuid
         var emparejadas = 0
         var huerfanas = 0
         if (opciones.emparejarTransferencias) {

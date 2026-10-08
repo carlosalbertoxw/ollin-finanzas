@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -22,7 +21,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -36,37 +34,37 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.carlosalbertoxw.ollin.finanzas.data.notify.Recordatorios
+import com.carlosalbertoxw.ollin.finanzas.data.prefs.Ajustes
+import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
+import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
+import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
+import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ControlBloqueo
+import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
+import com.carlosalbertoxw.ollin.finanzas.ui.seguridad.DialogoNuevoPin
+import com.carlosalbertoxw.ollin.finanzas.ui.seguridad.DialogoPinActual
+import com.carlosalbertoxw.ollin.finanzas.ui.seguridad.pedirCredencialDelSistema
+import com.carlosalbertoxw.ollin.finanzas.ui.seguridad.telefonoAsegurado
+import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.carlosalbertoxw.ollin.finanzas.data.notify.Recordatorios
-import com.carlosalbertoxw.ollin.finanzas.data.prefs.Ajustes
-import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
-import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ClavePin
-import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
-import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
-import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
-import com.carlosalbertoxw.ollin.finanzas.ui.seguridad.pedirCredencialDelSistema
-import com.carlosalbertoxw.ollin.finanzas.ui.seguridad.telefonoAsegurado
-import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
 
 class AjustesVm(
     private val prefs: AjustesRepositorio,
-    private val repo: FinanzasRepositorio
+    private val repo: FinanzasRepositorio,
+    private val bloqueo: ControlBloqueo
 ) : ViewModel() {
 
     val ajustes: StateFlow<Ajustes> = prefs.ajustes
@@ -115,8 +113,8 @@ class AjustesVm(
 
     fun usaBloqueoConPin(pin: String) {
         viewModelScope.launch {
-            val sal = ClavePin.nuevaSal()
-            prefs.activaBloqueoPin(hash = ClavePin.deriva(pin, sal), sal = sal)
+            val (hash, sal) = bloqueo.huellaNueva(pin)
+            prefs.activaBloqueoPin(hash = hash, sal = sal)
         }
     }
 }
@@ -126,6 +124,7 @@ class AjustesVm(
 fun AjustesPantalla(
     ajustes: AjustesRepositorio,
     repo: FinanzasRepositorio,
+    bloqueo: ControlBloqueo,
     alAbrirCuentas: () -> Unit,
     alAbrirCategorias: () -> Unit,
     alAbrirCompromisos: () -> Unit,
@@ -134,7 +133,7 @@ fun AjustesPantalla(
     alAbrirAcercaDe: () -> Unit,
     alCerrar: () -> Unit
 ) {
-    val vm = recuerdaVm("ajustes") { AjustesVm(ajustes, repo) }
+    val vm = recuerdaVm("ajustes") { AjustesVm(ajustes, repo, bloqueo) }
     val ajustes by vm.ajustes.collectAsStateWithLifecycle()
     val movimientos by vm.movimientos.collectAsStateWithLifecycle()
     val colores = LocalColoresOllin.current
@@ -222,6 +221,7 @@ fun AjustesPantalla(
 
             SeccionBloqueo(
                 ajustes = ajustes,
+                bloqueo = bloqueo,
                 alQuitar = vm::quitaBloqueo,
                 alUsarSistema = vm::usaBloqueoDelSistema,
                 alUsarPin = vm::usaBloqueoConPin
@@ -446,6 +446,7 @@ private fun DialogoHoraDeAviso(
 @Composable
 private fun SeccionBloqueo(
     ajustes: Ajustes,
+    bloqueo: ControlBloqueo,
     alQuitar: () -> Unit,
     alUsarSistema: () -> Unit,
     alUsarPin: (String) -> Unit
@@ -554,6 +555,7 @@ private fun SeccionBloqueo(
     if (pidiendoPinActual) {
         DialogoPinActual(
             ajustes = ajustes,
+            bloqueo = bloqueo,
             alConfirmar = {
                 pidiendoPinActual = false
                 pendiente?.invoke()
@@ -569,116 +571,4 @@ private fun SeccionBloqueo(
             alCancelar = { pidiendoPinNuevo = false }
         )
     }
-}
-
-@Composable
-private fun DialogoPinActual(
-    ajustes: Ajustes,
-    alConfirmar: () -> Unit,
-    alCancelar: () -> Unit
-) {
-    var pin by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var verificando by remember { mutableStateOf(false) }
-    val ambito = rememberCoroutineScope()
-
-    AlertDialog(
-        onDismissRequest = alCancelar,
-        title = { Text("Confirma tu PIN") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "Escribe el PIN que tienes puesto para poder cambiarlo o quitarlo.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                OutlinedTextField(
-                    value = pin,
-                    onValueChange = { pin = it.filter(Char::isDigit).take(12) },
-                    label = { Text("PIN actual") },
-                    singleLine = true,
-                    isError = error != null,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
-                )
-                error?.let {
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = LocalColoresOllin.current.salida
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = pin.length >= ClavePin.LARGO_MINIMO && !verificando,
-                onClick = {
-                    verificando = true
-                    error = null
-                    ambito.launch {
-                        val correcto = ClavePin.coincide(pin, ajustes.pinHash, ajustes.pinSal)
-                        verificando = false
-                        if (correcto) alConfirmar() else { error = "PIN incorrecto"; pin = "" }
-                    }
-                }
-            ) { Text(if (verificando) "Comprobando..." else "Confirmar") }
-        },
-        dismissButton = { TextButton(onClick = alCancelar) { Text("Cancelar") } }
-    )
-}
-
-@Composable
-private fun DialogoNuevoPin(alGuardar: (String) -> Unit, alCancelar: () -> Unit) {
-    var pin by remember { mutableStateOf("") }
-    var confirmacion by remember { mutableStateOf("") }
-
-    val corto = pin.length < ClavePin.LARGO_MINIMO
-    val distintos = confirmacion.isNotEmpty() && pin != confirmacion
-
-    AlertDialog(
-        onDismissRequest = alCancelar,
-        title = { Text("PIN de Ollin Finanzas") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "Minimo ${ClavePin.LARGO_MINIMO} digitos. No se guarda tal cual: " +
-                        "de el solo queda una huella de la que no se puede volver atras.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                OutlinedTextField(
-                    value = pin,
-                    onValueChange = { pin = it.filter(Char::isDigit).take(12) },
-                    label = { Text("PIN nuevo") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
-                )
-                OutlinedTextField(
-                    value = confirmacion,
-                    onValueChange = { confirmacion = it.filter(Char::isDigit).take(12) },
-                    label = { Text("Repitelo") },
-                    singleLine = true,
-                    isError = distintos,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
-                )
-                if (distintos) {
-                    Text(
-                        "Los dos PIN no coinciden.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = LocalColoresOllin.current.salida
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { alGuardar(pin) },
-                enabled = !corto && pin == confirmacion
-            ) { Text("Guardar") }
-        },
-        dismissButton = {
-            TextButton(onClick = alCancelar) { Text("Cancelar") }
-        }
-    )
 }

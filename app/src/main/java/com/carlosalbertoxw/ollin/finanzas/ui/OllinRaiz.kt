@@ -140,7 +140,6 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
                 ?: Destino.TABLERO.ruta
 
             NavHost(navController = nav, startDestination = arranque) {
-
                 composable(Destino.TABLERO.ruta) {
                     TableroPantalla(
                         repo = repo,
@@ -273,6 +272,7 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
                     AjustesPantalla(
                         ajustes = ajustes,
                         repo = repo,
+                        bloqueo = contenedor.controlBloqueo,
                         alAbrirCuentas = { nav.navigate(Rutas.CUENTAS) },
                         alAbrirCategorias = { nav.navigate(Rutas.CATEGORIAS) },
                         alAbrirCompromisos = { nav.navigate(Rutas.COMPROMISOS) },

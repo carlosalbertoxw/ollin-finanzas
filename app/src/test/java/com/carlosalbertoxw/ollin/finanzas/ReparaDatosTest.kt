@@ -1,10 +1,10 @@
 package com.carlosalbertoxw.ollin.finanzas
 
-import kotlinx.coroutines.test.runTest
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Medio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCuenta
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoMovimiento
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.ReparaDatos
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

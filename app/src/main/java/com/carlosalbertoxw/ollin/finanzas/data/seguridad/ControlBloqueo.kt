@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Decide cuando Ollin Finanzas esta cerrada con llave.
@@ -24,13 +26,37 @@ import kotlinx.coroutines.launch
  * cerrado, la gracia, el freno— tienen que poder probarse sin levantar
  * DataStore, que lee de disco en su propio dispatcher y volvia las pruebas no
  * deterministas. [reloj] se inyecta por lo mismo: para no dormir de verdad.
+ *
+ * Todo PIN que se teclea en la app pasa por [intentaPin], tambien el que pide
+ * Ajustes antes de cambiarlo o quitarlo. Si cada pantalla lo comprobara por su
+ * cuenta, la que se olvidara del freno seria el atajo para adivinarlo.
  */
 class ControlBloqueo(
     preferencias: Flow<Ajustes>,
     private val guardaFallos: suspend (Int) -> Unit,
+    /** Sella las huellas del PIN. En la app es [LlaveDelPin]. */
+    private val sello: ClavePin.Sello,
+    /** Guarda una huella ya sellada en lugar de una vieja, con la misma sal. */
+    private val guardaHuella: suspend (hash: String, sal: String) -> Unit,
     private val reloj: () -> Long = { SystemClock.elapsedRealtime() },
-    private val ambito: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val ambito: CoroutineScope =
+        CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 ) {
+
+    /** En que quedo un intento de PIN. */
+    sealed interface IntentoDePin {
+        data object Correcto : IntentoDePin
+        data object Incorrecto : IntentoDePin
+
+        /** Ni se comprobo: todavia corre la espera de los fallos anteriores. */
+        data class EnEspera(val segundos: Int) : IntentoDePin
+    }
+
+    /**
+     * Un intento a la vez. Sin esto, dos toques seguidos leerian los dos que no
+     * hay espera antes de que el primero registrara su fallo.
+     */
+    private val turno = Mutex()
 
     /**
      * Arranca bloqueada a proposito. Todavia no se sabe si hay candado puesto,
@@ -109,6 +135,42 @@ class ControlBloqueo(
         fallosDePin = fallos
         _esperaHasta.value = reloj() + esperaMillis(fallos)
         guardaFallos(fallos)
+    }
+
+    /**
+     * Comprueba [pin] contra la huella guardada, respetando la espera.
+     *
+     * Acertar contra una huella de la 1.2.0 o anterior la vuelve a guardar
+     * sellada con [sello]: se migra sola, sin pedirle nada a nadie. Si guardarla
+     * falla se deja como estaba; volvera a intentarse en el siguiente acierto.
+     */
+    suspend fun intentaPin(
+        pin: String,
+        hash: String?,
+        sal: String?
+    ): IntentoDePin = turno.withLock {
+        val espera = segundosDeEspera()
+        if (espera > 0) return@withLock IntentoDePin.EnEspera(espera)
+
+        when (ClavePin.verifica(pin, hash, sal, sello)) {
+            ClavePin.Verificacion.INCORRECTO -> {
+                registraFalloDePin()
+                return@withLock IntentoDePin.Incorrecto
+            }
+            ClavePin.Verificacion.CORRECTO_SIN_SELLAR -> runCatching {
+                // hash y sal no son nulos: con cualquiera de los dos nulo no se acierta.
+                guardaHuella(ClavePin.huella(pin, sal!!, sello), sal)
+            }
+            ClavePin.Verificacion.CORRECTO -> Unit
+        }
+        registraAciertoDePin()
+        IntentoDePin.Correcto
+    }
+
+    /** La huella y la sal de un PIN nuevo, ya selladas, listas para guardar. */
+    suspend fun huellaNueva(pin: String): Pair<String, String> {
+        val sal = ClavePin.nuevaSal()
+        return ClavePin.huella(pin, sal, sello) to sal
     }
 
     /** Acertar limpia la cuenta: el freno es contra el que adivina, no contra ti. */

@@ -48,6 +48,17 @@ jobs:
             exit 1
           fi
 
+          # El versionCode se arma con huecos de dos cifras (1.2.3 -> 10203; ver
+          # app/build.gradle.kts). Una 1.100.0 daria 20000, el mismo codigo que
+          # la 2.0.0, y Android se negaria a instalar la segunda encima de la
+          # primera; una 1.2.100 chocaria igual con la 1.3.0. Mejor saberlo aqui.
+          IFS=. read -r _ menor parche <<< "$version"
+          if [ "$((10#$menor))" -gt 99 ] || [ "$((10#$parche))" -gt 99 ]; then
+            echo "::error::La versión menor y el parche no pueden pasar de 99: el versionCode dejaría de crecer."
+            echo "::error::Sube la versión mayor, o cambia la fórmula del versionCode en app/build.gradle.kts."
+            exit 1
+          fi
+
           # La primera version del archivo, que es de la que el build de la app
           # saca su versionName. Si no fuera esta, el APK saldria etiquetado con
           # un numero distinto del de la release: la confusion mas cara posible.
@@ -152,11 +163,11 @@ jobs:
     permissions:
       contents: write
 
-    # Los secretos de firma se pueden mover a este environment y borrarse de los
-    # del repositorio: asi solo existen para este job, y si se le pone revision
-    # obligatoria o una regla de tags `v*`, ningun otro flujo --ni un pull
-    # request que toque un workflow-- puede leerlos. Ver docs/publicacion.md.
-    # Mientras sigan siendo del repositorio, esta linea no cambia nada.
+    # Los secretos de firma van en este environment y no en los del repositorio:
+    # asi solo existen para este job, y con la regla de tags `v*` (y, si se
+    # quiere, revision obligatoria) ningun otro flujo --ni un pull request que
+    # toque un workflow-- puede leerlos. Si siguieran en el repositorio, esta
+    # linea no protegeria nada. Ver docs/publicacion.md#los-secretos.
     environment: release
 
     env:
@@ -201,10 +212,11 @@ jobs:
           [ -n "${CLAVE:-}" ] || faltan+=("OLLIN_FINANZAS_KEY_PASSWORD")
 
           if [ ${#faltan[@]} -gt 0 ]; then
-            echo "::error::Faltan estos secretos del repositorio: ${faltan[*]}"
+            echo "::error::Faltan estos secretos: ${faltan[*]}"
             echo "::error::Sin ellos el APK saldría sin firmar y no se instala en ningún teléfono."
-            echo "::error::Van en Settings → Secrets and variables → Actions, como secretos del"
-            echo "::error::repositorio y no de un entorno. Los nombres van tal cual. Ver docs/publicacion.md."
+            echo "::error::Van en Settings → Environments → release → Environment secrets, no en los"
+            echo "::error::del repositorio, con el environment limitado a los tags v*. Los nombres van tal cual."
+            echo "::error::Ver docs/publicacion.md#los-secretos."
             exit 1
           fi
 
@@ -233,7 +245,7 @@ jobs:
           OLLIN_FINANZAS_STORE_PASSWORD: ${{ secrets.OLLIN_FINANZAS_STORE_PASSWORD }}
           OLLIN_FINANZAS_KEY_ALIAS: ${{ secrets.OLLIN_FINANZAS_KEY_ALIAS }}
           OLLIN_FINANZAS_KEY_PASSWORD: ${{ secrets.OLLIN_FINANZAS_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease bundleRelease --no-daemon --stacktrace
+        run: ./gradlew assembleRelease bundleRelease :app:cyclonedxDirectBom --no-daemon --stacktrace
 
       # Sin credenciales el build no falla, saca `app-release-unsigned.apk` y
       # sigue adelante. Es lo que se quiere al compilar en local; aqui seria un
@@ -280,19 +292,24 @@ jobs:
           } >> notas.md
           rm -f certificados.txt
 
-      # Se adjunta el APK y nada mas. El .aab se compila —un fallo de bundling
+      # Se adjuntan el APK y su SBOM. El .aab se compila —un fallo de bundling
       # es un fallo igual y conviene verlo aqui— pero no se publica: no se
       # instala en ningun telefono, solo sirve para subirlo a Play, y una
       # descarga que no hace lo que promete confunde a quien llega de fuera.
+      #
+      # El SBOM (CycloneDX) es el inventario de lo que viaja dentro de este APK.
+      # Sale de la misma compilacion, asi que ante una alerta futura dice que
+      # version exacta de cada biblioteca llevaba esta release.
       - name: Preparar la entrega
         run: |
           set -euo pipefail
           mkdir -p entrega
           cp app/build/outputs/apk/release/app-release.apk "entrega/ollin-finanzas-$VERSION.apk"
+          cp app/build/reports/sbom/ollin-finanzas.cdx.json "entrega/ollin-finanzas-$VERSION.cdx.json"
 
           # La huella se publica junto al archivo para que cualquiera pueda
           # comprobar que lo que bajo es lo que salio de esta compilacion.
-          ( cd entrega && sha256sum ./*.apk > checksums.txt )
+          ( cd entrega && sha256sum ./*.apk ./*.cdx.json > checksums.txt )
           cat entrega/checksums.txt
 
       - name: Crear la release

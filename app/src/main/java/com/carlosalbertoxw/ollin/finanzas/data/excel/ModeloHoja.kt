@@ -53,8 +53,8 @@ sealed interface Celda {
 
 /** Validacion de lista apuntando a un rango de otra hoja. */
 data class ValidacionLista(
-    val rangoDestino: String,   // "D2:D5000"
-    val origenFormula: String   // "Diccionarios!$A$2:$A$40"
+    val rangoDestino: String, // "D2:D5000"
+    val origenFormula: String // "Diccionarios!$A$2:$A$40"
 )
 
 /** Ancho de columna en caracteres, como lo mide Excel. */

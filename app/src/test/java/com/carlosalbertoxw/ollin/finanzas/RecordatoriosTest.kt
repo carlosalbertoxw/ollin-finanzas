@@ -41,7 +41,7 @@ class RecordatoriosTest {
     @Test
     fun `avisa dentro de la ventana y calla fuera de ella`() {
         val hoy = LocalDate.of(2026, 5, 10)
-        val dentro = compromiso("Dentro", LocalDate.of(2026, 5, 13))   // en 3 dias
+        val dentro = compromiso("Dentro", LocalDate.of(2026, 5, 13)) // en 3 dias
         val justoFuera = compromiso("Fuera", LocalDate.of(2026, 5, 14)) // en 4
 
         val avisados = Recordatorios.porVencer(listOf(dentro, justoFuera), hoy).map { it.first.nombre }

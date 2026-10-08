@@ -51,6 +51,9 @@ sdk.dir=C\:\\Users\\<usuario>\\AppData\\Local\\Android\\Sdk
 ./gradlew :app:testDebugUnitTest  # pruebas unitarias (JVM)
 ./gradlew :app:connectedDebugAndroidTest  # pruebas de interfaz (necesita dispositivo)
 ./gradlew :app:assembleRelease    # con minify y shrink de recursos
+./gradlew :app:ktlintCheck        # estilo de Kotlin (falla solo con infracciones nuevas)
+./gradlew :app:ktlintFormat       # arregla lo que ktlint sabe arreglar solo
+./gradlew :app:cyclonedxDirectBom # SBOM del APK de release, en app/build/reports/sbom/
 ./gradlew clean
 ```
 
@@ -120,7 +123,7 @@ La pantalla de Acerca de lee la versión del **paquete instalado** (`PackageMana
 
 ## Pruebas
 
-Hay dos suites: **208 pruebas unitarias** en la JVM y **11 pruebas de interfaz** que necesitan dispositivo. Las unitarias y el lint corren en cada push y cada PR ([`pruebas.yml`](../.github/workflows/pruebas.yml)).
+Hay dos suites: las **unitarias**, en la JVM, y las **de interfaz**, que necesitan dispositivo. Las unitarias, el lint y ktlint corren en cada push y cada PR ([`pruebas.yml`](../.github/workflows/pruebas.yml)).
 
 ### Unitarias (JVM)
 
@@ -133,21 +136,21 @@ Hay dos suites: **208 pruebas unitarias** en la JVM y **11 pruebas de interfaz**
 | [`DineroTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/DineroTest.kt) | `parsea` con coma de millares contra coma decimal, formato europeo, paréntesis contables y basura; redondeo HALF_UP; los tres tramos de `formateaCompacto` con signo |
 | [`EnumsYNormalizacionTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EnumsYNormalizacionTest.kt) | `normalizaClave` (acentos, espacios, idempotencia) y el `desdeEtiqueta` de cada enum; el signo esperado de los seis tipos de movimiento |
 | [`ProyeccionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ProyeccionesTest.kt) | Las guardas de división entre cero de `tasaAhorro` y `avance`, y que el presupuesto use el absoluto del gasto |
-| [`ClavePinTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ClavePinTest.kt) | PIN correcto e incorrecto, hash o sal ausentes, Base64 corrupto, y que la derivación sea determinista por sal |
+| [`ClavePinTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ClavePinTest.kt) | PIN correcto e incorrecto, hash o sal ausentes, Base64 corrupto, que la derivación sea determinista por sal, y el sello: una huella vieja se reconoce como pendiente de migrar y un sello que falla cuenta como PIN incorrecto |
 | [`RevisaCalidadTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/RevisaCalidadTest.kt) | Los nueve detectores, uno por prueba, más el libro sano que no debe reportar nada. Afirma sobre los **datos** del hallazgo (cuentas citadas, periodos, importe), no sobre su prosa |
 | [`ReparaDatosTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ReparaDatosTest.kt) | Las tres reparaciones automáticas, y sobre todo que **ninguna toque el importe** |
 | [`FinanzasRepositorioTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/FinanzasRepositorioTest.kt) | Los invariantes de la puerta única de escritura: una transferencia nace con sus dos patas y muere con las dos, el origen no puede ser el destino, la contraparte se deriva aunque le manden otra, y el plan de un compromiso avanza y se deshace sin perder el día del mes |
-| [`ControlBloqueoTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ControlBloqueoTest.kt) | Arrancar cerrado, la gracia del selector de archivos con reloj monótono, y el freno contra la fuerza bruta: escalada de la espera, tope y persistencia del contador |
+| [`ControlBloqueoTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ControlBloqueoTest.kt) | Arrancar cerrado, la gracia del selector de archivos con reloj monótono, el freno contra la fuerza bruta —escalada de la espera, tope y persistencia del contador— e `intentaPin`: en espera no se comprueba ni el PIN correcto, una huella vieja se guarda sellada al acertar, y una sellada no coincide con otro sello |
 | [`RecordatoriosTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/RecordatoriosTest.kt) | Qué avisa y qué no: la ventana, lo vencido primero, planes apagados o ya terminados, y la fecha formateada para una persona. También cuándo se programa la alarma: la hora en punto, la madrugada, el fin de mes, una hora movida por el usuario y una imposible guardada en disco |
 | [`ImportadorExcelTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ImportadorExcelTest.kt) | Round trip exportar→importar, sinónimos de encabezado, renglones incompletos, emparejado de transferencias e inferencia de tipo de cuenta |
 | [`ImportadorHojasTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ImportadorHojasTest.kt) | El regreso de Diccionarios, Presupuesto y Compromisos: naturaleza declarada, jerarquía de categorías, metas por mes, compromisos reconstruidos desde el próximo pago y el libro sin hoja de movimientos |
 | [`ExcelRoundTripTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ExcelRoundTripTest.kt) | Serial de fechas, letras de columna, centavos sin error acumulado, escritura y relectura del libro en ambos esquemas, escapado de XML, exportación parcial y libro vacío |
 | [`ExportadorBordesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ExportadorBordesTest.kt) | Compromisos con datos, catálogos incompletos, nombres que obligan a entrecomillar, y tres años de movimientos diarios |
-| [`XlsxLectorSeguridadTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/XlsxLectorSeguridadTest.kt) | Que el lector rechace un `DOCTYPE` —la bomba de entidades— y respete el tope de tamaño |
+| [`XlsxLectorSeguridadTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/XlsxLectorSeguridadTest.kt) | Que el lector rechace un `DOCTYPE` —la bomba de entidades—, respete el tope de tamaño, y no se deje inflar por índices: filas y columnas fuera de los límites de Excel, referencias que desbordan y el presupuesto de celdas |
 | [`EsquemaDeBaseTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EsquemaDeBaseTest.kt) | La guardia de la base: cada versión con su json exportado y la cadena de migraciones sin huecos. Ver [modelo de datos](modelo-de-datos.md#migraciones) |
 | [`RespaldosTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/RespaldosTest.kt) | Cuándo toca recordar un respaldo: la semana desde el último, el ancla cuando no hay ninguno, el reloj movido hacia atrás y qué dice el aviso. Ver [seguridad](seguridad.md#el-recordatorio) |
 | [`PreferenciasHeredadasTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/PreferenciasHeredadasTest.kt) | Actualizar por encima de una versión anterior: unas preferencias escritas por la 1.0.0 se leen sin cerrar la app, y una clave con el tipo equivocado se trata como ausente. Ver [modelo de datos](modelo-de-datos.md#las-preferencias-también-son-datos-guardados) |
-| [`ActualizacionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ActualizacionesTest.kt) | El aviso de versión nueva sin red: comparación semántica (`1.10.0` es posterior a `1.9.0`), el `version.json` con sus aristas, el salto de redirección que solo se sigue hacia `https`, cuándo toca preguntar y que un día sin respuesta no gaste el turno |
+| [`ActualizacionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ActualizacionesTest.kt) | El aviso de versión nueva sin red: comparación semántica (`1.10.0` es posterior a `1.9.0`), el `version.json` con sus aristas, el salto de redirección que solo se sigue hacia `https` y hacia el sitio, los enlaces que solo pueden ir a las releases del repositorio o al sitio (con `..`, `%2e`, usuario y puerto rechazados), cuándo toca preguntar y que un día sin respuesta no gaste el turno |
 
 Las pruebas de Excel escriben libros reales en `app/build/pruebas/`, útiles para abrirlos a mano y comprobar el resultado. El reporte HTML queda en `app/build/reports/tests/`.
 
@@ -164,10 +167,11 @@ Las claves foráneas están activas, así que un movimiento necesita una cuenta 
 
 ### Lo que no necesita base
 
-`ControlBloqueoTest` y `RecordatoriosTest` corren sin Robolectric y sin DataStore, porque las clases que prueban reciben lo que usan en vez de un repositorio entero: `ControlBloqueo` toma un `Flow<Ajustes>`, la función que guarda los fallos y un reloj; `Recordatorios.porVencer` es una función pura sobre fechas.
+`ControlBloqueoTest` y `RecordatoriosTest` corren sin Robolectric y sin DataStore, porque las clases que prueban reciben lo que usan en vez de un repositorio entero: `ControlBloqueo` toma un `Flow<Ajustes>`, la función que guarda los fallos, el sello del PIN, la que guarda la huella migrada y un reloj; `Recordatorios.porVencer` es una función pura sobre fechas.
 
 Dos trampas si tocas `ControlBloqueoTest`:
 
+- El sello de verdad es `LlaveDelPin`, del Keystore, que no existe en la JVM. La prueba pasa un HMAC con llave fija; lo que se comprueba con el Keystore real queda para el dispositivo.
 - El control colecciona las preferencias **para siempre**, así que su scope no puede ser el de `runTest`: la prueba esperaría por siempre a ese hijo. Va en un `CoroutineScope` propio que se cancela en `@After`.
 - Ese scope usa `UnconfinedTestDispatcher`, así el `collect` corre al construirse y cada prueba arranca con las preferencias ya leídas. La prueba de "arranca bloqueado" es la excepción: recibe un flujo que todavía no emite, porque es justo el instante que quiere retratar.
 
@@ -183,6 +187,9 @@ Requieren un emulador o teléfono con **API 26 o superior**; no corren en la JVM
 |---|---|
 | [`ComponentesComunesTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/ComponentesComunesTest.kt) | Los componentes de `ui/components` montados solos, sin actividad ni base: `TextoDinero`, `TarjetaCifra`, `TarjetaValor`, `EstadoVacio`, `SeccionTitulo` |
 | [`NavegacionTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/NavegacionTest.kt) | Arranque sobre la app real, las pestañas de `Destino`, ir y volver entre ellas, y que el botón de Capturar retire la barra de abajo |
+| [`CandadoPinTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/CandadoPinTest.kt) | El candado por PIN en pantalla con el Keystore de verdad: el PIN correcto abre, el incorrecto avisa y cuenta, con fallos guardados hay que esperar aunque el PIN sea el bueno, y el diálogo de *Ajustes* respeta el mismo freno. Cada prueba arma su propio `ControlBloqueo` con un reloj que no avanza solo |
+| [`LlaveDelPinTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/LlaveDelPinTest.kt) | El sello del PIN con el Keystore: determinista en el mismo teléfono, y una huella sellada que no coincide fuera de él |
+| [`ExportarImportarTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/ExportarImportarTest.kt) | Exportar e importar por el `ContentResolver`, sobre bases en memoria: el round trip sin perder centavos, y que sobrescribir un respaldo grande con uno chico lo trunque |
 
 Cinco cosas que hay que saber antes de escribir más:
 
@@ -238,10 +245,10 @@ Siete flujos, todos con **JDK 21**, en [`.github/workflows/`](../.github/workflo
 
 | Flujo | Cuándo | Qué corre |
 |---|---|---|
-| `pruebas.yml` | push a `main` y cada PR | `testDebugUnitTest`, `lintDebug`, `assembleDebugAndroidTest`, `assembleRelease` y el build del sitio |
+| `pruebas.yml` | push a `main` y cada PR | `testDebugUnitTest`, `lintDebug`, `ktlintCheck`, `assembleDebugAndroidTest`, `assembleRelease`, y `npm audit` y el build del sitio |
 | `pruebas-instrumentadas.yml` | lunes, y a mano | La suite de interfaz sobre un emulador |
 | `actualizacion.yml` | al etiquetar, lunes, y a mano | Instala la versión nueva sobre la anterior y comprueba que abre |
-| `publicacion.yml` | tag `vX.Y.Z` | Comprueba la etiqueta contra el CHANGELOG, invoca `pruebas.yml`, firma y publica el APK |
+| `publicacion.yml` | tag `vX.Y.Z` | Comprueba la etiqueta contra el CHANGELOG, invoca `pruebas.yml`, firma y publica el APK con su SBOM |
 | `sitio.yml` | `web/**`, `CHANGELOG.md`, o al terminar una publicación | Construye el sitio y lo publica en GitHub Pages |
 | `codeql.yml` | push a `main`, cada PR y los lunes | Análisis estático de seguridad del código Kotlin |
 | `dependencias.yml` | push a `main` que toque Gradle, y a mano | Envía a GitHub el grafo real de dependencias de Gradle, para que lleguen sus alertas |
@@ -255,7 +262,7 @@ Cuando CI falla, el reporte HTML de pruebas y el de lint quedan como artefacto d
 Lo mismo que corre allá corre aquí:
 
 ```bash
-./gradlew testDebugUnitTest lintDebug assembleDebugAndroidTest assembleRelease
+./gradlew testDebugUnitTest lintDebug ktlintCheck assembleDebugAndroidTest assembleRelease
 ```
 
 El proceso completo de publicar una versión está en [publicación](publicacion.md).
@@ -278,6 +285,7 @@ npm --prefix web run build
 - **Los comentarios explican el porqué, no el qué.** Si una decisión tiene una alternativa obvia que se descartó, el comentario dice por qué se descartó.
 - **Sin acentos en los comentarios y literales del código** (la documentación de `docs/` y el sitio de `web/` sí los usan).
 - **`.editorconfig` fija el estilo**: LF, UTF-8, cuatro espacios, 100 columnas en Kotlin y sin imports con comodín.
+- **ktlint lo vigila** con el estilo de IntelliJ (`ktlint_code_style = intellij_idea`): sangría, orden de imports, espacios y largo de línea. Las reglas que piden otro acomodo de líneas —argumentos uno por renglón, llaves en todo `if`— están apagadas en `.editorconfig` con su motivo, porque el código usa otro de forma pareja. Lo que ya había al agregarlo, casi todo líneas de más de 100 columnas, vive en [`app/ktlint-baseline.xml`](../app/ktlint-baseline.xml): CI solo falla con infracciones nuevas. El baseline se encoge arreglando y regenerándolo con `./gradlew :app:ktlintGenerateBaseline`; regenerarlo para tapar una infracción nueva es hacer trampa. Como guarda líneas y columnas, mover código en un archivo con entradas puede hacer que reaparezcan: se arreglan en ese momento, que para eso está el archivo abierto.
 - **Una pantalla por archivo**, con su ViewModel arriba y los composables privados abajo.
 - **La escritura pasa por el repositorio.** Las pantallas no tocan los DAO.
 - **Los importes son centavos en `Long`**, nunca decimales flotantes.

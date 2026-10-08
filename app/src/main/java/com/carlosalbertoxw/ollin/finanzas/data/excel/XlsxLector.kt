@@ -1,6 +1,7 @@
 package com.carlosalbertoxw.ollin.finanzas.data.excel
 
 import org.xml.sax.Attributes
+import org.xml.sax.SAXException
 import org.xml.sax.helpers.DefaultHandler
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -53,10 +54,38 @@ object XlsxLector {
      */
     private const val LIMITE_PARTES = 2_000
 
+    /** Los topes de una hoja de Excel: 1 048 576 filas por 16 384 columnas (XFD). */
+    internal const val MAX_FILAS = 1_048_576
+    internal const val MAX_COLUMNAS = 16_384
+
+    /**
+     * Celdas que se pueden materializar entre todas las hojas, contando las
+     * vacias con que se rellenan los huecos.
+     *
+     * [LIMITE_BYTES] acota lo que se lee, no lo que sale de ahi: una sola
+     * `<row r="2000000000">` o una celda en la columna XFD son unos pocos bytes
+     * que obligan a rellenar millones de posiciones, y el `OutOfMemoryError`
+     * cierra la app en vez de rechazar el archivo. Un libro de Ollin con
+     * cincuenta mil movimientos ronda las 750 mil; esto es holgura de sobra.
+     */
+    internal const val LIMITE_CELDAS = 3_000_000L
+
+    /** Una sola instancia para todos los huecos: rellenar no debe costar un objeto por celda. */
+    private val VACIA = CeldaLeida()
+
     class ArchivoInvalido(mensaje: String, causa: Throwable? = null) : Exception(mensaje, causa)
+
+    /** Lo que queda del [LIMITE_CELDAS] mientras se leen las hojas de un libro. */
+    private class Presupuesto(private var restantes: Long) {
+        fun gasta(celdas: Long) {
+            restantes -= celdas
+            if (restantes < 0) throw demasiadoGrande()
+        }
+    }
 
     fun lee(entrada: InputStream): LibroLeido {
         val partes = descomprime(entrada)
+        val presupuesto = Presupuesto(LIMITE_CELDAS)
 
         if (!partes.containsKey("xl/workbook.xml")) {
             throw ArchivoInvalido("El archivo no parece un libro de Excel (.xlsx). Si es .xls antiguo, guardalo primero como .xlsx.")
@@ -70,7 +99,7 @@ object XlsxLector {
             val destino = relaciones[rid] ?: return@mapNotNull null
             val ruta = normalizaRuta(destino)
             val bytes = partes[ruta] ?: return@mapNotNull null
-            HojaLeida(nombre, leeFilas(bytes, cadenas))
+            HojaLeida(nombre, leeFilas(bytes, cadenas, presupuesto))
         }
 
         if (hojas.isEmpty()) throw ArchivoInvalido("El libro no tiene hojas legibles.")
@@ -139,6 +168,12 @@ object XlsxLector {
     private fun demasiadoGrande() =
         ArchivoInvalido("El archivo es demasiado grande para procesarse en el telefono.")
 
+    private fun fueraDeLaHoja() =
+        ArchivoInvalido(
+            "El archivo tiene celdas fuera de los limites de una hoja de calculo. " +
+                "Vuelve a guardarlo como .xlsx desde tu hoja de calculo."
+        )
+
     private fun normalizaRuta(destino: String): String {
         val limpio = destino.removePrefix("/")
         return if (limpio.startsWith("xl/")) limpio else "xl/$limpio"
@@ -177,8 +212,21 @@ object XlsxLector {
                 runCatching { setFeature(nombre, valor) }
             }
         }
-        factory.newSAXParser().parse(ByteArrayInputStream(bytes), handler)
+        try {
+            factory.newSAXParser().parse(ByteArrayInputStream(bytes), handler)
+        } catch (e: Exception) {
+            // Un rechazo lanzado desde el handler puede llegar envuelto en una
+            // SAXException, segun el parser. Se desenvuelve para que el mensaje
+            // legible llegue a la persona y no el de la envoltura.
+            throw rechazoDentroDe(e) ?: e
+        }
     }
+
+    private fun rechazoDentroDe(e: Throwable): ArchivoInvalido? =
+        generateSequence<Throwable>(e) { (it as? SAXException)?.exception ?: it.cause }
+            .take(8)
+            .filterIsInstance<ArchivoInvalido>()
+            .firstOrNull()
 
     /**
      * Recorre el prologo —lo que va antes del elemento raiz— y aborta si
@@ -283,7 +331,11 @@ object XlsxLector {
         return lista
     }
 
-    private fun leeFilas(bytes: ByteArray, cadenas: List<String>): List<List<CeldaLeida>> {
+    private fun leeFilas(
+        bytes: ByteArray,
+        cadenas: List<String>,
+        presupuesto: Presupuesto
+    ): List<List<CeldaLeida>> {
         val filas = mutableListOf<List<CeldaLeida>>()
         var filaActual = HashMap<Int, CeldaLeida>()
         var numeroFilaActual = 0
@@ -297,9 +349,13 @@ object XlsxLector {
 
         fun cierraFila() {
             if (numeroFilaActual <= 0) return
-            // Rellena los huecos que el archivo omite y las filas salteadas.
-            while (filas.size < numeroFilaActual - 1) filas.add(emptyList())
-            val fila = (1..maxColFila).map { filaActual[it] ?: CeldaLeida() }
+            // Rellena los huecos que el archivo omite y las filas salteadas. Se
+            // cobra antes de rellenar: el presupuesto existe justo para que una
+            // fila o una columna lejanas no se materialicen.
+            val huecos = (numeroFilaActual - 1 - filas.size).coerceAtLeast(0)
+            presupuesto.gasta(huecos.toLong() + maxColFila)
+            repeat(huecos) { filas.add(emptyList()) }
+            val fila = List(maxColFila) { filaActual[it + 1] ?: VACIA }
             if (filas.size == numeroFilaActual - 1) filas.add(fila) else filas[numeroFilaActual - 1] = fila
         }
 
@@ -310,11 +366,13 @@ object XlsxLector {
                         filaActual = HashMap()
                         maxColFila = 0
                         numeroFilaActual = attrs?.getValue("r")?.toIntOrNull() ?: (filas.size + 1)
+                        if (numeroFilaActual > MAX_FILAS) throw fueraDeLaHoja()
                     }
                     "c" -> {
                         val ref = attrs?.getValue("r")
                         columnaCelda = if (ref != null) Ooxml.indiceColumna(Ooxml.partesReferencia(ref).first)
                         else columnaCelda + 1
+                        if (columnaCelda > MAX_COLUMNAS) throw fueraDeLaHoja()
                         if (columnaCelda > maxColFila) maxColFila = columnaCelda
                         tipoCelda = attrs?.getValue("t")
                         valor.setLength(0)

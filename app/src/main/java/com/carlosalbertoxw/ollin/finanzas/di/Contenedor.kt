@@ -10,6 +10,7 @@ import com.carlosalbertoxw.ollin.finanzas.data.notify.AvisoDeRespaldo
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ControlBloqueo
+import com.carlosalbertoxw.ollin.finanzas.data.seguridad.LlaveDelPin
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.ReparaDatos
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.RevisaCalidad
 
@@ -48,7 +49,12 @@ class Contenedor(contexto: Context) {
     }
 
     val controlBloqueo: ControlBloqueo by lazy {
-        ControlBloqueo(ajustes.ajustes, ajustes::guardaFallosDePin)
+        ControlBloqueo(
+            preferencias = ajustes.ajustes,
+            guardaFallos = ajustes::guardaFallosDePin,
+            sello = LlaveDelPin,
+            guardaHuella = ajustes::guardaHuellaPin
+        )
     }
 
     val avisoDeRespaldo: AvisoDeRespaldo by lazy { AvisoDeRespaldo() }

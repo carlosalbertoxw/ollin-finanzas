@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 
 /** Lo que el sitio dice de la ultima version publicada. */
@@ -122,12 +123,12 @@ class ComprobadorActualizaciones(
             val version = Version.de(objeto.optString("version").takeIf { it.isNotBlank() })
                 ?: return null
 
-            // Solo https, y solo si viene. Un enlace en claro que llegara desde
-            // fuera acabaria abriendo el navegador en una descarga manipulable
-            // por cualquiera que este en medio de la red.
-            val url = objeto.optString("apk")
-                .takeIf { it.startsWith("https://") }
-                ?: objeto.optString("sitio").takeIf { it.startsWith("https://") }
+            // Solo https, y solo hacia las releases o el sitio de este
+            // repositorio. Un enlace en claro acabaria en una descarga que
+            // cualquiera en medio de la red puede cambiar, y uno a otro host,
+            // en la de quien se quedara con el dominio. Ver [DestinosPermitidos].
+            val url = DestinosPermitidos.apk(objeto.optString("apk"))
+                ?: DestinosPermitidos.sitio(objeto.optString("sitio"))
                 ?: return null
 
             return VersionPublicada(
@@ -236,11 +237,71 @@ private fun pide(url: String): Respuesta {
  * mano: un 301 desde https que apunte a http dejaria la respuesta viajando en
  * claro, y quien este en medio de la red podria anunciar la version que
  * quisiera con el enlace de descarga que quisiera.
+ *
+ * **Y solo hacia el sitio.** Un https cualquiera tampoco basta: si el dominio
+ * propio se perdiera, Pages seguiria redirigiendo a el y quien lo comprara
+ * contestaria el `version.json`. Ver [DestinosPermitidos].
  */
 internal fun siguienteSalto(codigo: Int, destino: String?): String? {
     if (codigo !in 300..399) return null
-    val limpio = destino?.trim().orEmpty()
-    return limpio.takeIf { it.startsWith("https://", ignoreCase = true) }
+    return DestinosPermitidos.sitio(destino?.trim())
+}
+
+/**
+ * Las unicas direcciones a las que el aviso de version nueva puede mandar.
+ *
+ * El `version.json` llega de la red, y de el sale un boton que alguien va a
+ * tocar convencido de que lo puso la app. Exigir https protege el viaje, no el
+ * destino: si `carlosalbertoxw.com` vence o le secuestran el DNS, GitHub Pages
+ * sigue redirigiendo ahi, y el nuevo dueno anunciaria en cada telefono una
+ * "version nueva" con su propio APK. Android no lo instalaria encima por la
+ * firma distinta, pero quien desinstale para arreglarlo ya cayo.
+ *
+ * Por eso el APK solo puede venir de las releases de este repositorio, y el
+ * sitio solo puede ser uno de sus dos domicilios. Se compara la direccion ya
+ * desarmada --esquema, host exacto, sin usuario ni puerto, ruta bajo el
+ * prefijo-- y no el texto: `startsWith` dejaria pasar un `..` que el
+ * navegador resuelve hacia otro repositorio de GitHub.
+ */
+internal object DestinosPermitidos {
+
+    private class Destino(val host: String, val prefijo: String)
+
+    /** Releases de este repositorio. Nada fuera de ahi es un APK de Ollin Finanzas. */
+    private val APK = listOf(
+        Destino("github.com", "/carlosalbertoxw/ollin-finanzas/releases/")
+    )
+
+    /**
+     * La direccion de github.io, que va compilada en cada APK, y el dominio
+     * propio al que hoy redirige.
+     */
+    private val SITIO = listOf(
+        Destino("carlosalbertoxw.github.io", "/ollin-finanzas/"),
+        Destino("carlosalbertoxw.com", "/ollin-finanzas/")
+    )
+
+    /**
+     * Letras, cifras y `. _ - /`. Basta para cualquier ruta del sitio y de las
+     * releases, y deja fuera los `%2e` que el navegador decodifica a `.` y las
+     * barras invertidas que algunos tratan como `/`.
+     */
+    private val RUTA_SEGURA = Regex("""[A-Za-z0-9._/\-]*""")
+
+    fun apk(url: String?): String? = url?.takeIf { cabeEn(it, APK) }
+
+    fun sitio(url: String?): String? = url?.takeIf { cabeEn(it, SITIO) }
+
+    private fun cabeEn(url: String, destinos: List<Destino>): Boolean {
+        val uri = runCatching { URI(url) }.getOrNull() ?: return false
+        if (!uri.scheme.equals("https", ignoreCase = true)) return false
+        if (uri.rawUserInfo != null || uri.port != -1) return false
+        if (uri.rawQuery != null || uri.rawFragment != null) return false
+        val ruta = uri.rawPath ?: return false
+        if (!RUTA_SEGURA.matches(ruta) || ".." in ruta) return false
+        val host = uri.host?.lowercase() ?: return false
+        return destinos.any { host == it.host && ruta.startsWith(it.prefijo) }
+    }
 }
 
 /** 64 K caracteres. El archivo real ronda los 400 bytes; esto es holgura, no expectativa. */

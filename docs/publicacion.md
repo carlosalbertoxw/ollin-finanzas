@@ -16,7 +16,7 @@ Ese último despliegue se lanza sobre `main` con `gh workflow run` y corre apart
 No hay ningún número de versión escrito a mano en el proyecto. [`app/build.gradle.kts`](../app/build.gradle.kts) lee el primer encabezado `## [x.y.z]` de [`CHANGELOG.md`](../CHANGELOG.md) y de ahí saca las dos cosas:
 
 - **`versionName`** es ese número tal cual.
-- **`versionCode`** se deriva con tres huecos de dos cifras: `1.2.3` → `10203`. Crece solo, ordena igual que el semver y nunca hay que acordarse de subirlo aparte. Da margen hasta 99 versiones menores y 99 parches.
+- **`versionCode`** se deriva con tres huecos de dos cifras: `1.2.3` → `10203`. Crece solo, ordena igual que el semver y nunca hay que acordarse de subirlo aparte. Da margen hasta 99 versiones menores y 99 parches, y el flujo de publicación rechaza una etiqueta que pase de ahí: una `1.100.0` daría el mismo código que la `2.0.0`.
 
 Un número escrito a mano en el build se olvida: se publica la 1.2.0 con el build todavía en 1.1.0, y quien instala el APK ve una versión que no corresponde a las notas que leyó. Con el historial como única fuente, subir la versión y explicar por qué son el mismo gesto.
 
@@ -31,7 +31,7 @@ Un número escrito a mano en el build se olvida: se publica la 1.2.0 con el buil
 
 ## Los secretos
 
-El flujo necesita cuatro, en *Settings → Secrets and variables → Actions*. El job que firma declara `environment: release`, así que pueden ser secretos del repositorio o del environment `release`, y conviene lo segundo:
+El flujo necesita cuatro, y van como secretos del environment `release`, **no** del repositorio. El job que firma declara `environment: release`; si los secretos siguieran en el repositorio, esa línea no protegería nada, porque cualquier flujo de cualquier rama podría leerlos:
 
 1. En *Settings → Environments → release*, agrega los cuatro como secretos del environment.
 2. En *Deployment branches and tags*, limita el environment a los tags `v*`.
@@ -54,7 +54,7 @@ base64 -w 0 ollin-finanzas-release.jks > almacen.b64
 
 Se pega el contenido de `almacen.b64` y **se borra el archivo**. En el runner se restaura en `$RUNNER_TEMP`, fuera del árbol de trabajo, para que no pueda acabar dentro de un artefacto por descuido.
 
-Los nombres llevan la app completa y no un `OLLIN_` a secas: Ollin Finanzas se publica aparte y con su propio almacén, y unos nombres genéricos harían que cada app tomara la llave de la otra sin avisar.
+Los nombres llevan la app completa y no un `OLLIN_` a secas: Ollin Actividades se publica aparte y con su propio almacén, y unos nombres genéricos harían que cada app tomara la llave de la otra sin avisar.
 
 ### Sin secretos no se publica
 
@@ -72,7 +72,9 @@ La misma huella se agrega al final de las notas de la release, para que quien de
 
 ## Qué se publica
 
-Solo el **APK** y un `checksums.txt` con su SHA-256.
+El **APK**, su **SBOM** y un `checksums.txt` con el SHA-256 de los dos.
+
+El SBOM (`ollin-finanzas-x.y.z.cdx.json`, en CycloneDX) es el inventario de lo que viaja dentro de ese APK: sale de `./gradlew :app:cyclonedxDirectBom` en la misma compilación y solo mira `releaseRuntimeClasspath`, así que no trae las bibliotecas de pruebas ni de Gradle. Sirve para el día que aparezca una alerta sobre una biblioteca: dice qué versión exacta llevaba cada release sin tener que reconstruirla.
 
 El `.aab` se compila —un fallo de bundling es un fallo igual y conviene verlo— pero no se adjunta: no se instala en ningún teléfono, solo sirve para subirlo a Play, y una descarga que no hace lo que promete confunde a quien llega de fuera. Si algún día hace falta, `./gradlew bundleRelease`.
 
@@ -114,7 +116,25 @@ Quien tenga el `.jks` y sus contraseñas puede publicar una «actualización» q
 
 1. Borra en el acto los cuatro secretos de GitHub y revisa en *Actions* qué corrió en los últimos días.
 2. Avisa en el sitio y en el README: que nadie instale nada que no venga de las releases de este repositorio, y que comparen la huella.
-3. La salida de fondo es una llave nueva, y con ella otro `applicationId`: para Android sería otra app. La gente tendría que exportar su libro, instalar la nueva e importarlo. Escríbelo como versión con su propia entrada en el CHANGELOG, explicando el porqué.
+3. Rota la llave con el linaje de la firma v3 (abajo). Es la salida menos dolorosa, pero no es completa: solo la entienden Android 9 y posteriores, y la llave vieja sigue sirviendo contra los teléfonos que no hayan instalado la versión rotada.
+4. Si la rotación no basta —teléfonos con Android 8, o una filtración que ya se explotó—, la salida de fondo es una llave nueva sin linaje, y con ella otro `applicationId`: para Android sería otra app. La gente tendría que exportar su libro, instalar la nueva e importarlo. Escríbelo como versión con su propia entrada en el CHANGELOG, explicando el porqué.
+
+#### Rotar la llave
+
+La compilación ya firma con v3 (`enableV3Signing`), que admite un *linaje*: la llave vieja firma una prueba de que la nueva la sucede, y Android 9 (API 28) en adelante acepta como actualización un APK firmado con la nueva. Rotar exige **tener** la llave vieja; si se perdió, no hay linaje posible.
+
+```bash
+apksigner rotate --out linaje.bin \
+  --old-signer --ks ollin-finanzas-release.jks --ks-key-alias ollin-finanzas --set-rollback false \
+  --new-signer --ks ollin-finanzas-release-2.jks --ks-key-alias ollin-finanzas
+apksigner lineage --in linaje.bin --print-certs
+```
+
+Las banderas de capacidad (`--set-rollback`, `--set-installed-data`…) se aplican al firmante que las precede. Quitarle a la llave vieja el *rollback* es lo que se quiere si se filtró, para que no pueda volver a firmar actualizaciones que se acepten encima de la rotada; `lineage --print-certs` muestra con qué capacidades quedó cada una.
+
+Después, la versión siguiente se firma con la llave nueva y el linaje (`apksigner sign --lineage linaje.bin …` sobre el APK sin firmar; el flujo de publicación tendría que cambiar para hacerlo), y se actualizan la huella del README y los secretos del environment. El `minSdk` es 26, así que los teléfonos con Android 8 no entienden el linaje y se quedarían sin actualizaciones: para ellos solo queda el camino del punto 4.
+
+Ensáyalo con un almacén de prueba antes de necesitarlo de verdad: el día que haga falta no es el día para aprender las banderas de `apksigner`.
 
 ### La llave de firma, perdida
 
@@ -124,7 +144,7 @@ Sin el `.jks` no se puede volver a publicar una actualización de esta app. Es e
 
 El `applicationId` y el `namespace` son `com.carlosalbertoxw.ollin.finanzas`, y el código fuente vive bajo ese mismo paquete.
 
-Lleva el dominio de quien publica y no un `mx.ollin` a secas: `mx.ollin` no está respaldado por ningún dominio registrado, y el `applicationId` es un identificador global —quien registre `ollin.mx` antes podría reclamarlo—. `com.carlosalbertoxw` sí es un espacio propio, y deja sitio para que Ollin Finanzas cuelgue del mismo tronco sin colisionar.
+Lleva el dominio de quien publica y no un `mx.ollin` a secas: `mx.ollin` no está respaldado por ningún dominio registrado, y el `applicationId` es un identificador global —quien registre `ollin.mx` antes podría reclamarlo—. `com.carlosalbertoxw` sí es un espacio propio, y deja sitio para que Ollin Actividades cuelgue del mismo tronco sin colisionar.
 
 **Ya publicada, esta cadena no se puede cambiar.** Para Android una app con otro `applicationId` es otra app: no actualiza a la instalada, sino que se instala al lado, y el libro de la primera se queda donde estaba, cifrada con una llave del Keystore que la nueva no puede leer.
 
@@ -144,7 +164,7 @@ Una sola vez, en la raíz del proyecto:
 
 Los 10 000 días (unos 27 años) son la recomendación de Google: una llave vencida deja de servir para publicar actualizaciones.
 
-**El nombre lleva la app completa, no solo `ollin`.** Ollin Finanzas y Ollin Finanzas son dos aplicaciones distintas, cada una con su `applicationId` y su propio almacén. Un archivo `ollin-release.jks` no dice a cuál pertenece, y confundirlos al firmar no se nota hasta que la actualización se niega a instalarse. **Nunca firmes las dos apps con el mismo almacén:** una llave comprometida se llevaría las dos por delante, y no hay forma de rotarla sin obligar a reinstalar.
+**El nombre lleva la app completa, no solo `ollin`.** Ollin Finanzas y Ollin Actividades son dos aplicaciones distintas, cada una con su `applicationId` y su propio almacén. Un archivo `ollin-release.jks` no dice a cuál pertenece, y confundirlos al firmar no se nota hasta que la actualización se niega a instalarse. **Nunca firmes las dos apps con el mismo almacén:** una llave comprometida se llevaría las dos por delante, y rotarla deja fuera a los teléfonos con Android 8 (ver [rotar la llave](#rotar-la-llave)).
 
 ## Publicar a mano
 

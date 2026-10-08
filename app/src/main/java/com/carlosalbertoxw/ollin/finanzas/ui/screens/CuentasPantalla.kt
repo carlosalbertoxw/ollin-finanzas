@@ -43,10 +43,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
 import com.carlosalbertoxw.ollin.finanzas.data.db.SaldoCuenta
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
@@ -57,9 +53,12 @@ import com.carlosalbertoxw.ollin.finanzas.ui.components.SeccionTitulo
 import com.carlosalbertoxw.ollin.finanzas.ui.components.TextoDinero
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class CuentasVm(private val repo: FinanzasRepositorio) : ViewModel() {
-
 
     val saldos: StateFlow<List<SaldoCuenta>> = repo.observaSaldos()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

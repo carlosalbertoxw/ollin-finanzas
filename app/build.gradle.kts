@@ -1,3 +1,5 @@
+import org.cyclonedx.gradle.CyclonedxDirectTask
+import org.cyclonedx.model.Component
 import java.util.Properties
 
 plugins {
@@ -6,6 +8,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.cyclonedx)
+    alias(libs.plugins.ktlint)
 }
 
 /**
@@ -188,6 +192,26 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
+/*
+ * El inventario de lo que viaja dentro del APK (SBOM, en CycloneDX).
+ *
+ * Solo `releaseRuntimeClasspath`: lo que compila, prueba o depura no llega al
+ * telefono, y meterlo en el inventario esconderia lo que importa entre cientos
+ * de bibliotecas de Gradle y de pruebas. El flujo de publicacion lo adjunta a
+ * cada release, para que ante una alerta futura --SQLite dentro de SQLCipher,
+ * algo que arrastre AndroidX-- se pueda saber que version exacta llevaba cada
+ * APK sin reconstruirlo.
+ */
+tasks.named<CyclonedxDirectTask>("cyclonedxDirectBom") {
+    includeConfigs = listOf("releaseRuntimeClasspath")
+    projectType = Component.Type.APPLICATION
+    componentGroup = "com.carlosalbertoxw"
+    componentName = "ollin-finanzas"
+    componentVersion = nombreDeVersion
+    jsonOutput = layout.buildDirectory.file("reports/sbom/ollin-finanzas.cdx.json")
+    xmlOutput.unsetConvention()
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -228,4 +252,18 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+}
+
+/*
+ * ktlint: sangria, imports, espacios y largo de linea. Las reglas que piden
+ * otro acomodo de lineas estan apagadas en .editorconfig, con su motivo.
+ *
+ * El baseline congela lo que ya habia cuando se agrego --casi todo, lineas de
+ * mas de 100 caracteres--: CI falla solo con infracciones nuevas. Se encoge
+ * arreglando y regenerandolo con `./gradlew ktlintGenerateBaseline`, nunca
+ * regenerandolo para tapar una nueva. Ver docs/desarrollo.md.
+ */
+ktlint {
+    version.set(libs.versions.ktlint)
+    baseline.set(file("ktlint-baseline.xml"))
 }

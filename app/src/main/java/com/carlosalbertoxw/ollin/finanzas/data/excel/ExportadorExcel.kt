@@ -134,14 +134,14 @@ class ExportadorExcel(
         val lista = mutableListOf<ValidacionLista>()
         val cuentas = datos.cuentas.size + 1
         lista += ValidacionLista(
-            "${colCuenta}2:${colCuenta}${fin}",
+            "${colCuenta}2:${colCuenta}$fin",
             Ooxml.refHoja("Diccionarios", "\$A\$2:\$A\$$cuentas")
         )
         if (esquema == EsquemaExportacion.EXTENDIDO) {
             // Solo las categorias hoja, que son las que se capturan.
             val cats = datos.categorias.count { it.padreId != null } + 1
             lista += ValidacionLista(
-                "${colGrupo}2:${colGrupo}${fin}",
+                "${colGrupo}2:${colGrupo}$fin",
                 Ooxml.refHoja("Diccionarios", "\$C\$2:\$C\$$cats")
             )
         }
@@ -149,7 +149,7 @@ class ExportadorExcel(
         // fuera del desplegable a cualquier tipo agregado despues.
         val tipos = TipoMovimiento.entries.size + 1
         lista += ValidacionLista(
-            "${colTipo}2:${colTipo}${fin}",
+            "${colTipo}2:${colTipo}$fin",
             Ooxml.refHoja("Diccionarios", "\$G\$2:\$G\$$tipos")
         )
         return lista
@@ -657,7 +657,6 @@ class ExportadorExcel(
             )
         )
     }
-
 
     // ------------------------------------------------------------- utiles
 

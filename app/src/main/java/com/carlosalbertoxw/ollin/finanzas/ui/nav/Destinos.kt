@@ -1,10 +1,10 @@
 package com.carlosalbertoxw.ollin.finanzas.ui.nav
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.PieChart
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**

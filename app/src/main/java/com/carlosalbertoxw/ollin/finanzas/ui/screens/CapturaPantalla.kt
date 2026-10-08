@@ -1,5 +1,6 @@
 package com.carlosalbertoxw.ollin.finanzas.ui.screens
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -47,13 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.data.db.Categoria
 import com.carlosalbertoxw.ollin.finanzas.data.db.Compromiso
 import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
@@ -69,6 +62,13 @@ import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCuenta
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoMovimiento
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -83,6 +83,7 @@ enum class NaturalezaCaptura(val etiqueta: String) {
     INGRESO("Ingreso"),
     PATRIMONIO("Patrimonio"),
     SALDO_INICIAL("Saldo inicial"),
+
     /** Revaluar o depreciar algo que ya tienes, sin que se mueva un peso. */
     AJUSTE("Ajuste de valor");
 
@@ -97,27 +98,30 @@ class CapturaVm(
     private val compromisoId: Long? = null
 ) : ViewModel() {
 
-
     var fecha by mutableStateOf(LocalDate.now())
     var importeTexto by mutableStateOf("")
     var naturaleza by mutableStateOf(NaturalezaCaptura.GASTO)
         private set
     var cuentaId by mutableStateOf<Long?>(null)
+
     /** Cuenta de Activo a la que entra una compra de patrimonio. */
     var cuentaActivoId by mutableStateOf<Long?>(null)
     var categoriaId by mutableStateOf<Long?>(null)
     var descripcion by mutableStateOf("")
     var medio by mutableStateOf(Medio.ELECTRONICO)
     var nota by mutableStateOf("")
+
     /** Un saldo inicial puede nacer en contra: una tarjeta que ya debia dinero. */
     var saldoEnContra by mutableStateOf(false)
     var cargado by mutableStateOf(movimientoId == null && compromisoId == null)
         private set
+
     /** Datos del compromiso que se paga, para el encabezado de la pantalla. */
     var compromisoPagado by mutableStateOf<Compromiso?>(null)
         private set
     var esTraspaso by mutableStateOf(false)
         private set
+
     /** Saldo inicial que ya tenia la cuenta elegida, para no duplicarlo sin querer. */
     var saldoInicialPrevio by mutableStateOf<Movimiento?>(null)
         private set

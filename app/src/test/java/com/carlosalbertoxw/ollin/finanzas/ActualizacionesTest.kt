@@ -88,7 +88,7 @@ class ActualizacionesTest {
         val publicada = ComprobadorActualizaciones.lee(JSON_1_1_0)
 
         assertEquals(Version(1, 1, 0), publicada?.version)
-        assertEquals("$SITIO" + "descarga.apk", publicada?.url)
+        assertEquals(APK, publicada?.url)
         assertEquals("2026-09-15", publicada?.publicadaEn)
     }
 
@@ -116,6 +116,48 @@ class ActualizacionesTest {
         )
     }
 
+    /**
+     * https no basta: si el dominio propio cambiara de manos, el que lo tenga
+     * contestaria el version.json. El APK solo sale de las releases de este
+     * repositorio y el sitio solo es uno de sus dos domicilios.
+     */
+    @Test
+    fun `un apk fuera de las releases del repositorio se cambia por el sitio`() {
+        val ajenos = listOf(
+            "https://ejemplo.invalido/ollin-finanzas.apk",
+            "https://github.com/otra-cuenta/ollin-finanzas/releases/download/v9.0.0/x.apk",
+            // `..` y su forma codificada: el navegador los resuelve hacia otro repositorio.
+            "https://github.com/carlosalbertoxw/ollin-finanzas/releases/../../../otra/x/releases/download/a.apk",
+            "https://github.com/carlosalbertoxw/ollin-finanzas/releases/%2e%2e/%2e%2e/otra/a.apk",
+            "https://github.com.ejemplo.invalido/carlosalbertoxw/ollin-finanzas/releases/a.apk",
+            "https://github.com@ejemplo.invalido/carlosalbertoxw/ollin-finanzas/releases/a.apk",
+            "https://github.com:8443/carlosalbertoxw/ollin-finanzas/releases/a.apk"
+        )
+        ajenos.forEach { apk ->
+            val publicada = ComprobadorActualizaciones.lee(
+                """{"version":"1.1.0","apk":"$apk","sitio":"$SITIO"}"""
+            )
+            assertEquals("No debio aceptarse $apk", SITIO, publicada?.url)
+        }
+    }
+
+    @Test
+    fun `sin un destino conocido no hay aviso`() {
+        assertNull(
+            ComprobadorActualizaciones.lee(
+                """{"version":"1.1.0","apk":"https://ejemplo.invalido/x.apk","sitio":"https://ejemplo.invalido/"}"""
+            )
+        )
+    }
+
+    @Test
+    fun `los dos domicilios del sitio se aceptan`() {
+        listOf(SITIO, "https://carlosalbertoxw.com/ollin-finanzas/").forEach { sitio ->
+            val publicada = ComprobadorActualizaciones.lee("""{"version":"1.1.0","sitio":"$sitio"}""")
+            assertEquals(sitio, publicada?.url)
+        }
+    }
+
     @Test
     fun `un archivo roto o incompleto no interpreta nada`() {
         assertNull(ComprobadorActualizaciones.lee(""))
@@ -135,6 +177,20 @@ class ActualizacionesTest {
     @Test
     fun `un salto hacia http no se sigue`() {
         assertNull(siguienteSalto(301, "http://ejemplo.invalido/version.json"))
+    }
+
+    /** Es exactamente el salto que hace hoy Pages hacia el dominio propio. */
+    @Test
+    fun `el salto de github io al dominio propio se sigue`() {
+        val destino = "https://carlosalbertoxw.com/ollin-finanzas/version.json"
+        assertEquals(destino, siguienteSalto(301, destino))
+    }
+
+    /** Un dominio perdido seguiria recibiendo el salto; ahi ya no se va. */
+    @Test
+    fun `un salto https hacia otro host no se sigue`() {
+        assertNull(siguienteSalto(301, "https://ejemplo.invalido/ollin-finanzas/version.json"))
+        assertNull(siguienteSalto(302, "https://carlosalbertoxw.com/otra-cosa/version.json"))
     }
 
     @Test
@@ -226,12 +282,14 @@ class ActualizacionesTest {
 
     private companion object {
         const val SITIO = "https://carlosalbertoxw.github.io/ollin-finanzas/"
+        const val APK =
+            "https://github.com/carlosalbertoxw/ollin-finanzas/releases/download/v1.1.0/ollin-finanzas-1.1.0.apk"
 
         val JSON_1_1_0 = """
             {
               "version": "1.1.0",
               "publicada": "2026-09-15",
-              "apk": "${SITIO}descarga.apk",
+              "apk": "$APK",
               "sitio": "$SITIO",
               "notas": "Arregla lo que estorbaba."
             }

@@ -1,5 +1,6 @@
 package com.carlosalbertoxw.ollin.finanzas
 
+import com.carlosalbertoxw.ollin.finanzas.data.excel.Ooxml
 import com.carlosalbertoxw.ollin.finanzas.data.excel.XlsxLector
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -23,7 +24,10 @@ import java.util.zip.ZipOutputStream
 class XlsxLectorSeguridadTest {
 
     /** Libro minimo pero valido, con una hoja y una celda de texto. */
-    private fun libro(prologoDeHoja: String = ""): ByteArray {
+    private fun libro(
+        prologoDeHoja: String = "",
+        filas: String = """<row r="1"><c r="A1" t="inlineStr"><is><t>Hola</t></is></c></row>"""
+    ): ByteArray {
         val salida = ByteArrayOutputStream()
         ZipOutputStream(salida).use { zip ->
             fun parte(ruta: String, contenido: String) {
@@ -44,7 +48,7 @@ class XlsxLectorSeguridadTest {
             parte(
                 "xl/worksheets/sheet1.xml",
                 """<?xml version="1.0" encoding="UTF-8"?>$prologoDeHoja
-                   <worksheet><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Hola</t></is></c></row></sheetData></worksheet>"""
+                   <worksheet><sheetData>$filas</sheetData></worksheet>"""
             )
         }
         return salida.toByteArray()
@@ -115,6 +119,79 @@ class XlsxLectorSeguridadTest {
         } catch (e: XlsxLector.ArchivoInvalido) {
             assertTrue(e.message!!.contains("demasiado grande"))
         }
+    }
+
+    private fun rechaza(libro: ByteArray, motivo: String): XlsxLector.ArchivoInvalido {
+        try {
+            XlsxLector.lee(ByteArrayInputStream(libro))
+        } catch (e: XlsxLector.ArchivoInvalido) {
+            return e
+        }
+        fail(motivo)
+        error("inalcanzable")
+    }
+
+    /**
+     * Una fila con un numero enorme son unos pocos bytes, y antes obligaba a
+     * rellenar dos mil millones de filas vacias: `OutOfMemoryError` y la app
+     * cerrada en vez de un archivo rechazado.
+     */
+    @Test
+    fun `una fila mas alla del limite de Excel se rechaza`() {
+        val e = rechaza(
+            libro(filas = """<row r="2000000000"><c r="A2000000000"><v>1</v></c></row>"""),
+            "Una fila fuera de la hoja no debe leerse"
+        )
+        assertTrue(e.message!!.contains("fuera de los limites"))
+    }
+
+    /** XFD es la ultima columna de Excel; una mas alla ya no es una hoja real. */
+    @Test
+    fun `una columna mas alla de XFD se rechaza`() {
+        val e = rechaza(
+            libro(filas = """<row r="1"><c r="XFE1"><v>1</v></c></row>"""),
+            "Una columna fuera de la hoja no debe leerse"
+        )
+        assertTrue(e.message!!.contains("fuera de los limites"))
+    }
+
+    /** Con letras de mas, el indice desbordaba el Int y podia salir negativo. */
+    @Test
+    fun `una referencia con letras de mas se rechaza en vez de desbordar`() {
+        rechaza(
+            libro(filas = """<row r="1"><c r="AAAAAAAAAAAA1"><v>1</v></c></row>"""),
+            "Una referencia desbordada no debe leerse"
+        )
+        assertEquals(Int.MAX_VALUE, Ooxml.indiceColumna("ZZZZZZZZZZZZ"))
+    }
+
+    /**
+     * Cada fila valida por si sola, pero todas juntas piden mas celdas de las
+     * que caben: doscientas filas con una celda en XFD son 3,2 millones.
+     */
+    @Test
+    fun `muchas filas anchas agotan el presupuesto de celdas`() {
+        val anchas = (1..200).joinToString("") {
+            """<row r="$it"><c r="XFD$it"><v>1</v></c></row>"""
+        }
+        val e = rechaza(libro(filas = anchas), "Un libro que pasa del presupuesto no debe leerse")
+        assertTrue(e.message!!.contains("demasiado grande"))
+    }
+
+    /** Los huecos legitimos siguen leyendose: la fila 5 queda en su sitio. */
+    @Test
+    fun `una fila salteada dentro del limite se rellena`() {
+        val leido = XlsxLector.lee(
+            ByteArrayInputStream(
+                libro(
+                    filas = """<row r="5"><c r="C5" t="inlineStr"><is><t>Lejos</t></is></c></row>"""
+                )
+            )
+        )
+        val filas = leido.hoja("Registros")!!.filas
+        assertEquals(5, filas.size)
+        assertEquals("Lejos", filas[4][2].comoTexto())
+        assertTrue(filas[4][0].estaVacia)
     }
 
     /** `<!doctype` en minusculas es igual de valido para XML, y hay que atajarlo. */

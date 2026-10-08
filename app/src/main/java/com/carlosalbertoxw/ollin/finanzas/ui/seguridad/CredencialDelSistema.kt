@@ -51,6 +51,7 @@ fun pedirCredencialDelSistema(
 
     val pantallaDelSistema: () -> Unit = {
         val guardia = actividad.getSystemService(KeyguardManager::class.java)
+
         @Suppress("DEPRECATION")
         val intencion = guardia?.createConfirmDeviceCredentialIntent(
             titulo,

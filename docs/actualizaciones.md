@@ -82,13 +82,24 @@ Lo publica el sitio en `https://carlosalbertoxw.com/ollin-finanzas/version.json`
 
 **Los nombres de los campos no se renombran, se agregan.** Los lee `ComprobadorActualizaciones.lee()`, y cambiar uno rompe el aviso de todas las versiones que ya están instaladas, que por definición no se pueden actualizar para arreglarlo.
 
-### Solo `https`
+### Solo `https`, y solo hacia este repositorio
 
-Un enlace en claro que llegara desde fuera acabaría abriendo el navegador en una descarga manipulable por cualquiera que esté en medio de la red. Si `apk` no empieza por `https://`, se ignora y se cae a `sitio`; si tampoco, el archivo se descarta entero.
+Un enlace en claro que llegara desde fuera acabaría abriendo el navegador en una descarga manipulable por cualquiera que esté en medio de la red. Pero `https` protege el viaje, no el destino: si `carlosalbertoxw.com` vence o le secuestran el DNS, Pages sigue redirigiendo ahí, y quien se quede con el dominio contestaría el `version.json` con una «versión nueva» y su propio APK. Android no lo instalaría encima por la firma distinta, pero quien desinstale para arreglarlo ya cayó, y el aviso sale de la propia app, que es en lo que más se confía.
 
-### Un salto, y solo hacia `https`
+Por eso [`DestinosPermitidos`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/actualizaciones/ComprobadorActualizaciones.kt) solo acepta:
 
-La petición va con `instanceFollowRedirects = false`, pero no para rechazar las redirecciones: para seguirlas a mano y poder exigir que el destino siga siendo `https`. `HttpURLConnection` ni siquiera sigue por su cuenta las que cambian de protocolo, y una que se quedara en `http` dejaría la respuesta viajando en claro.
+| Campo | Destino |
+|---|---|
+| `apk` | `https://github.com/carlosalbertoxw/ollin-finanzas/releases/…` |
+| `sitio` y las redirecciones | `https://carlosalbertoxw.github.io/ollin-finanzas/…` o `https://carlosalbertoxw.com/ollin-finanzas/…` |
+
+Se compara la dirección desarmada —esquema, host exacto, sin usuario ni puerto, sin consulta ni fragmento, ruta bajo el prefijo y hecha solo de letras, cifras, `.`, `_`, `-` y `/`— y no el texto: un `startsWith` dejaría pasar un `../../` o un `%2e%2e` que el navegador resuelve hacia otro repositorio de GitHub. Si `apk` no cabe, se cae a `sitio`; si tampoco, el archivo se descarta entero. Lo que guardó una versión anterior, que aceptaba cualquier `https`, pasa por la misma lista antes de enseñarse.
+
+**Mudar el sitio o las releases exige una versión nueva antes de la mudanza**, con el destino nuevo en la lista: las instalaciones que no la tengan dejarán de ver el aviso. La propiedad `ollin.urlActualizaciones` sigue cambiando a dónde se pregunta, pero no a dónde puede mandar la respuesta.
+
+### Un salto, y solo hacia el sitio
+
+La petición va con `instanceFollowRedirects = false`, pero no para rechazar las redirecciones: para seguirlas a mano y poder exigir que el destino siga siendo `https` y uno de los dos domicilios del sitio. `HttpURLConnection` ni siquiera sigue por su cuenta las que cambian de protocolo, y una que se quedara en `http` dejaría la respuesta viajando en claro.
 
 Se sigue **un** salto. Hace falta porque la dirección va compilada dentro de cada APK y no se puede corregir en los que ya están instalados: poner un dominio propio delante de GitHub Pages deja el `.github.io` devolviendo un `301` para siempre, y sin seguirlo el aviso se apaga en todas las instalaciones a la vez. Más de un salto no aporta nada para eso y sí permite que una cadena de redirecciones dé vueltas sin fin.
 

@@ -47,6 +47,8 @@ jobs:
       #
       #   testDebugUnitTest        las pruebas en la JVM, EsquemaDeBaseTest incluido
       #   lintDebug                falla la compilacion si Lint encuentra errores
+      #   ktlintCheck              estilo de Kotlin; solo falla con infracciones
+      #                            nuevas, las de antes estan en el baseline
       #   assembleDebugAndroidTest compila la suite instrumentada sin ejecutarla,
       #                            que es lo unico que se puede hacer sin emulador
       #   assembleRelease          R8 y shrink: rompe aqui, no al etiquetar
@@ -55,6 +57,7 @@ jobs:
           ./gradlew
           testDebugUnitTest
           lintDebug
+          ktlintCheck
           assembleDebugAndroidTest
           assembleRelease
           --no-daemon --stacktrace
@@ -88,6 +91,14 @@ jobs:
       - name: Instalar
         working-directory: web
         run: npm ci
+
+      # Las dependencias del sitio son solo de compilacion, pero corren en el
+      # runner que lo despliega. Dependabot avisa por correo; esto lo hace
+      # imposible de pasar por alto, porque un PR con una vulnerabilidad alta
+      # conocida no queda en verde.
+      - name: Auditar dependencias
+        working-directory: web
+        run: npm audit --audit-level=high
 
       # Compilar el sitio tambien valida el CHANGELOG: genera-version.mjs se
       # niega si no encuentra un encabezado `## [x.y.z]`, que es exactamente lo
