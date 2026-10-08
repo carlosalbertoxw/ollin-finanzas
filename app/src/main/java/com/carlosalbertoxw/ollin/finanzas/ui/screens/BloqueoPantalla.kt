@@ -33,14 +33,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.Ajustes
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ClavePin
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ControlBloqueo
 import com.carlosalbertoxw.ollin.finanzas.ui.seguridad.pedirCredencialDelSistema
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Lo unico que se ve mientras Ollin Finanzas esta cerrada con llave.
@@ -139,12 +139,9 @@ private fun DesbloqueoPin(ajustes: Ajustes, bloqueo: ControlBloqueo) {
             verificando = true
             error = null
             ambito.launch {
-                val correcto = ClavePin.coincide(pin, ajustes.pinHash, ajustes.pinSal)
+                val intento = bloqueo.intentaPin(pin, ajustes.pinHash, ajustes.pinSal)
                 verificando = false
-                if (correcto) {
-                    bloqueo.registraAciertoDePin()
-                } else {
-                    bloqueo.registraFalloDePin()
+                if (intento != ControlBloqueo.IntentoDePin.Correcto) {
                     espera = bloqueo.segundosDeEspera()
                     error = "PIN incorrecto"
                     pin = ""

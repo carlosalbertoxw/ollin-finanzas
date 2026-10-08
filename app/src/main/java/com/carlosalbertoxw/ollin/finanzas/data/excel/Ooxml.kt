@@ -28,14 +28,21 @@ object Ooxml {
         return sb.reverse().toString()
     }
 
-    /** "A" -> 1, "AA" -> 27. */
+    /**
+     * "A" -> 1, "AA" -> 27.
+     *
+     * Satura en [Int.MAX_VALUE] en vez de desbordar: la referencia sale de un
+     * archivo ajeno, y "AAAAAAAAA1" daria la vuelta a un numero cualquiera,
+     * incluso negativo. Saturado, quien la lee puede rechazarla por grande.
+     */
     fun indiceColumna(letras: String): Int {
-        var n = 0
+        var n = 0L
         for (c in letras.uppercase()) {
             if (c !in 'A'..'Z') continue
             n = n * 26 + (c - 'A' + 1)
+            if (n > Int.MAX_VALUE) return Int.MAX_VALUE
         }
-        return n
+        return n.toInt()
     }
 
     fun referencia(fila: Int, columna: Int): String = "${letraColumna(columna)}$fila"

@@ -1,7 +1,7 @@
 package com.carlosalbertoxw.ollin.finanzas
 
-import kotlinx.coroutines.test.runTest
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ClavePin
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -79,6 +79,41 @@ class ClavePinTest {
 
         assertEquals(primera, segunda)
         assertNotEquals(primera, otraSal)
+    }
+
+    /**
+     * Las huellas de la 1.2.0 y anteriores no llevan sello. Siguen abriendo,
+     * pero avisan que hay que guardarlas selladas; la sellada ya no lo pide.
+     */
+    @Test
+    fun `una huella sin sellar se reconoce como pendiente de migrar`() = runTest {
+        val sello = ClavePin.Sello { it.reversedArray() }
+        val sal = ClavePin.nuevaSal()
+
+        assertEquals(
+            ClavePin.Verificacion.CORRECTO_SIN_SELLAR,
+            ClavePin.verifica("2468", ClavePin.deriva("2468", sal), sal, sello)
+        )
+        assertEquals(
+            ClavePin.Verificacion.CORRECTO,
+            ClavePin.verifica("2468", ClavePin.huella("2468", sal, sello), sal, sello)
+        )
+        assertEquals(
+            ClavePin.Verificacion.INCORRECTO,
+            ClavePin.verifica("1357", ClavePin.huella("2468", sal, sello), sal, sello)
+        )
+    }
+
+    /** Si el Keystore falla, es un PIN que no abre, no una pantalla que se cae. */
+    @Test
+    fun `un sello que lanza cuenta como PIN incorrecto`() = runTest {
+        val sal = ClavePin.nuevaSal()
+        val sellada = ClavePin.huella("2468", sal) { it }
+
+        assertEquals(
+            ClavePin.Verificacion.INCORRECTO,
+            ClavePin.verifica("2468", sellada, sal) { error("Keystore no disponible") }
+        )
     }
 
     @Test

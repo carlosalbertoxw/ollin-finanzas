@@ -9,18 +9,20 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import com.carlosalbertoxw.ollin.finanzas.data.excel.EsquemaExportacion
 import com.carlosalbertoxw.ollin.finanzas.data.excel.HojaExportable
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 private val Context.almacen by preferencesDataStore(name = "ollin_ajustes")
 
 /** Con que se desbloquea Ollin Finanzas al abrirla. */
 enum class ModoBloqueo(val etiqueta: String) {
     NINGUNO("Sin bloqueo"),
+
     /** El patron, PIN, contrasena o huella del propio telefono. */
     SISTEMA("Del telefono"),
+
     /** Un PIN exclusivo de Ollin Finanzas, distinto al del telefono. */
     PIN("PIN propio")
 }
@@ -35,7 +37,7 @@ data class Ajustes(
     val hojas: Set<HojaExportable> = HojaExportable.PREDETERMINADAS,
     val corregirAlImportar: Boolean = true,
     val reemplazarAlImportar: Boolean = true,
-    val temaOscuro: Boolean? = null,          // null = sigue al sistema
+    val temaOscuro: Boolean? = null, // null = sigue al sistema
     val colorDinamico: Boolean = false,
     val ultimoArchivo: String? = null,
     /** El saldo inicial solo se ocupa al dar de alta una cuenta; despues estorba. */
@@ -110,6 +112,7 @@ class AjustesRepositorio(private val contexto: Context) {
         val TUTORIALES = booleanPreferencesKey("muestra_tutoriales")
         val BUSCAR_ACTUALIZACIONES = booleanPreferencesKey("buscar_actualizaciones")
         val ULTIMA_COMPROBACION = longPreferencesKey("ultima_comprobacion")
+
         /**
          * Nombre nuevo a proposito. La 1.0.0 escribio un entero bajo
          * `version_publicada`, y DataStore guarda el tipo junto al valor:
@@ -223,6 +226,18 @@ class AjustesRepositorio(private val contexto: Context) {
             it[Claves.BLOQUEO] = ModoBloqueo.PIN.name
             it[Claves.PIN_HASH] = hash
             it[Claves.PIN_SAL] = sal
+        }
+    }
+
+    /**
+     * Cambia la huella del PIN por su version sellada, sin tocar el modo.
+     *
+     * Solo si la sal sigue siendo la misma: si entre tanto se puso otro PIN o se
+     * quito el candado, esta huella ya no es de nadie y no debe revivirlo.
+     */
+    suspend fun guardaHuellaPin(hash: String, sal: String) {
+        contexto.almacen.edit {
+            if (it[Claves.PIN_SAL] == sal) it[Claves.PIN_HASH] = hash
         }
     }
 

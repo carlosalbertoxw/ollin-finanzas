@@ -2,6 +2,7 @@ package com.carlosalbertoxw.ollin.finanzas
 
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.Ajustes
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
+import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ClavePin
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ControlBloqueo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -17,6 +18,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 /**
  * El candado es codigo de seguridad y no tenia ni una prueba: arrancar cerrado,
@@ -31,6 +34,7 @@ class ControlBloqueoTest {
 
     private val preferencias = MutableStateFlow(Ajustes())
     private var fallosGuardados: Int? = null
+    private var huellaGuardada: Pair<String, String>? = null
     private var ahora = 1_000_000L
 
     private val ambitos = mutableListOf<CoroutineScope>()
@@ -49,6 +53,8 @@ class ControlBloqueoTest {
         return ControlBloqueo(
             preferencias = flujo,
             guardaFallos = { fallosGuardados = it },
+            sello = SELLO,
+            guardaHuella = { hash, sal -> huellaGuardada = hash to sal },
             reloj = { ahora },
             ambito = ambito
         )
@@ -274,5 +280,100 @@ class ControlBloqueoTest {
         val bloqueo = control()
 
         assertEquals(0, bloqueo.segundosDeEspera())
+    }
+
+    // ------------------------------------------------------- intentos de PIN
+
+    @Test
+    fun `un PIN correcto contra su huella sellada abre sin migrar nada`() = runTest {
+        val bloqueo = control()
+        val (hash, sal) = bloqueo.huellaNueva("2468")
+
+        assertTrue(hash.startsWith("ks1:"))
+        assertEquals(ControlBloqueo.IntentoDePin.Correcto, bloqueo.intentaPin("2468", hash, sal))
+        assertEquals(null, huellaGuardada)
+        assertFalse(bloqueo.bloqueado.value)
+    }
+
+    /**
+     * La huella de la 1.2.0 y anteriores es PBKDF2 a secas. Tiene que seguir
+     * abriendo, y en cuanto abre se cambia por la sellada con la misma sal.
+     */
+    @Test
+    fun `acertar contra una huella vieja la guarda sellada`() = runTest {
+        val bloqueo = control()
+        val sal = ClavePin.nuevaSal()
+        val vieja = ClavePin.deriva("2468", sal)
+
+        assertEquals(ControlBloqueo.IntentoDePin.Correcto, bloqueo.intentaPin("2468", vieja, sal))
+
+        val (nueva, mismaSal) = huellaGuardada!!
+        assertEquals(sal, mismaSal)
+        assertEquals(ClavePin.huella("2468", sal, SELLO), nueva)
+        assertEquals(
+            ControlBloqueo.IntentoDePin.Correcto,
+            bloqueo.intentaPin("2468", nueva, sal)
+        )
+    }
+
+    @Test
+    fun `fallar contra una huella vieja no la migra`() = runTest {
+        val bloqueo = control()
+        val sal = ClavePin.nuevaSal()
+
+        bloqueo.intentaPin("1111", ClavePin.deriva("2468", sal), sal)
+
+        assertEquals(null, huellaGuardada)
+        assertEquals(1, fallosGuardados)
+    }
+
+    /**
+     * Lo que compra el sello: la huella copiada a otro aparato no se puede
+     * comprobar alli, porque la llave del sello no salio de este.
+     */
+    @Test
+    fun `una huella sellada no coincide con otro sello`() = runTest {
+        val bloqueo = control()
+        val (hash, sal) = bloqueo.huellaNueva("2468")
+
+        assertFalse(ClavePin.coincide("2468", hash, sal, OTRO_SELLO))
+        assertFalse("Sin sello no se puede comprobar", ClavePin.coincide("2468", hash, sal))
+    }
+
+    /**
+     * El freno es el mismo para todos los que piden el PIN, Ajustes incluido:
+     * en espera ni siquiera se comprueba, aunque el PIN sea el correcto.
+     */
+    @Test
+    fun `en espera no se comprueba ni el PIN correcto`() = runTest {
+        val bloqueo = control()
+        val (hash, sal) = bloqueo.huellaNueva("2468")
+
+        repeat(5) {
+            assertEquals(
+                ControlBloqueo.IntentoDePin.Incorrecto,
+                bloqueo.intentaPin("0000", hash, sal)
+            )
+        }
+
+        val enEspera = bloqueo.intentaPin("2468", hash, sal)
+        assertTrue("Salio $enEspera", enEspera is ControlBloqueo.IntentoDePin.EnEspera)
+        assertEquals("Esperar no cuenta como otro fallo", 5, fallosGuardados)
+
+        ahora += ControlBloqueo.esperaMillis(5)
+        assertEquals(ControlBloqueo.IntentoDePin.Correcto, bloqueo.intentaPin("2468", hash, sal))
+        assertEquals(0, fallosGuardados)
+    }
+
+    private companion object {
+        /** El Keystore no existe en la JVM: un HMAC con llave fija hace sus veces. */
+        val SELLO = selloCon(1)
+        val OTRO_SELLO = selloCon(2)
+
+        fun selloCon(semilla: Byte) = ClavePin.Sello { huella ->
+            Mac.getInstance("HmacSHA256")
+                .apply { init(SecretKeySpec(ByteArray(32) { semilla }, "HmacSHA256")) }
+                .doFinal(huella)
+        }
     }
 }

@@ -44,17 +44,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import com.carlosalbertoxw.ollin.finanzas.BuildConfig
 import com.carlosalbertoxw.ollin.finanzas.R
 import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.ComprobadorActualizaciones
+import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.DestinosPermitidos
 import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.Resultado
 import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.Version
 import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.VersionPublicada
@@ -63,6 +56,14 @@ import com.carlosalbertoxw.ollin.finanzas.data.prefs.Ajustes
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class AcercaDeVm(
     private val comprobador: ComprobadorActualizaciones,
@@ -87,7 +88,11 @@ class AcercaDeVm(
 
     private fun loGuardado(preferencias: Ajustes): Resultado? {
         val publicada = Version.de(preferencias.versionPublicada) ?: return null
-        val url = preferencias.urlDeDescarga ?: return null
+        // Lo guardado pudo escribirlo una version anterior, que aceptaba
+        // cualquier https: se vuelve a pasar por la misma lista.
+        val url = preferencias.urlDeDescarga
+            ?.let { DestinosPermitidos.apk(it) ?: DestinosPermitidos.sitio(it) }
+            ?: return null
 
         return if (instalada != null && publicada <= instalada) {
             Resultado.AlDia
