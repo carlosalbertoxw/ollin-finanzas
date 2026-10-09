@@ -30,7 +30,10 @@ permissions:
 
 jobs:
   analizar:
-    name: Analizar ${{ matrix.lenguaje }}
+    # El nombre del job es el del check, y "Analizar Kotlin" es un check
+    # obligatorio de la regla de main: si cambia, el check exigido nunca llega y
+    # ningun PR se puede fusionar. Por eso cada entrada lleva su nombre a mano.
+    name: Analizar ${{ matrix.nombre }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -44,12 +47,15 @@ jobs:
         include:
           # Kotlin no se puede analizar sin compilar: CodeQL observa al
           # compilador.
-          - lenguaje: java-kotlin
+          - nombre: Kotlin
+            lenguaje: java-kotlin
             modo: manual
           # El sitio y los flujos se leen tal cual.
-          - lenguaje: javascript-typescript
+          - nombre: JavaScript
+            lenguaje: javascript-typescript
             modo: none
-          - lenguaje: actions
+          - nombre: flujos
+            lenguaje: actions
             modo: none
 
     steps:
