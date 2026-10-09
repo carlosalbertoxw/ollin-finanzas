@@ -13,7 +13,7 @@ biometric = "1.1.0"
 # su FragmentActivity rechaza los request codes de mas de 16 bits que genera
 # activity 1.10.1, y cualquier launcher revienta al abrirse. Se fija a mano.
 fragment = "1.9.1"
-sqlcipher = "4.19.0"
+sqlcipher = "4.19.1"
 datastore = "1.1.4"
 # Navigation trae la 1.7.3. room-testing 2.8 (MigrationTestHelper) esta
 # compilado contra la 1.8.1, y con una anterior cada prueba de migracion
