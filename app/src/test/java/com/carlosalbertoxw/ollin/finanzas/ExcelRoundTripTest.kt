@@ -34,7 +34,12 @@ class ExcelRoundTripTest {
     private fun datosDeMuestra(): DatosExportacion {
         val cuentas = listOf(
             Cuenta(id = 1, nombre = "Banorte", tipo = TipoCuenta.DEBITO),
-            Cuenta(id = 2, nombre = "Cartera", tipo = TipoCuenta.EFECTIVO, medioPorDefecto = Medio.EFECTIVO),
+            Cuenta(
+                id = 2,
+                nombre = "Cartera",
+                tipo = TipoCuenta.EFECTIVO,
+                medioPorDefecto = Medio.EFECTIVO
+            ),
             Cuenta(id = 3, nombre = "Tarjeta Credito Plata", tipo = TipoCuenta.CREDITO),
             Cuenta(id = 4, nombre = "Terreno", tipo = TipoCuenta.ACTIVO)
         )
@@ -44,19 +49,58 @@ class ExcelRoundTripTest {
             Categoria(id = 20, nombre = "Sueldo", tipo = TipoCategoria.INGRESO),
             Categoria(id = 21, nombre = "Salario", padreId = 20, tipo = TipoCategoria.INGRESO),
             Categoria(id = 30, nombre = "Inmuebles", tipo = TipoCategoria.PATRIMONIO),
-            Categoria(id = 31, nombre = "Construccion Terreno", padreId = 30, tipo = TipoCategoria.PATRIMONIO)
+            Categoria(
+                id = 31,
+                nombre = "Construccion Terreno",
+                padreId = 30,
+                tipo = TipoCategoria.PATRIMONIO
+            )
         )
         val movimientos = listOf(
-            mov(1, "2026-01-01", 409194, 1, null, "Balance Inicial", TipoMovimiento.BALANCE_INICIAL),
+            mov(
+                1,
+                "2026-01-01",
+                409194,
+                1,
+                null,
+                "Balance Inicial",
+                TipoMovimiento.BALANCE_INICIAL
+            ),
             mov(2, "2026-01-15", 850871, 1, 21, "Salario", TipoMovimiento.ENTRADA),
             mov(3, "2026-01-16", -59980, 3, 11, "Gasolina", TipoMovimiento.SALIDA),
             mov(4, "2026-02-15", 853357, 1, 21, "Salario", TipoMovimiento.ENTRADA),
             mov(5, "2026-02-18", -117600, 3, 11, "Gasolina", TipoMovimiento.SALIDA),
             // Un caso con acentos y comillas, para probar el escapado del XML.
-            mov(6, "2026-02-20", -25000, 2, 11, "Gasolina \"Pemex\" & más <ruta>", TipoMovimiento.SALIDA),
+            mov(
+                6,
+                "2026-02-20",
+                -25000,
+                2,
+                11,
+                "Gasolina \"Pemex\" & más <ruta>",
+                TipoMovimiento.SALIDA
+            ),
             mov(7, "2026-03-10", -1000000, 1, 31, "Construccion Terreno", TipoMovimiento.SALIDA),
-            mov(8, "2026-03-11", -350000, 1, null, "Transferencia entre cuentas", TipoMovimiento.TRANSFERENCIA_SALIDA, "g1"),
-            mov(9, "2026-03-11", 350000, 2, null, "Transferencia entre cuentas", TipoMovimiento.TRANSFERENCIA_ENTRADA, "g1")
+            mov(
+                8,
+                "2026-03-11",
+                -350000,
+                1,
+                null,
+                "Transferencia entre cuentas",
+                TipoMovimiento.TRANSFERENCIA_SALIDA,
+                "g1"
+            ),
+            mov(
+                9,
+                "2026-03-11",
+                350000,
+                2,
+                null,
+                "Transferencia entre cuentas",
+                TipoMovimiento.TRANSFERENCIA_ENTRADA,
+                "g1"
+            )
         )
         return DatosExportacion(
             cuentas = cuentas,
@@ -175,7 +219,9 @@ class ExcelRoundTripTest {
         assertEquals("Banorte", primera[2].comoTexto())
 
         // El texto con comillas, ampersand y signos sobrevive el escapado.
-        val conAcentos = registros.filas.first { it.getOrNull(4)?.comoTexto()?.contains("Pemex") == true }
+        val conAcentos = registros.filas.first {
+            it.getOrNull(4)?.comoTexto()?.contains("Pemex") == true
+        }
         assertEquals("Gasolina \"Pemex\" & más <ruta>", conAcentos[4].comoTexto())
     }
 
@@ -190,7 +236,16 @@ class ExcelRoundTripTest {
 
         val registros = archivo.inputStream().use(XlsxLector::lee).hoja("Registros")!!
         assertEquals(
-            listOf("Fecha", "Cantidad", "Cuenta", "Descripcion", "Medio", "Contraparte", "Tipo", "Mes"),
+            listOf(
+                "Fecha",
+                "Cantidad",
+                "Cuenta",
+                "Descripcion",
+                "Medio",
+                "Contraparte",
+                "Tipo",
+                "Mes"
+            ),
             registros.filas[0].map { it.comoTexto() }
         )
         // La contraparte sale como su codigo numerico 1/2.
@@ -213,7 +268,13 @@ class ExcelRoundTripTest {
 
     @Test
     fun `un libro sin movimientos no revienta`() {
-        val vacio = DatosExportacion(emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+        val vacio = DatosExportacion(
+            emptyList(),
+            emptyList(),
+            emptyList(),
+            emptyList(),
+            emptyList()
+        )
         val archivo = File(salida, "ollin-vacio.xlsx")
         archivo.outputStream().use {
             ExportadorExcel(vacio, EsquemaExportacion.EXTENDIDO, HojaExportable.PREDETERMINADAS)

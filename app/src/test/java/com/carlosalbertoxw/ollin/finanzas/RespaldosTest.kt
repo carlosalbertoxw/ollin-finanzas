@@ -72,14 +72,20 @@ class RespaldosTest {
      */
     @Test
     fun `un reloj movido hacia atras no congela el aviso`() {
-        assertTrue(Respaldos.toca(ultimoRespaldo = lunes + semana * 5, ancla = lunes, ahora = lunes))
+        assertTrue(
+            Respaldos.toca(ultimoRespaldo = lunes + semana * 5, ancla = lunes, ahora = lunes)
+        )
     }
 
     // -------------------------------------------------------- que se dice
 
     @Test
     fun `sin ningun respaldo el aviso lo dice sin rodeos`() {
-        val texto = Respaldos.textoDelAviso(ultimoRespaldo = 0L, ancla = lunes, ahora = lunes + semana)
+        val texto = Respaldos.textoDelAviso(
+            ultimoRespaldo = 0L,
+            ancla = lunes,
+            ahora = lunes + semana
+        )
 
         assertTrue("Debe decir que no hay respaldo, salio: $texto", texto.contains("Todavia no"))
     }

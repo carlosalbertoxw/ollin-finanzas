@@ -86,7 +86,9 @@ fun pedirCredencialDelSistema(
                         override fun onAuthenticationSucceeded(
                             resultado: BiometricPrompt.AuthenticationResult
                         ) {
-                            if (LlaveDeDesbloqueo.demuestraAutenticacion(resultado.cryptoObject?.cipher)) {
+                            if (LlaveDeDesbloqueo.demuestraAutenticacion(
+                                    resultado.cryptoObject?.cipher
+                                )) {
                                 alLograr()
                             } else {
                                 alFallar("No se pudo verificar. Intenta de nuevo.")

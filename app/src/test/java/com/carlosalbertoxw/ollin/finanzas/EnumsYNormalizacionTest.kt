@@ -220,7 +220,10 @@ class EnumsYNormalizacionTest {
             Periodicidad.MENSUAL.retrocede(Periodicidad.MENSUAL.avanza(ancla, 3), 3)
         )
         // En dias no pasa: restar dias es exacto en cualquier fecha.
-        assertEquals(ancla, Periodicidad.QUINCENAL.retrocede(Periodicidad.QUINCENAL.avanza(ancla, 3), 3))
+        assertEquals(
+            ancla,
+            Periodicidad.QUINCENAL.retrocede(Periodicidad.QUINCENAL.avanza(ancla, 3), 3)
+        )
     }
 
     @Test

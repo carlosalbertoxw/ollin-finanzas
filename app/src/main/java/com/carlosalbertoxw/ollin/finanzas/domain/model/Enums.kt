@@ -58,7 +58,9 @@ enum class TipoCuenta(val etiqueta: String, val esDeuda: Boolean, val esLiquida:
     companion object {
         fun desdeEtiqueta(valor: String?): TipoCuenta? {
             val n = valor?.normalizaClave() ?: return null
-            return entries.firstOrNull { it.etiqueta.normalizaClave() == n || it.name.normalizaClave() == n }
+            return entries.firstOrNull {
+                it.etiqueta.normalizaClave() == n || it.name.normalizaClave() == n
+            }
         }
     }
 }
@@ -109,7 +111,9 @@ enum class TipoCategoria(val etiqueta: String) {
     companion object {
         fun desdeEtiqueta(valor: String?): TipoCategoria? {
             val n = valor?.normalizaClave() ?: return null
-            return entries.firstOrNull { it.etiqueta.normalizaClave() == n || it.name.normalizaClave() == n }
+            return entries.firstOrNull {
+                it.etiqueta.normalizaClave() == n || it.name.normalizaClave() == n
+            }
         }
     }
 }
@@ -200,7 +204,9 @@ enum class Periodicidad(val etiqueta: String, val meses: Int = 0, val dias: Int 
     companion object {
         fun desdeEtiqueta(valor: String?): Periodicidad? {
             val n = valor?.normalizaClave() ?: return null
-            return entries.firstOrNull { it.etiqueta.normalizaClave() == n || it.name.normalizaClave() == n }
+            return entries.firstOrNull {
+                it.etiqueta.normalizaClave() == n || it.name.normalizaClave() == n
+            }
         }
     }
 }

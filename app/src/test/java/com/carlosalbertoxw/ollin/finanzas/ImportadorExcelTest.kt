@@ -103,18 +103,49 @@ class ImportadorExcelTest : BaseEnMemoria() {
         val datos = DatosExportacion(
             cuentas = listOf(
                 Cuenta(id = 1, nombre = "Banorte", tipo = TipoCuenta.DEBITO),
-                Cuenta(id = 2, nombre = "Cartera", tipo = TipoCuenta.EFECTIVO, medioPorDefecto = Medio.EFECTIVO)
+                Cuenta(
+                    id = 2,
+                    nombre = "Cartera",
+                    tipo = TipoCuenta.EFECTIVO,
+                    medioPorDefecto = Medio.EFECTIVO
+                )
             ),
             categorias = listOf(
                 Categoria(id = 11, nombre = "Gasolina", tipo = TipoCategoria.GASTO),
                 Categoria(id = 21, nombre = "Salario", tipo = TipoCategoria.INGRESO)
             ),
             movimientos = listOf(
-                movExport(1, "2026-01-01", 409194, 1, null, "Balance Inicial", TipoMovimiento.BALANCE_INICIAL),
+                movExport(
+                    1,
+                    "2026-01-01",
+                    409194,
+                    1,
+                    null,
+                    "Balance Inicial",
+                    TipoMovimiento.BALANCE_INICIAL
+                ),
                 movExport(2, "2026-01-15", 850871, 1, 21, "Salario", TipoMovimiento.ENTRADA),
                 movExport(3, "2026-01-16", -59980, 1, 11, "Gasolina", TipoMovimiento.SALIDA),
-                movExport(4, "2026-01-20", -350000, 1, null, "Traspaso a cartera", TipoMovimiento.TRANSFERENCIA_SALIDA, "g1"),
-                movExport(5, "2026-01-20", 350000, 2, null, "Traspaso a cartera", TipoMovimiento.TRANSFERENCIA_ENTRADA, "g1")
+                movExport(
+                    4,
+                    "2026-01-20",
+                    -350000,
+                    1,
+                    null,
+                    "Traspaso a cartera",
+                    TipoMovimiento.TRANSFERENCIA_SALIDA,
+                    "g1"
+                ),
+                movExport(
+                    5,
+                    "2026-01-20",
+                    350000,
+                    2,
+                    null,
+                    "Traspaso a cartera",
+                    TipoMovimiento.TRANSFERENCIA_ENTRADA,
+                    "g1"
+                )
             ),
             presupuestos = emptyList(),
             compromisos = emptyList()
@@ -151,7 +182,11 @@ class ImportadorExcelTest : BaseEnMemoria() {
         descripcion = descripcion,
         medio = Medio.ELECTRONICO,
         tipo = tipo,
-        contraparte = if (tipo.esTransferencia || tipo.esInterno) Contraparte.PROPIA else Contraparte.TERCERO,
+        contraparte = if (tipo.esTransferencia || tipo.esInterno) {
+            Contraparte.PROPIA
+        } else {
+            Contraparte.TERCERO
+        },
         grupoTransferencia = grupo
     )
 
@@ -225,8 +260,18 @@ class ImportadorExcelTest : BaseEnMemoria() {
     fun `empareja las dos patas de una transferencia`() = runTest {
         val resultado = importa(
             listOf(
-                fila(cantidad = -500.0, cuenta = "Banorte", descripcion = "Traspaso", tipo = "Transferencia Salida"),
-                fila(cantidad = 500.0, cuenta = "Cartera", descripcion = "Traspaso", tipo = "Transferencia Entrada")
+                fila(
+                    cantidad = -500.0,
+                    cuenta = "Banorte",
+                    descripcion = "Traspaso",
+                    tipo = "Transferencia Salida"
+                ),
+                fila(
+                    cantidad = 500.0,
+                    cuenta = "Cartera",
+                    descripcion = "Traspaso",
+                    tipo = "Transferencia Entrada"
+                )
             )
         )
 
@@ -311,11 +356,36 @@ class ImportadorExcelTest : BaseEnMemoria() {
     fun `sin columna de tipo lo deduce de la descripcion y del signo`() = runTest {
         importa(
             filas = listOf(
-                listOf(celda(LocalDate.of(2026, 1, 1)), celda(1000.0), celda("Banorte"), celda("Balance Inicial")),
-                listOf(celda(LocalDate.of(2026, 1, 2)), celda(500.0), celda("Banorte"), celda("Revaluacion terreno")),
-                listOf(celda(LocalDate.of(2026, 1, 3)), celda(-500.0), celda("Banorte"), celda("Traspaso")),
-                listOf(celda(LocalDate.of(2026, 1, 4)), celda(-200.0), celda("Banorte"), celda("Pago servicios")),
-                listOf(celda(LocalDate.of(2026, 1, 5)), celda(900.0), celda("Banorte"), celda("Sueldo"))
+                listOf(
+                    celda(LocalDate.of(2026, 1, 1)),
+                    celda(1000.0),
+                    celda("Banorte"),
+                    celda("Balance Inicial")
+                ),
+                listOf(
+                    celda(LocalDate.of(2026, 1, 2)),
+                    celda(500.0),
+                    celda("Banorte"),
+                    celda("Revaluacion terreno")
+                ),
+                listOf(
+                    celda(LocalDate.of(2026, 1, 3)),
+                    celda(-500.0),
+                    celda("Banorte"),
+                    celda("Traspaso")
+                ),
+                listOf(
+                    celda(LocalDate.of(2026, 1, 4)),
+                    celda(-200.0),
+                    celda("Banorte"),
+                    celda("Pago servicios")
+                ),
+                listOf(
+                    celda(LocalDate.of(2026, 1, 5)),
+                    celda(900.0),
+                    celda("Banorte"),
+                    celda("Sueldo")
+                )
             ),
             encabezados = listOf("Fecha", "Cantidad", "Cuenta", "Descripcion")
         )
@@ -333,7 +403,9 @@ class ImportadorExcelTest : BaseEnMemoria() {
         val esperada = LocalDate.of(2026, 1, 15)
         listOf<Any>(esperada, "2026-01-15", "15/01/2026", "15-01-2026").forEach { valor ->
             movimientoDao.eliminaTodos()
-            val resultado = importa(listOf(fila(fecha = valor, cantidad = -500.0, descripcion = "Gasolina")))
+            val resultado = importa(
+                listOf(fila(fecha = valor, cantidad = -500.0, descripcion = "Gasolina"))
+            )
             assertEquals("Fallo con $valor", 1, resultado.importados)
             assertEquals("Fallo con $valor", esperada, movimientoDao.todos().single().fecha)
         }

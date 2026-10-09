@@ -127,7 +127,9 @@ class FinanzasRepositorio(
 
     /** Las dos patas de una transferencia, para poder editarla como una sola cosa. */
     suspend fun movimientosDeGrupo(grupo: String): List<Movimiento> = movimientos.porGrupo(grupo)
-    suspend fun balanceInicialDe(cuentaId: Long): Movimiento? = movimientos.balanceInicialDe(cuentaId)
+    suspend fun balanceInicialDe(
+        cuentaId: Long
+    ): Movimiento? = movimientos.balanceInicialDe(cuentaId)
     suspend fun compromiso(id: Long): Compromiso? = compromisos.porId(id)
     suspend fun listaCuentas(): List<Cuenta> = cuentas.todas()
     suspend fun listaCategorias(): List<Categoria> = categorias.todas()
@@ -188,7 +190,9 @@ class FinanzasRepositorio(
         categoriaId: Long? = null
     ) {
         require(importeCentavos > 0) { "El importe de una transferencia se captura en positivo" }
-        require(cuentaOrigenId != cuentaDestinoId) { "El origen y el destino no pueden ser la misma cuenta" }
+        require(
+            cuentaOrigenId != cuentaDestinoId
+        ) { "El origen y el destino no pueden ser la misma cuenta" }
 
         val grupo = grupoExistente ?: UUID.randomUUID().toString()
 
@@ -283,7 +287,12 @@ class FinanzasRepositorio(
     suspend fun eliminaCuenta(cuenta: Cuenta) = cuentas.elimina(cuenta)
 
     suspend fun guardaCategoria(categoria: Categoria): Long =
-        if (categoria.id == 0L) categorias.inserta(categoria) else { categorias.actualiza(categoria); categoria.id }
+        if (categoria.id == 0L) {
+            categorias.inserta(categoria)
+        } else {
+            categorias.actualiza(categoria)
+            categoria.id
+        }
 
     suspend fun eliminaCategoria(categoria: Categoria) = categorias.elimina(categoria)
 
@@ -292,11 +301,23 @@ class FinanzasRepositorio(
         presupuestos.elimina(categoriaId, anio, mes)
 
     /** Copia las metas de un mes al siguiente, que es como se arma un presupuesto real. */
-    suspend fun copiaPresupuesto(desdeAnio: Int, desdeMes: Int, haciaAnio: Int, haciaMes: Int): Int {
+    suspend fun copiaPresupuesto(
+        desdeAnio: Int,
+        desdeMes: Int,
+        haciaAnio: Int,
+        haciaMes: Int
+    ): Int {
         val origen = presupuestos.delMes(desdeAnio, desdeMes)
         if (origen.isEmpty()) return 0
         presupuestos.guardaTodos(
-            origen.map { Presupuesto(categoriaId = it.categoriaId, anio = haciaAnio, mes = haciaMes, montoCentavos = it.montoCentavos) }
+            origen.map {
+                Presupuesto(
+                    categoriaId = it.categoriaId,
+                    anio = haciaAnio,
+                    mes = haciaMes,
+                    montoCentavos = it.montoCentavos
+                )
+            }
         )
         return origen.size
     }

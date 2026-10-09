@@ -16,7 +16,7 @@ Room (OllinDatabase, cifrada con SQLCipher)
 
 ### `ui/`
 
-Una pantalla por archivo en `ui/screens/`, cada una con su `ViewModel` declarado en el mismo archivo. Los estados se exponen como `StateFlow` y se consumen con `collectAsStateWithLifecycle`.
+Una pantalla por archivo en `ui/screens/`, y su `ViewModel` al lado, en `XxxVm.kt`, junto con los modelos de estado que publica. Separados porque se leen por motivos distintos —el estado y sus reglas por un lado, cómo se dibuja por otro— y porque juntos hacían archivos de setecientas líneas; lo `private` de la interfaz se queda con la pantalla. Los estados se exponen como `StateFlow` y se consumen con `collectAsStateWithLifecycle`.
 
 No hay `Factory` por pantalla: [`recuerdaVm`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/Fabrica.kt) crea el ViewModel pasándole a mano lo que necesita.
 

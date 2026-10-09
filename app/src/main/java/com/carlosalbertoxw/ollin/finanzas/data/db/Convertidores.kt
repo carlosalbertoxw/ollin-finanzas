@@ -18,7 +18,9 @@ class Convertidores {
 
     @TypeConverter fun tipoMovimientoATexto(v: TipoMovimiento?): String? = v?.name
 
-    @TypeConverter fun textoATipoMovimiento(v: String?): TipoMovimiento? = v?.let(TipoMovimiento::valueOf)
+    @TypeConverter fun textoATipoMovimiento(v: String?): TipoMovimiento? = v?.let(
+        TipoMovimiento::valueOf
+    )
 
     @TypeConverter fun tipoCuentaATexto(v: TipoCuenta?): String? = v?.name
 
@@ -34,7 +36,9 @@ class Convertidores {
 
     @TypeConverter fun tipoCategoriaATexto(v: TipoCategoria?): String? = v?.name
 
-    @TypeConverter fun textoATipoCategoria(v: String?): TipoCategoria? = v?.let(TipoCategoria::valueOf)
+    @TypeConverter fun textoATipoCategoria(v: String?): TipoCategoria? = v?.let(
+        TipoCategoria::valueOf
+    )
 
     @TypeConverter fun periodicidadATexto(v: Periodicidad?): String? = v?.name
 

@@ -71,7 +71,8 @@ abstract class BaseEnMemoria {
     protected suspend fun nuevaCuenta(
         nombre: String,
         tipo: TipoCuenta = TipoCuenta.DEBITO,
-        medioPorDefecto: Medio = if (tipo == TipoCuenta.EFECTIVO) Medio.EFECTIVO else Medio.ELECTRONICO,
+        medioPorDefecto: Medio =
+            if (tipo == TipoCuenta.EFECTIVO) Medio.EFECTIVO else Medio.ELECTRONICO,
         soloElectronico: Boolean = tipo == TipoCuenta.CREDITO || tipo == TipoCuenta.CREDITO_MSI
     ): Long = cuentaDao.inserta(
         Cuenta(

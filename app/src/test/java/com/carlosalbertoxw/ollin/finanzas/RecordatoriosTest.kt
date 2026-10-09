@@ -44,7 +44,10 @@ class RecordatoriosTest {
         val dentro = compromiso("Dentro", LocalDate.of(2026, 5, 13)) // en 3 dias
         val justoFuera = compromiso("Fuera", LocalDate.of(2026, 5, 14)) // en 4
 
-        val avisados = Recordatorios.porVencer(listOf(dentro, justoFuera), hoy).map { it.first.nombre }
+        val avisados = Recordatorios.porVencer(
+            listOf(dentro, justoFuera),
+            hoy
+        ).map { it.first.nombre }
 
         assertEquals(listOf("Dentro"), avisados)
     }
@@ -107,7 +110,10 @@ class RecordatoriosTest {
             pagosDescartados = 2
         )
 
-        assertEquals(LocalDate.of(2026, 5, 12), Recordatorios.porVencer(listOf(c), hoy).single().second)
+        assertEquals(
+            LocalDate.of(2026, 5, 12),
+            Recordatorios.porVencer(listOf(c), hoy).single().second
+        )
     }
 
     /** El ancla no se recorta: desde el 31 se vuelve al 31 en los meses que lo tienen. */
@@ -116,7 +122,10 @@ class RecordatoriosTest {
         val hoy = LocalDate.of(2026, 3, 30)
         val c = compromiso(primerPago = LocalDate.of(2026, 1, 31), pagosRealizados = 2)
 
-        assertEquals(LocalDate.of(2026, 3, 31), Recordatorios.porVencer(listOf(c), hoy).single().second)
+        assertEquals(
+            LocalDate.of(2026, 3, 31),
+            Recordatorios.porVencer(listOf(c), hoy).single().second
+        )
     }
 
     @Test

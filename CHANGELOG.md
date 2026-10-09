@@ -35,7 +35,7 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ### Cambiado
 
-- El código Kotlin pasa por ktlint en cada cambio, y las dependencias del sitio por `npm audit`.
+- El código Kotlin pasa por ktlint en cada cambio, sin excepciones heredadas, y las dependencias del sitio por `npm audit`.
 - Cada biblioteca que descarga el build se compara contra su huella registrada, y CI rechaza cualquier dependencia con una licencia que no admita la del proyecto.
 - Las migraciones de la base se prueban en un emulador antes de cada publicación, y el análisis de seguridad cubre también el sitio y los flujos de CI.
 - La publicación se niega a etiquetar una versión con menor o parche por encima de 99, que repetiría el `versionCode` de otra.

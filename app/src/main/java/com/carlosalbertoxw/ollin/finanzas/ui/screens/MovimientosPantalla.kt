@@ -49,95 +49,6 @@ import kotlinx.coroutines.flow.stateIn
 /** Como se lee no tener filtro de cuenta. Es opcion del menu y texto del campo. */
 private const val TODAS_LAS_CUENTAS = "Todas las cuentas"
 
-data class FiltroMovimientos(
-    val texto: String = "",
-    val cuentaId: Long? = null,
-    val categoriaId: Long? = null,
-    val incluyeTraspasos: Boolean = false
-)
-
-class MovimientosVm(private val repo: FinanzasRepositorio) : ViewModel() {
-
-    private val _filtro = MutableStateFlow(FiltroMovimientos())
-    val filtro: StateFlow<FiltroMovimientos> = _filtro
-
-    val cuentas: StateFlow<List<Cuenta>> = repo.observaCuentas()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    val categorias: StateFlow<List<Categoria>> = repo.observaCategorias()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    /**
-     * Cuantos renglones se piden ahora mismo. Crece de [PAGINA] en [PAGINA] al
-     * llegar al final de la lista y vuelve al principio en cuanto cambia el
-     * filtro: pedir mil renglones de un filtro que ya no esta en pantalla es
-     * trabajo tirado.
-     */
-    private val _limite = MutableStateFlow(PAGINA)
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val movimientos: StateFlow<List<MovimientoDetallado>> =
-        combine(_filtro, _limite) { f, limite -> f to limite }
-            .flatMapLatest { (f, limite) ->
-                repo.observaMovimientos(
-                    cuentaId = f.cuentaId,
-                    categoriaId = f.categoriaId,
-                    incluyeTraspasos = f.incluyeTraspasos,
-                    texto = f.texto,
-                    limite = limite
-                )
-            }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    /**
-     * Cuantos cumplen el filtro en total, no cuantos se alcanzaron a cargar.
-     * Es lo que dice si queda algo mas abajo.
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val totalDelFiltro: StateFlow<Int> = _filtro
-        .flatMapLatest { f ->
-            repo.observaConteoFiltrado(
-                cuentaId = f.cuentaId,
-                categoriaId = f.categoriaId,
-                incluyeTraspasos = f.incluyeTraspasos,
-                texto = f.texto
-            )
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-
-    /**
-     * Total de lo que cumple el filtro, para que el filtro sirva de calculadora.
-     *
-     * Se suma en SQL y no sobre la lista cargada. Sumando la pagina, un filtro
-     * con mas renglones de los que caben daba una cifra parcial presentada como
-     * si fuera el total: una calculadora que miente es peor que ninguna.
-     */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val totalVisible: StateFlow<Long> = _filtro
-        .flatMapLatest { f ->
-            repo.observaTotalFiltrado(
-                cuentaId = f.cuentaId,
-                categoriaId = f.categoriaId,
-                incluyeTraspasos = f.incluyeTraspasos,
-                texto = f.texto
-            )
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0L)
-
-    fun actualiza(bloque: (FiltroMovimientos) -> FiltroMovimientos) {
-        _filtro.value = bloque(_filtro.value)
-        _limite.value = PAGINA
-    }
-
-    fun cargaMas() {
-        _limite.value += PAGINA
-    }
-
-    private companion object {
-        const val PAGINA = 200
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MovimientosPantalla(
@@ -240,7 +151,12 @@ fun MovimientosPantalla(
         LazyColumn(
             Modifier.fillMaxSize(),
             state = estadoLista,
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 8.dp, 16.dp, 96.dp)
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                16.dp,
+                8.dp,
+                16.dp,
+                96.dp
+            )
         ) {
             val porFecha = movimientos.groupBy { it.movimiento.fecha }
             porFecha.forEach { (fecha, delDia) ->
@@ -273,7 +189,10 @@ fun MovimientosPantalla(
             }
 
             item {
-                TextButton(onClick = alNuevaTransferencia, modifier = Modifier.padding(top = 12.dp)) {
+                TextButton(
+                    onClick = alNuevaTransferencia,
+                    modifier = Modifier.padding(top = 12.dp)
+                ) {
                     Icon(Icons.Filled.SwapHoriz, contentDescription = null)
                     Text("  Nueva transferencia entre cuentas")
                 }

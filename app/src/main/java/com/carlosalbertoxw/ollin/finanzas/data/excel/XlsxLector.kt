@@ -94,7 +94,9 @@ object XlsxLector {
         val presupuesto = Presupuesto(LIMITE_CELDAS)
 
         if (!partes.containsKey("xl/workbook.xml")) {
-            throw ArchivoInvalido("El archivo no parece un libro de Excel (.xlsx). Si es .xls antiguo, guardalo primero como .xlsx.")
+            throw ArchivoInvalido(
+                "El archivo no parece un libro de Excel (.xlsx). Si es .xls antiguo, guardalo primero como .xlsx."
+            )
         }
 
         val cadenas = partes["xl/sharedStrings.xml"]?.let(::leeSharedStrings) ?: emptyList()
@@ -333,7 +335,12 @@ object XlsxLector {
         var capturando = false
 
         parsea(bytes, object : DefaultHandler() {
-            override fun startElement(uri: String?, local: String?, qName: String, attrs: Attributes?) {
+            override fun startElement(
+                uri: String?,
+                local: String?,
+                qName: String,
+                attrs: Attributes?
+            ) {
                 when (qName) {
                     "si" -> { dentroDeSi = true; actual.setLength(0) }
                     "t" -> if (dentroDeSi) capturando = true
@@ -359,7 +366,12 @@ object XlsxLector {
     private fun leeRelaciones(bytes: ByteArray): Map<String, String> {
         val mapa = HashMap<String, String>()
         parsea(bytes, object : DefaultHandler() {
-            override fun startElement(uri: String?, local: String?, qName: String, attrs: Attributes?) {
+            override fun startElement(
+                uri: String?,
+                local: String?,
+                qName: String,
+                attrs: Attributes?
+            ) {
                 if (qName == "Relationship" && attrs != null) {
                     val id = attrs.getValue("Id") ?: return
                     val target = attrs.getValue("Target") ?: return
@@ -374,7 +386,12 @@ object XlsxLector {
     private fun leeDefinicionHojas(bytes: ByteArray): List<Pair<String, String>> {
         val lista = mutableListOf<Pair<String, String>>()
         parsea(bytes, object : DefaultHandler() {
-            override fun startElement(uri: String?, local: String?, qName: String, attrs: Attributes?) {
+            override fun startElement(
+                uri: String?,
+                local: String?,
+                qName: String,
+                attrs: Attributes?
+            ) {
                 if (qName == "sheet" && attrs != null) {
                     val nombre = attrs.getValue("name") ?: return
                     val rid = attrs.getValue("r:id") ?: attrs.getValue("id") ?: return
@@ -410,11 +427,20 @@ object XlsxLector {
             presupuesto.gasta(huecos.toLong() + maxColFila)
             repeat(huecos) { filas.add(emptyList()) }
             val fila = List(maxColFila) { filaActual[it + 1] ?: VACIA }
-            if (filas.size == numeroFilaActual - 1) filas.add(fila) else filas[numeroFilaActual - 1] = fila
+            if (filas.size == numeroFilaActual - 1) {
+                filas.add(fila)
+            } else {
+                filas[numeroFilaActual - 1] = fila
+            }
         }
 
         parsea(bytes, object : DefaultHandler() {
-            override fun startElement(uri: String?, local: String?, qName: String, attrs: Attributes?) {
+            override fun startElement(
+                uri: String?,
+                local: String?,
+                qName: String,
+                attrs: Attributes?
+            ) {
                 when (qName) {
                     "row" -> {
                         filaActual = HashMap()
@@ -424,8 +450,11 @@ object XlsxLector {
                     }
                     "c" -> {
                         val ref = attrs?.getValue("r")
-                        columnaCelda = if (ref != null) Ooxml.indiceColumna(Ooxml.partesReferencia(ref).first)
-                        else columnaCelda + 1
+                        columnaCelda = if (ref != null) {
+                            Ooxml.indiceColumna(Ooxml.partesReferencia(ref).first)
+                        } else {
+                            columnaCelda + 1
+                        }
                         if (columnaCelda > MAX_COLUMNAS) throw fueraDeLaHoja()
                         if (columnaCelda > maxColFila) maxColFila = columnaCelda
                         tipoCelda = attrs?.getValue("t")
@@ -449,9 +478,13 @@ object XlsxLector {
                         val crudo = valor.toString()
                         if (crudo.isNotEmpty()) {
                             val celda = when (tipoCelda) {
-                                "s" -> CeldaLeida(texto = crudo.toIntOrNull()?.let { cadenas.getOrNull(it) })
+                                "s" -> CeldaLeida(
+                                    texto = crudo.toIntOrNull()?.let { cadenas.getOrNull(it) }
+                                )
                                 "inlineStr", "str" -> CeldaLeida(texto = crudo)
-                                "b" -> CeldaLeida(texto = if (crudo == "1") "VERDADERO" else "FALSO")
+                                "b" -> CeldaLeida(
+                                    texto = if (crudo == "1") "VERDADERO" else "FALSO"
+                                )
                                 "e" -> CeldaLeida(texto = crudo) // #REF!, #VALUE!, etc.
                                 else -> crudo.toDoubleOrNull()
                                     ?.let { CeldaLeida(numero = it) }

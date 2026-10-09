@@ -82,7 +82,10 @@ private val EsquemaClaro = lightColorScheme(
  */
 private val Tipografia = Typography().let { base ->
     base.copy(
-        displaySmall = base.displaySmall.copy(fontWeight = FontWeight.Bold, letterSpacing = (-1).sp),
+        displaySmall = base.displaySmall.copy(
+            fontWeight = FontWeight.Bold,
+            letterSpacing = (-1).sp
+        ),
         headlineMedium = base.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
         headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
         titleLarge = base.titleLarge.copy(fontWeight = FontWeight.SemiBold),

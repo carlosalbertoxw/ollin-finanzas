@@ -51,7 +51,7 @@ sdk.dir=C\:\\Users\\<usuario>\\AppData\\Local\\Android\\Sdk
 ./gradlew :app:testDebugUnitTest  # pruebas unitarias (JVM)
 ./gradlew :app:connectedDebugAndroidTest  # pruebas de interfaz (necesita dispositivo)
 ./gradlew :app:assembleRelease    # con minify y shrink de recursos
-./gradlew :app:ktlintCheck        # estilo de Kotlin (falla solo con infracciones nuevas)
+./gradlew :app:ktlintCheck        # estilo de Kotlin, como en CI
 ./gradlew :app:ktlintFormat       # arregla lo que ktlint sabe arreglar solo
 ./gradlew :app:licenseeAndroidRelease  # que lo que viaja en el APK tenga una licencia permitida
 ./gradlew :app:cyclonedxDirectBom # SBOM del APK de release, en app/build/reports/sbom/
@@ -318,15 +318,15 @@ npm --prefix web run build
 - **Los comentarios explican el porqué, no el qué.** Si una decisión tiene una alternativa obvia que se descartó, el comentario dice por qué se descartó.
 - **Sin acentos en los comentarios y literales del código** (la documentación de `docs/` y el sitio de `web/` sí los usan).
 - **`.editorconfig` fija el estilo**: LF, UTF-8, cuatro espacios, 100 columnas en Kotlin y sin imports con comodín.
-- **ktlint lo vigila** con el estilo de IntelliJ (`ktlint_code_style = intellij_idea`): sangría, orden de imports, espacios y largo de línea. Las reglas que piden otro acomodo de líneas —argumentos uno por renglón, llaves en todo `if`— están apagadas en `.editorconfig` con su motivo, porque el código usa otro de forma pareja. Lo que ya había al agregarlo, casi todo líneas de más de 100 columnas, vive en [`app/ktlint-baseline.xml`](../app/ktlint-baseline.xml): CI solo falla con infracciones nuevas. El baseline se encoge arreglando y regenerándolo con `./gradlew :app:ktlintGenerateBaseline`; regenerarlo para tapar una infracción nueva es hacer trampa. Como guarda líneas y columnas, mover código en un archivo con entradas puede hacer que reaparezcan: se arreglan en ese momento, que para eso está el archivo abierto.
-- **Una pantalla por archivo**, con su ViewModel arriba y los composables privados abajo.
+- **ktlint lo vigila** con el estilo de IntelliJ (`ktlint_code_style = intellij_idea`): sangría, orden de imports, espacios y largo de línea. Las reglas que piden otro acomodo de líneas —argumentos uno por renglón, llaves en todo `if`— están apagadas en `.editorconfig` con su motivo, porque el código usa otro de forma pareja. **No hay baseline**: CI falla con la primera infracción. El que hubo congelaba las líneas de más de 100 columnas por su número de línea, y cualquier cambio que las moviera las hacía aparecer como nuevas; se cortaron todas. La única excepción es [`XlsxEscritor`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/XlsxEscritor.kt), que la declara en su cabecera con `@file:Suppress("ktlint:standard:max-line-length")`: sus partes OOXML van tal cual las define la norma, y partir esas URLs las haría ilegibles. Una línea que solo contiene una cadena tampoco cuenta, así que un texto largo se pone en su propio renglón en vez de partirse a mitad de frase.
+- **Una pantalla por archivo**, con sus composables privados; su ViewModel y los modelos de estado que publica van al lado, en `XxxVm.kt`.
 - **La escritura pasa por el repositorio.** Las pantallas no tocan los DAO.
 - **Los importes son centavos en `Long`**, nunca decimales flotantes.
 - Las cadenas visibles están en el código, no en `strings.xml`: la app es monolingüe por diseño. En `strings.xml` solo viven el nombre, el lema y los textos del canal de notificaciones.
 
 ## Añadir una pantalla
 
-1. Crea el archivo en `ui/screens/` con su `ViewModel` y su composable.
+1. Crea en `ui/screens/` la pantalla (`XxxPantalla.kt`) y su ViewModel (`XxxVm.kt`).
 2. Declara la ruta en [`ui/nav/Destinos.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/nav/Destinos.kt) (`Destino` si es pestaña, `Rutas` si cuelga de una).
 3. Regístrala en el `NavHost` de [`ui/OllinRaiz.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/OllinRaiz.kt).
 4. Si la ruta lleva argumentos, agrégalos con `navArgument` y su `defaultValue`; el patrón de la app es usar `0L` como "sin valor" y filtrarlo con `takeIf { it > 0L }`.

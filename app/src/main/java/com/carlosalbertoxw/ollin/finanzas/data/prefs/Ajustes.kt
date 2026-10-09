@@ -369,7 +369,11 @@ class AjustesRepositorio(
             it[Claves.ULTIMA_COMPROBACION] = cuando
             it[Claves.VERSION_PUBLICADA] = version
             it[Claves.URL_DESCARGA] = url
-            if (notas.isNullOrBlank()) it.remove(Claves.NOTAS_VERSION) else it[Claves.NOTAS_VERSION] = notas
+            if (notas.isNullOrBlank()) {
+                it.remove(Claves.NOTAS_VERSION)
+            } else {
+                it[Claves.NOTAS_VERSION] = notas
+            }
         }
     }
 

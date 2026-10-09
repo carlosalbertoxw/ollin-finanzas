@@ -49,8 +49,8 @@ jobs:
       #                            de la lista de app/build.gradle.kts
       #   testDebugUnitTest        las pruebas en la JVM, EsquemaDeBaseTest incluido
       #   lintDebug                falla la compilacion si Lint encuentra errores
-      #   ktlintCheck              estilo de Kotlin; solo falla con infracciones
-      #                            nuevas, las de antes estan en el baseline
+      #   ktlintCheck              estilo de Kotlin; sin baseline, falla con la
+      #                            primera infraccion
       #   assembleDebugAndroidTest compila la suite instrumentada sin ejecutarla,
       #                            que es lo unico que se puede hacer sin emulador
       #   assembleRelease          R8 y shrink: rompe aqui, no al etiquetar

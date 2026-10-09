@@ -44,7 +44,9 @@ class PreferenciasHeredadasTest {
     private fun comoLasDejoLa100() = mutablePreferencesOf(
         intPreferencesKey("version_publicada") to 10_000,
         stringPreferencesKey("nombre_version_publicada") to "1.0.0",
-        stringPreferencesKey("url_version_publicada") to "https://carlosalbertoxw.com/ollin-finanzas/",
+        stringPreferencesKey(
+            "url_version_publicada"
+        ) to "https://carlosalbertoxw.com/ollin-finanzas/",
         longPreferencesKey("ultima_busqueda_version") to 1_756_000_000_000L,
         booleanPreferencesKey("busca_actualizaciones") to true
     )
@@ -55,8 +57,15 @@ class PreferenciasHeredadasTest {
         // ella se cierra la app en el arranque.
         val ajustes = repositorio.interpreta(comoLasDejoLa100())
 
-        assertNull("La version vieja era un entero y no se puede leer como texto", ajustes.versionPublicada)
-        assertEquals("Y el resto tiene que quedar en su valor de fabrica", 0L, ajustes.ultimaComprobacion)
+        assertNull(
+            "La version vieja era un entero y no se puede leer como texto",
+            ajustes.versionPublicada
+        )
+        assertEquals(
+            "Y el resto tiene que quedar en su valor de fabrica",
+            0L,
+            ajustes.ultimaComprobacion
+        )
     }
 
     /**

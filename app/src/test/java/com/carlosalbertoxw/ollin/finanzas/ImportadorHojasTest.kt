@@ -157,7 +157,9 @@ class ImportadorHojasTest : BaseEnMemoria() {
 
         // Presupuesto.
         assertEquals(2, resultado.presupuestosImportados)
-        val metas = presupuestoDao.todos().associateBy { categorias.entries.first { c -> c.value.id == it.categoriaId }.key }
+        val metas = presupuestoDao.todos().associateBy {
+            categorias.entries.first { c -> c.value.id == it.categoriaId }.key
+        }
         assertEquals(80000L, metas.getValue("Luz").montoCentavos)
         assertEquals(2026, metas.getValue("Luz").anio)
         assertEquals(1, metas.getValue("Luz").mes)
@@ -197,7 +199,11 @@ class ImportadorHojasTest : BaseEnMemoria() {
         descripcion = descripcion,
         medio = Medio.ELECTRONICO,
         tipo = tipo,
-        contraparte = if (tipo.esTransferencia || tipo.esInterno) Contraparte.PROPIA else Contraparte.TERCERO
+        contraparte = if (tipo.esTransferencia || tipo.esInterno) {
+            Contraparte.PROPIA
+        } else {
+            Contraparte.TERCERO
+        }
     )
 
     // -------------------------------------------------------- Diccionarios
@@ -304,7 +310,12 @@ class ImportadorHojasTest : BaseEnMemoria() {
         val presupuesto = hoja(
             "Presupuesto",
             texto("Categoria", "Monto", "Anio", "Mes"),
-            listOf(Celda.Texto("Despensa"), Celda.Numero(4200.0), Celda.Numero(2026.0), Celda.Numero(5.0))
+            listOf(
+                Celda.Texto("Despensa"),
+                Celda.Numero(4200.0),
+                Celda.Numero(2026.0),
+                Celda.Numero(5.0)
+            )
         )
 
         val resultado = importador().importa(
@@ -343,18 +354,37 @@ class ImportadorHojasTest : BaseEnMemoria() {
         val compromisos = hoja(
             "Compromisos",
             texto("Compromisos por venir"),
-            texto("Compromiso", "Cuenta", "Monto", "Periodicidad", "Proximo pago", "Pagos restantes"),
-            listOf(
-                Celda.Texto("Seguro auto"), Celda.Texto("Banorte"), Celda.Numero(3200.0),
-                Celda.Texto("Anual"), Celda.Fecha(LocalDate.of(2026, 6, 1)), Celda.Numero(3.0)
+            texto(
+                "Compromiso",
+                "Cuenta",
+                "Monto",
+                "Periodicidad",
+                "Proximo pago",
+                "Pagos restantes"
             ),
             listOf(
-                Celda.Texto("Gimnasio"), Celda.Vacia, Celda.Numero(450.0),
-                Celda.Texto("Mensual"), Celda.Fecha(LocalDate.of(2026, 2, 3)), Celda.Texto("indefinido")
+                Celda.Texto("Seguro auto"),
+                Celda.Texto("Banorte"),
+                Celda.Numero(3200.0),
+                Celda.Texto("Anual"),
+                Celda.Fecha(LocalDate.of(2026, 6, 1)),
+                Celda.Numero(3.0)
             ),
             listOf(
-                Celda.Texto("Total comprometido"), Celda.Vacia, Celda.Vacia,
-                Celda.Vacia, Celda.Vacia, Celda.Vacia
+                Celda.Texto("Gimnasio"),
+                Celda.Vacia,
+                Celda.Numero(450.0),
+                Celda.Texto("Mensual"),
+                Celda.Fecha(LocalDate.of(2026, 2, 3)),
+                Celda.Texto("indefinido")
+            ),
+            listOf(
+                Celda.Texto("Total comprometido"),
+                Celda.Vacia,
+                Celda.Vacia,
+                Celda.Vacia,
+                Celda.Vacia,
+                Celda.Vacia
             )
         )
 
@@ -382,10 +412,21 @@ class ImportadorHojasTest : BaseEnMemoria() {
             libro(
                 hoja(
                     "Compromisos",
-                    texto("Compromiso", "Cuenta", "Categoria", "Monto", "Proximo pago", "Pagos restantes"),
+                    texto(
+                        "Compromiso",
+                        "Cuenta",
+                        "Categoria",
+                        "Monto",
+                        "Proximo pago",
+                        "Pagos restantes"
+                    ),
                     listOf(
-                        Celda.Texto("Seguro auto"), Celda.Vacia, Celda.Texto("Seguros"),
-                        Celda.Numero(3200.0), Celda.Fecha(LocalDate.of(2026, 6, 1)), Celda.Numero(3.0)
+                        Celda.Texto("Seguro auto"),
+                        Celda.Vacia,
+                        Celda.Texto("Seguros"),
+                        Celda.Numero(3200.0),
+                        Celda.Fecha(LocalDate.of(2026, 6, 1)),
+                        Celda.Numero(3.0)
                     )
                 ),
                 hojaRegistros(registro(cantidad = -500.0, descripcion = "Pago"))
@@ -519,7 +560,12 @@ class ImportadorHojasTest : BaseEnMemoria() {
         val resultado = importador().importa(
             libro(
                 hojaRegistros(
-                    registro(cantidad = -800.0, cuenta = "Banorte", categoria = "Gasolina", descripcion = "Carga")
+                    registro(
+                        cantidad = -800.0,
+                        cuenta = "Banorte",
+                        categoria = "Gasolina",
+                        descripcion = "Carga"
+                    )
                 )
             )
         )
@@ -550,7 +596,12 @@ class ImportadorHojasTest : BaseEnMemoria() {
             libro(
                 diccionarios,
                 hojaRegistros(
-                    registro(cantidad = -800.0, cuenta = "Banorte", categoria = "Despensa", descripcion = "Super")
+                    registro(
+                        cantidad = -800.0,
+                        cuenta = "Banorte",
+                        categoria = "Despensa",
+                        descripcion = "Super"
+                    )
                 )
             )
         )
@@ -575,7 +626,12 @@ class ImportadorHojasTest : BaseEnMemoria() {
                     texto(null, null, "Gasolina", "Transporte")
                 ),
                 hojaRegistros(
-                    registro(cantidad = -800.0, cuenta = "Banorte", categoria = "Gasolina", descripcion = "Carga")
+                    registro(
+                        cantidad = -800.0,
+                        cuenta = "Banorte",
+                        categoria = "Gasolina",
+                        descripcion = "Carga"
+                    )
                 )
             )
         )
@@ -597,7 +653,11 @@ class ImportadorHojasTest : BaseEnMemoria() {
         nuevaCategoria("Mascotas")
 
         val resultado = importador().importa(
-            libro(hojaRegistros(registro(cantidad = -800.0, cuenta = "Banorte", descripcion = "Compra")))
+            libro(
+                hojaRegistros(
+                    registro(cantidad = -800.0, cuenta = "Banorte", descripcion = "Compra")
+                )
+            )
         )
 
         assertEquals(2, categoriaDao.todas().size)
@@ -613,7 +673,12 @@ class ImportadorHojasTest : BaseEnMemoria() {
         val resultado = importador().importa(
             libro(
                 hojaRegistros(
-                    registro(cantidad = -800.0, cuenta = "Banorte", categoria = "Gasolina", descripcion = "Carga")
+                    registro(
+                        cantidad = -800.0,
+                        cuenta = "Banorte",
+                        categoria = "Gasolina",
+                        descripcion = "Carga"
+                    )
                 )
             ),
             OpcionesImportacion(reemplazarTodo = false)

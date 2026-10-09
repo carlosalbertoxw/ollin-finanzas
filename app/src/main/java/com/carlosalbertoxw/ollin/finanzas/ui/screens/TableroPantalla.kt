@@ -81,154 +81,6 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import kotlin.math.abs
 
-data class EstadoTablero(
-    val saldos: List<SaldoCuenta> = emptyList(),
-    val flujo: List<FlujoMes> = emptyList(),
-    val proximos: List<Pair<Compromiso, LocalDate>> = emptyList(),
-    val hallazgos: List<Hallazgo> = emptyList(),
-    /**
-     * Si ya llego algo de la base. El estado inicial no trae cuentas, y sin
-     * esta marca "todavia no se leyo" y "el libro esta vacio" se ven igual.
-     */
-    val cargado: Boolean = false
-) {
-    /**
-     * La tarjeta de "Empieza por aqui": solo con el libro en blanco de verdad.
-     *
-     * Hasta la 1.1.0 se decidia sobre el estado inicial, que no tiene cuentas
-     * porque la base cifrada aun no termino de abrir: la tarjeta salia un
-     * instante al entrar y desaparecia en cuanto llegaban los datos. Por eso
-     * exige [cargado], y el interruptor de los tutoriales ya leido del disco
-     * (nulo mientras no).
-     */
-    fun muestraBienvenida(muestraTutoriales: Boolean?): Boolean =
-        cargado && muestraTutoriales == true && saldos.none { it.movimientos > 0 }
-
-    /**
-     * Las cuentas marcadas como fuera del patrimonio no entran a ninguna cifra
-     * agregada. Sirven para llevar el registro de dinero que pasa por tus manos
-     * pero no es tuyo, sin que infle tu patrimonio ni tu colchon.
-     */
-    private val propias: List<SaldoCuenta> get() = saldos.filter { it.incluirEnPatrimonio }
-
-    val liquidez: Long get() = propias.filter { it.tipo.esLiquida }.sumOf { it.saldoCentavos }
-    val deuda: Long get() = propias.filter { it.tipo.esDeuda }.sumOf { it.saldoCentavos }
-    val noLiquido: Long
-        get() = propias.filter { !it.tipo.esLiquida && !it.tipo.esDeuda }.sumOf { it.saldoCentavos }
-    val patrimonio: Long get() = liquidez + deuda + noLiquido
-
-    /** El ultimo mes casi siempre esta a medias, asi que no entra al promedio. */
-    val gastoMensualPromedio: Long
-        get() {
-            val considerados = if (flujo.size > 1) flujo.dropLast(1) else flujo
-            if (considerados.isEmpty()) return 0L
-            return considerados.sumOf { abs(it.gastoConsumoCentavos) } / considerados.size
-        }
-
-    /**
-     * null mientras no haya gasto registrado. Un "0.0 meses" ahi seria mentira:
-     * no dice que no tengas colchon, dice que no hay contra que medirlo, y son
-     * cosas opuestas para quien lo lee.
-     */
-    val mesesDeColchon: Double?
-        get() = if (gastoMensualPromedio <= 0L) null else liquidez.toDouble() / gastoMensualPromedio
-
-    /** null sin ingresos registrados; un 0% se leeria como "no ahorras nada". */
-    val tasaAhorroPromedio: Double?
-        get() {
-            val ingresos = flujo.sumOf { it.ingresosCentavos }
-            if (ingresos <= 0L) return null
-            return (ingresos + flujo.sumOf { it.gastoConsumoCentavos }).toDouble() / ingresos
-        }
-
-    val patrimonioAcumulado: List<Long>
-        get() {
-            var acumulado = 0L
-            return flujo.map { acumulado += it.netoCentavos; acumulado }
-        }
-}
-
-class TableroVm(
-    private val repo: FinanzasRepositorio,
-    private val ajustes: AjustesRepositorio,
-    private val revisaCalidad: RevisaCalidad,
-    private val avisoDeRespaldo: AvisoDeRespaldo
-) : ViewModel() {
-
-    private val hallazgos = MutableStateFlow<List<Hallazgo>>(emptyList())
-
-    val estado: StateFlow<EstadoTablero> = combine(
-        repo.observaSaldos(),
-        repo.observaFlujoMensual(),
-        repo.observaCompromisos(),
-        hallazgos.asStateFlow()
-    ) { saldos, flujo, compromisos, problemas ->
-        EstadoTablero(
-            saldos = saldos,
-            flujo = flujo,
-            proximos = Recordatorios.porVencer(compromisos.map { it.copy(avisarDiasAntes = 45) }),
-            hallazgos = problemas,
-            cargado = true
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EstadoTablero())
-
-    // Las mismas decisiones que ofrece la lista de Compromisos. Se repiten aqui
-    // porque el tablero es donde de verdad se ven los pagos que vienen, y
-    // mandar a la persona a otra pantalla para dos toques sobra.
-
-    fun cumple(id: Long) {
-        viewModelScope.launch { repo.avanzaCompromiso(id) }
-    }
-
-    fun deshaceCumplimiento(id: Long) {
-        viewModelScope.launch { repo.retrocedeCompromiso(id) }
-    }
-
-    fun descarta(id: Long) {
-        viewModelScope.launch { repo.descartaPagoCompromiso(id) }
-    }
-
-    fun deshaceDescarte(id: Long) {
-        viewModelScope.launch { repo.restauraPagoCompromiso(id) }
-    }
-
-    /**
-     * El texto del aviso de respaldo, o nulo si no toca.
-     *
-     * La hora se toma al combinar. No hace falta un reloj que avise: al irse
-     * la app al fondo se deja de escuchar, y al volver se recalcula con la hora
-     * de ese momento. Exportar escribe el ultimo respaldo en DataStore, y eso
-     * basta para que el aviso desaparezca solo.
-     */
-    val avisoRespaldo: StateFlow<String?> = combine(
-        ajustes.ajustes,
-        avisoDeRespaldo.descartado
-    ) { preferencias, descartado ->
-        AvisoDeRespaldo.texto(preferencias, descartado, System.currentTimeMillis())
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
-
-    fun descartaAvisoRespaldo() = avisoDeRespaldo.descarta()
-
-    /**
-     * Manda si el tablero enseña o no sus atajos de ayuda. Nulo mientras no se
-     * lee del disco: partir de `true` dibujaba la ayuda un instante a quien la
-     * tiene apagada.
-     */
-    val muestraTutoriales: StateFlow<Boolean?> = ajustes.ajustes
-        .map<_, Boolean?> { it.muestraTutoriales }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
-
-    init {
-        revisaCalidad()
-    }
-
-    fun revisaCalidad() {
-        viewModelScope.launch {
-            hallazgos.value = runCatching { revisaCalidad.ejecuta() }.getOrDefault(emptyList())
-        }
-    }
-}
-
 @Composable
 fun TableroPantalla(
     repo: FinanzasRepositorio,
@@ -269,7 +121,12 @@ fun TableroPantalla(
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 16.dp, 16.dp, 96.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                16.dp,
+                16.dp,
+                16.dp,
+                96.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Lo primero de todo: es lo unico del tablero que, si se ignora, puede
@@ -291,7 +148,11 @@ fun TableroPantalla(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Patrimonio neto", style = MaterialTheme.typography.labelLarge, color = colores.textoTenue)
+                        Text(
+                            "Patrimonio neto",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = colores.textoTenue
+                        )
                         Text(
                             Dinero.formatea(estado.patrimonio),
                             style = MaterialTheme.typography.displaySmall
@@ -363,8 +224,11 @@ fun TableroPantalla(
                     Card(
                         Modifier.fillMaxWidth().clickable(onClick = alAbrirCalidad),
                         colors = CardDefaults.cardColors(
-                            containerColor = if (graves > 0) MaterialTheme.colorScheme.errorContainer
-                            else MaterialTheme.colorScheme.tertiaryContainer
+                            containerColor = if (graves > 0) {
+                                MaterialTheme.colorScheme.errorContainer
+                            } else {
+                                MaterialTheme.colorScheme.tertiaryContainer
+                            }
                         )
                     ) {
                         Row(
@@ -441,7 +305,9 @@ fun TableroPantalla(
                 item {
                     Card(
                         Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
                     ) {
                         Column(Modifier.padding(16.dp)) {
                             SeccionTitulo("Ingresos contra gasto")
@@ -471,7 +337,10 @@ fun TableroPantalla(
                 }
                 // La clave lleva prefijo porque este LazyColumn mezcla secciones de
                 // tablas distintas: el compromiso 1 y la cuenta 1 chocarian.
-                items(estado.proximos.take(4), key = { "compromiso-${it.first.id}" }) { (compromiso, fecha) ->
+                items(
+                    estado.proximos.take(4),
+                    key = { "compromiso-${it.first.id}" }
+                ) { (compromiso, fecha) ->
                     // Mismo gesto que en la lista de Compromisos: tocar abre la
                     // captura ya llena, deslizar descubre cumplir y descartar. Que
                     // signifique lo mismo en los dos lugares es la mitad del valor.
@@ -527,7 +396,10 @@ fun TableroPantalla(
                     TextButton(onClick = alAbrirCuentas) { Text("Administrar") }
                 }
             }
-            items(estado.saldos.filter { it.movimientos > 0 }, key = { "cuenta-${it.cuentaId}" }) { saldo ->
+            items(
+                estado.saldos.filter { it.movimientos > 0 },
+                key = { "cuenta-${it.cuentaId}" }
+            ) { saldo ->
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -559,8 +431,6 @@ fun TableroPantalla(
         )
     }
 }
-
-/** Renglon compartido por el tablero y la lista de movimientos. */
 
 /**
  * La tarjeta del aviso de respaldo. Toda ella lleva a Archivo, igual que la
@@ -595,6 +465,7 @@ private fun AvisoRespaldo(texto: String, alExportar: () -> Unit, alQuitar: () ->
     }
 }
 
+/** Renglon compartido por el tablero y la lista de movimientos. */
 @Composable
 fun RenglonMovimiento(
     detalle: MovimientoDetallado,

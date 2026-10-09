@@ -246,7 +246,11 @@ class ControlBloqueoTest {
         assertEquals(1, bloqueo.segundosDeEspera())
 
         ahora += 1_000
-        assertEquals("Cumplida la espera, se puede volver a intentar", 0, bloqueo.segundosDeEspera())
+        assertEquals(
+            "Cumplida la espera, se puede volver a intentar",
+            0,
+            bloqueo.segundosDeEspera()
+        )
     }
 
     @Test
@@ -311,7 +315,11 @@ class ControlBloqueoTest {
         )
 
         ahora += ControlBloqueo.esperaMillis(6)
-        assertEquals("Cumplida la espera, se puede volver a intentar", 0, bloqueo.segundosDeEspera())
+        assertEquals(
+            "Cumplida la espera, se puede volver a intentar",
+            0,
+            bloqueo.segundosDeEspera()
+        )
     }
 
     @Test

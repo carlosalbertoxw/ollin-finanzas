@@ -118,9 +118,7 @@ data class DiagnosticoAgrupado(
  * Diccionarios, Presupuesto o Compromisos, tambien entran. Exportar el libro
  * completo y volver a importarlo devuelve el catalogo de cuentas y categorias,
  * las metas del mes y los pagos por venir, no solo los movimientos.
- */
-
-/**
+ *
  * Recibe la base entera y no sus DAOs sueltos porque necesita abrir una
  * transaccion: importar reemplazando borra todo antes de escribir, y sin
  * atomicidad un fallo a medio camino deja el libro vacio. Ver [importa].
@@ -245,7 +243,10 @@ class ImportadorExcel(private val db: OllinDatabase) {
                     "Entraron solo las otras pestañas; tus movimientos actuales quedaron como estaban."
             )
         } else {
-            Diagnostico(Severidad.ERROR, "No encontre ninguna hoja con columnas de Fecha, Cantidad y Cuenta.")
+            Diagnostico(
+                Severidad.ERROR,
+                "No encontre ninguna hoja con columnas de Fecha, Cantidad y Cuenta."
+            )
         }
         return copy(diagnosticos = diagnosticos + aviso)
     }
@@ -260,7 +261,9 @@ class ImportadorExcel(private val db: OllinDatabase) {
     private class MapaColumnas(private val indices: Map<String, Int>) {
         operator fun get(clave: String): Int? = indices[clave]
         fun esUtilizable(): Boolean =
-            indices.containsKey("fecha") && indices.containsKey("cantidad") && indices.containsKey("cuenta")
+            indices.containsKey(
+                "fecha"
+            ) && indices.containsKey("cantidad") && indices.containsKey("cuenta")
     }
 
     private fun mapaColumnas(hoja: HojaLeida): MapaColumnas {
@@ -304,7 +307,8 @@ class ImportadorExcel(private val db: OllinDatabase) {
                 return@forEachIndexed
             }
 
-            val descripcion = columnas["descripcion"]?.let { fila.getOrNull(it) }?.comoTexto()?.trim().orEmpty()
+            val descripcion = columnas["descripcion"]?.let { fila.getOrNull(it) }
+                ?.comoTexto()?.trim().orEmpty()
             val tipo = columnas["tipo"]?.let { fila.getOrNull(it) }?.comoTexto()
                 ?.let(TipoMovimiento::desdeEtiqueta)
                 ?: infiereTipo(importe, descripcion)
@@ -314,14 +318,16 @@ class ImportadorExcel(private val db: OllinDatabase) {
                 fecha = fecha,
                 importeCentavos = importe,
                 cuenta = cuenta,
-                categoria = columnas["categoria"]?.let { fila.getOrNull(it) }?.comoTexto()?.trim()?.ifBlank { null },
+                categoria = columnas["categoria"]?.let { fila.getOrNull(it) }
+                    ?.comoTexto()?.trim()?.ifBlank { null },
                 descripcion = descripcion.ifBlank { "(sin descripcion)" },
                 medio = columnas["medio"]?.let { fila.getOrNull(it) }?.comoTexto()
                     ?.let(Medio::desdeEtiqueta) ?: Medio.ELECTRONICO,
                 tipo = tipo,
                 contraparteArchivo = columnas["contraparte"]?.let { fila.getOrNull(it) }
                     ?.let(::leeContraparte),
-                nota = columnas["nota"]?.let { fila.getOrNull(it) }?.comoTexto()?.trim()?.ifBlank { null }
+                nota = columnas["nota"]?.let { fila.getOrNull(it) }
+                    ?.comoTexto()?.trim()?.ifBlank { null }
             )
         }
 
@@ -329,7 +335,10 @@ class ImportadorExcel(private val db: OllinDatabase) {
             return ResultadoImportacion(
                 filasLeidas = hoja.filas.size - 1,
                 omitidos = omitidos,
-                diagnosticos = diagnosticos + Diagnostico(Severidad.ERROR, "No hubo ningun renglon aprovechable.")
+                diagnosticos = diagnosticos + Diagnostico(
+                    Severidad.ERROR,
+                    "No hubo ningun renglon aprovechable."
+                )
             )
         }
 
@@ -353,7 +362,8 @@ class ImportadorExcel(private val db: OllinDatabase) {
             tiposCorregidos++
             diagnosticos += Diagnostico(
                 Severidad.AVISO,
-                "El tipo decia \"${fila.tipo.etiqueta}\" pero el importe es ${if (real > 0) "positivo" else "negativo"}. " +
+                "El tipo decia \"${fila.tipo.etiqueta}\" pero el importe es " +
+                    "${if (real > 0) "positivo" else "negativo"}. " +
                     "Se corrigio a \"${nuevo.etiqueta}\"; el importe no se toco.",
                 fila.numeroFila
             )
@@ -365,8 +375,12 @@ class ImportadorExcel(private val db: OllinDatabase) {
         var emparejadas = 0
         var huerfanas = 0
         if (opciones.emparejarTransferencias) {
-            val salidas = corregidas.filter { it.tipo == TipoMovimiento.TRANSFERENCIA_SALIDA }.toMutableList()
-            val entradas = corregidas.filter { it.tipo == TipoMovimiento.TRANSFERENCIA_ENTRADA }.toMutableList()
+            val salidas = corregidas
+                .filter { it.tipo == TipoMovimiento.TRANSFERENCIA_SALIDA }
+                .toMutableList()
+            val entradas = corregidas
+                .filter { it.tipo == TipoMovimiento.TRANSFERENCIA_ENTRADA }
+                .toMutableList()
 
             // Primero la coincidencia estricta, luego se afloja la descripcion.
             listOf(true, false).forEach { exigeDescripcion ->
@@ -430,22 +444,34 @@ class ImportadorExcel(private val db: OllinDatabase) {
             .toMutableMap()
         corregidas.mapNotNull { it.categoria }.forEach(delLibro::anotaCategoria)
         aplicaCategoriasDeDiccionario(
-            diccionarios.categorias, corregidas, indiceCategorias, categoriasCreadas, diagnosticos, delLibro
+            diccionarios.categorias,
+            corregidas,
+            indiceCategorias,
+            categoriasCreadas,
+            diagnosticos,
+            delLibro
         )
         val mapeo = mapeoDao.todos().associate { it.clave to it.categoriaId }
         var sinCategoria = 0
 
         suspend fun resuelveCategoria(fila: FilaCruda): Long? {
             if (fila.tipo.esInterno) return null
-            if (fila.descripcion.normalizaClave() in Semilla.DESCRIPCIONES_SIN_CATEGORIA) return null
+            val clave = fila.descripcion.normalizaClave()
+            if (clave in Semilla.DESCRIPCIONES_SIN_CATEGORIA) return null
 
             // a) la columna Categoria manda si viene
             fila.categoria?.let { nombre ->
                 indiceCategorias[nombre.normalizaClave()]?.let { return it.id }
                 if (!opciones.autoCategorizar) return null
                 val tipoCat = tipoCategoriaPara(fila.tipo)
-                val id = categoriaDao.inserta(Categoria(nombre = nombre, tipo = tipoCat, orden = 999))
-                indiceCategorias[nombre.normalizaClave()] = Categoria(id = id, nombre = nombre, tipo = tipoCat)
+                val id = categoriaDao.inserta(
+                    Categoria(nombre = nombre, tipo = tipoCat, orden = 999)
+                )
+                indiceCategorias[nombre.normalizaClave()] = Categoria(
+                    id = id,
+                    nombre = nombre,
+                    tipo = tipoCat
+                )
                 categoriasCreadas += nombre
                 return id
             }
@@ -503,8 +529,9 @@ class ImportadorExcel(private val db: OllinDatabase) {
         if (contrapartesRecalculadas > 0) {
             diagnosticos += Diagnostico(
                 Severidad.INFO,
-                "Recalcule la contraparte de $contrapartesRecalculadas movimientos: el archivo los marcaba " +
-                    "como si intervinera un tercero, pero son traspasos entre cuentas tuyas."
+                "Recalcule la contraparte de $contrapartesRecalculadas movimientos: el archivo " +
+                    "los marcaba como si intervinera un tercero, pero son traspasos entre " +
+                    "cuentas tuyas."
             )
         }
         if (sinCategoria > 0) {
@@ -549,7 +576,10 @@ class ImportadorExcel(private val db: OllinDatabase) {
         if (indice.containsKey(clave)) return
         if (!opciones.crearCuentasFaltantes) {
             if (reportaFaltante) {
-                diagnosticos += Diagnostico(Severidad.ERROR, "La cuenta \"$nombre\" no existe en Ollin Finanzas.")
+                diagnosticos += Diagnostico(
+                    Severidad.ERROR,
+                    "La cuenta \"$nombre\" no existe en Ollin Finanzas."
+                )
             }
             return
         }
@@ -667,7 +697,12 @@ class ImportadorExcel(private val db: OllinDatabase) {
             .associateBy { it.nombre.normalizaClave() }
             .toMutableMap()
         aplicaCategoriasDeDiccionario(
-            diccionarios.categorias, emptyList(), indiceCategorias, categoriasCreadas, diagnosticos, delLibro
+            diccionarios.categorias,
+            emptyList(),
+            indiceCategorias,
+            categoriasCreadas,
+            diagnosticos,
+            delLibro
         )
 
         return ResultadoImportacion(
@@ -713,7 +748,9 @@ class ImportadorExcel(private val db: OllinDatabase) {
             it.id !in categoriasUsadas && it.nombre.normalizaClave() !in delLibro.categorias
         }
         val idsCandidatas = candidatas.mapTo(HashSet()) { it.id }
-        val padresDeVivas = todas.filterNot { it.id in idsCandidatas }.mapNotNullTo(HashSet()) { it.padreId }
+        val padresDeVivas = todas.filterNot { it.id in idsCandidatas }.mapNotNullTo(
+            HashSet()
+        ) { it.padreId }
         val categoriasSobran = candidatas.filterNot { it.id in padresDeVivas }
 
         // Vaciar el catalogo entero no seria reemplazarlo sino desmantelarlo: sin
@@ -730,9 +767,14 @@ class ImportadorExcel(private val db: OllinDatabase) {
         if (cuentasSobran.isNotEmpty() || categoriasEliminadas > 0) {
             diagnosticos += Diagnostico(
                 Severidad.INFO,
-                "Al reemplazar quite ${cuentasSobran.size} cuentas y $categoriasEliminadas categorias " +
-                    "que quedaron sin un solo movimiento y que el libro no nombra" +
-                    if (cuentasSobran.isEmpty()) "." else ": ${cuentasSobran.joinToString { it.nombre }}."
+                "Al reemplazar quite ${cuentasSobran.size} cuentas y " +
+                    "$categoriasEliminadas categorias que quedaron sin un solo movimiento y " +
+                    "que el libro no nombra" +
+                    if (cuentasSobran.isEmpty()) {
+                        "."
+                    } else {
+                        ": ${cuentasSobran.joinToString { it.nombre }}."
+                    }
             )
         }
         if (loBorraTodo) {
@@ -910,7 +952,9 @@ class ImportadorExcel(private val db: OllinDatabase) {
         celda.numero?.let { return Contraparte.desdeCodigo(it.toInt()) }
         val texto = celda.texto?.normalizaClave() ?: return null
         return when {
-            texto.startsWith("1") || texto.contains("propia") || texto.contains("mis cuentas") -> Contraparte.PROPIA
+            texto.startsWith(
+                "1"
+            ) || texto.contains("propia") || texto.contains("mis cuentas") -> Contraparte.PROPIA
             texto.startsWith("2") || texto.contains("tercero") -> Contraparte.TERCERO
             else -> null
         }
@@ -954,8 +998,12 @@ class ImportadorExcel(private val db: OllinDatabase) {
                 clave.contains("prestamo") || clave.contains("hipoteca") ||
                 clave.contains("financiamiento") -> TipoCuenta.CREDITO
 
-            clave.contains("cartera") || clave.contains("efectivo") || clave.contains("caja") -> TipoCuenta.EFECTIVO
-            clave.contains("terreno") || clave.contains("cripto") || clave.contains("inmueble") -> TipoCuenta.ACTIVO
+            clave.contains(
+                "cartera"
+            ) || clave.contains("efectivo") || clave.contains("caja") -> TipoCuenta.EFECTIVO
+            clave.contains(
+                "terreno"
+            ) || clave.contains("cripto") || clave.contains("inmueble") -> TipoCuenta.ACTIVO
             else -> TipoCuenta.DEBITO
         }
     }

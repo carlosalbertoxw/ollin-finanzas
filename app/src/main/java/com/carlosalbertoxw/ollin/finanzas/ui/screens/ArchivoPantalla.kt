@@ -101,142 +101,6 @@ private class CreaLibro : ActivityResultContracts.CreateDocument(MIME_XLSX) {
         }
 }
 
-sealed interface EstadoArchivo {
-    data object Reposo : EstadoArchivo
-    data class Trabajando(val mensaje: String) : EstadoArchivo
-
-    /**
-     * [hallazgosEnSalud] es lo que la auditoria encontro en los datos ya
-     * importados. Se cuenta aqui porque los avisos de la importacion hablan del
-     * archivo —renglones incompletos, metas sin categoria— y casi ninguno deja
-     * rastro en la base: mandar a Salud por ellos llevaba a una pantalla que
-     * decia "todo cuadra".
-     */
-    data class Importado(
-        val resultado: ResultadoImportacion,
-        val hallazgosEnSalud: Int = 0
-    ) : EstadoArchivo
-
-    data class Exportado(val hojas: Int, val movimientos: Int) : EstadoArchivo
-    data class Fallo(val mensaje: String) : EstadoArchivo
-}
-
-class ArchivoVm(
-    private val repo: FinanzasRepositorio,
-    private val prefs: AjustesRepositorio,
-    private val revisaCalidad: RevisaCalidad
-) : ViewModel() {
-
-    val ajustes: StateFlow<Ajustes> = prefs.ajustes
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Ajustes())
-
-    val totalMovimientos: StateFlow<Int> = repo.observaConteoMovimientos()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-
-    private val _estado = MutableStateFlow<EstadoArchivo>(EstadoArchivo.Reposo)
-    val estado: StateFlow<EstadoArchivo> = _estado
-
-    fun cambiaEsquema(esquema: EsquemaExportacion) {
-        viewModelScope.launch { prefs.guardaEsquema(esquema) }
-    }
-
-    fun alternaHoja(hoja: HojaExportable) {
-        if (hoja.obligatoria) return
-        viewModelScope.launch {
-            val actuales = ajustes.value.hojas
-            prefs.guardaHojas(if (hoja in actuales) actuales - hoja else actuales + hoja)
-        }
-    }
-
-    fun cambiaHojasPreset(hojas: Set<HojaExportable>) {
-        viewModelScope.launch { prefs.guardaHojas(hojas) }
-    }
-
-    fun cambiaCorregir(valor: Boolean) {
-        viewModelScope.launch { prefs.guardaCorregir(valor) }
-    }
-
-    fun cambiaReemplazar(valor: Boolean) {
-        viewModelScope.launch { prefs.guardaReemplazar(valor) }
-    }
-
-    fun importa(uri: Uri) {
-        _estado.value = EstadoArchivo.Trabajando("Leyendo el archivo...")
-        viewModelScope.launch {
-            val a = ajustes.value
-            runCatching {
-                repo.importa(
-                    uri,
-                    OpcionesImportacion(
-                        corregirTipoSegunSigno = a.corregirAlImportar,
-                        derivarContraparte = a.corregirAlImportar,
-                        emparejarTransferencias = true,
-                        reemplazarTodo = a.reemplazarAlImportar
-                    )
-                )
-            }.fold(
-                onSuccess = { resultado ->
-                    // La auditoria corre aqui, sobre los datos ya importados,
-                    // para saber si mandar a Salud tiene algo que ofrecer.
-                    val hallazgos = runCatching { revisaCalidad.ejecuta().size }
-                        .getOrDefault(0)
-                    _estado.value = EstadoArchivo.Importado(resultado, hallazgos)
-                },
-                onFailure = { _estado.value = EstadoArchivo.Fallo(explica(it, "importar")) }
-            )
-        }
-    }
-
-    fun exporta(uri: Uri) {
-        _estado.value = EstadoArchivo.Trabajando("Generando el libro...")
-        viewModelScope.launch {
-            val a = ajustes.value
-            runCatching { repo.exporta(uri, a.esquema, a.hojas) }.fold(
-                onSuccess = {
-                    // La semana del recordatorio vuelve a contar desde aqui:
-                    // acaba de hacerse lo que el aviso pediria.
-                    prefs.guardaRespaldoHecho(System.currentTimeMillis())
-                    _estado.value = EstadoArchivo.Exportado(
-                        hojas = HojaExportable.normaliza(a.hojas).size,
-                        movimientos = totalMovimientos.value
-                    )
-                },
-                onFailure = { _estado.value = EstadoArchivo.Fallo(explica(it, "exportar")) }
-            )
-        }
-    }
-
-    /**
-     * Traduce el fallo a algo accionable. El mensaje crudo de una excepcion
-     * habla de rutas internas, clases y consultas: al usuario no le sirve de
-     * nada y de paso le ensena como esta hecha la app por dentro.
-     */
-    private fun explica(fallo: Throwable, accion: String): String {
-        // El mensaje que ve el usuario oculta los internos a proposito, asi que
-        // el fallo real se manda a logcat: sin esto, un error de exportacion no
-        // deja rastro de que lo causo. No lleva ningun dato del usuario.
-        android.util.Log.w("OllinFinanzas", "Fallo al $accion", fallo)
-        return mensajeDe(fallo, accion)
-    }
-
-    private fun mensajeDe(fallo: Throwable, accion: String): String = when (fallo) {
-        // Los suyos si estan escritos para leerse; el resto no.
-        is XlsxLector.ArchivoInvalido -> fallo.message ?: "El archivo no se pudo leer."
-        is SecurityException -> "Ya no hay permiso sobre ese archivo. Vuelve a elegirlo."
-        is java.io.IOException -> "No se pudo leer o escribir el archivo. Revisa que haya " +
-            "espacio libre y que la ubicacion siga disponible."
-        is OutOfMemoryError -> "El libro es demasiado grande para la memoria del telefono. " +
-            "Exporta menos pestanas desde \"Solo datos\"."
-        else -> "No se pudo $accion. Intenta de nuevo."
-    }
-
-    fun limpia() { _estado.value = EstadoArchivo.Reposo }
-
-    fun avisa(mensaje: String) { _estado.value = EstadoArchivo.Fallo(mensaje) }
-
-    fun nombreSugerido(): String = "Finanzas-${LocalDate.now()}.xlsx"
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArchivoPantalla(
@@ -300,7 +164,9 @@ fun ArchivoPantalla(
                 }
 
                 is EstadoArchivo.Fallo -> Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text("No se pudo completar", style = MaterialTheme.typography.titleSmall)
@@ -311,7 +177,9 @@ fun ArchivoPantalla(
                 }
 
                 is EstadoArchivo.Exportado -> Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Libro generado", style = MaterialTheme.typography.titleSmall)
@@ -345,18 +213,21 @@ fun ArchivoPantalla(
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     InterruptorConNota(
                         titulo = "Corregir al importar",
-                        detalle = "Alinea el tipo con el signo del importe y recalcula si el movimiento " +
-                            "es entre tus cuentas o con un tercero.",
+                        detalle = "Alinea el tipo con el signo del importe y recalcula si el " +
+                            "movimiento es entre tus cuentas o con un tercero.",
                         valor = ajustes.corregirAlImportar,
                         alCambiar = vm::cambiaCorregir
                     )
                     InterruptorConNota(
                         titulo = "Reemplazar todo",
-                        detalle = if (ajustes.reemplazarAlImportar)
-                            "Se borran los $total movimientos actuales —y las metas y compromisos— " +
-                                "y se cargan los del archivo. Las cuentas y categorias que queden " +
-                                "sin un solo movimiento, incluidas las de ejemplo, tambien se van."
-                        else "Lo del archivo se agrega a lo que ya tienes.",
+                        detalle = if (ajustes.reemplazarAlImportar) {
+                            "Se borran los $total movimientos actuales —y las metas y " +
+                                "compromisos— y se cargan los del archivo. Las cuentas y " +
+                                "categorias que queden sin un solo movimiento, incluidas las de " +
+                                "ejemplo, tambien se van."
+                        } else {
+                            "Lo del archivo se agrega a lo que ya tienes."
+                        },
                         valor = ajustes.reemplazarAlImportar,
                         alCambiar = vm::cambiaReemplazar
                     )
@@ -384,7 +255,10 @@ fun ArchivoPantalla(
                     SegmentedButton(
                         selected = ajustes.esquema == esquema,
                         onClick = { vm.cambiaEsquema(esquema) },
-                        shape = SegmentedButtonDefaults.itemShape(i, EsquemaExportacion.entries.size)
+                        shape = SegmentedButtonDefaults.itemShape(
+                            i,
+                            EsquemaExportacion.entries.size
+                        )
                     ) { Text(esquema.etiqueta) }
                 }
             }
@@ -434,7 +308,9 @@ fun ArchivoPantalla(
             }
 
             Button(
-                onClick = { lanza(vm, "guardar", alSalirAlSistema) { crear.launch(vm.nombreSugerido()) } },
+                onClick = {
+                    lanza(vm, "guardar", alSalirAlSistema) { crear.launch(vm.nombreSugerido()) }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = total > 0
             ) {
@@ -540,8 +416,11 @@ private fun ResumenImportacion(
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (resultado.huboProblemas) MaterialTheme.colorScheme.tertiaryContainer
-            else MaterialTheme.colorScheme.primaryContainer
+            containerColor = if (resultado.huboProblemas) {
+                MaterialTheme.colorScheme.tertiaryContainer
+            } else {
+                MaterialTheme.colorScheme.primaryContainer
+            }
         )
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

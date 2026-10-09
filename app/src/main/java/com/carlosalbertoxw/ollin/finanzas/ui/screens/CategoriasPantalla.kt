@@ -52,56 +52,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** Una categoria con lo que la pantalla necesita saber para decidir que se puede hacer con ella. */
-data class RenglonCategoria(
-    val categoria: Categoria,
-    val movimientos: Int,
-    val hijas: Int
-) {
-    val esRaiz: Boolean get() = categoria.padreId == null
-
-    /**
-     * Borrar solo es seguro cuando nada cuelga de la categoria. Con movimientos,
-     * la clave foranea los dejaria sin categoria en silencio; con hijas, las
-     * subiria a raiz. En esos casos se archiva.
-     */
-    val sePuedeBorrar: Boolean get() = movimientos == 0 && hijas == 0
-}
-
-class CategoriasVm(private val repo: FinanzasRepositorio) : ViewModel() {
-
-    val renglones: StateFlow<List<RenglonCategoria>> = combine(
-        repo.observaTodasLasCategorias(),
-        repo.observaUsoDeCategorias()
-    ) { categorias, uso ->
-        val porCategoria = uso.associate { it.categoriaId to it.movimientos }
-        val hijasPorPadre = categorias.groupingBy { it.padreId }.eachCount()
-        categorias.map {
-            RenglonCategoria(
-                categoria = it,
-                movimientos = porCategoria[it.id] ?: 0,
-                hijas = hijasPorPadre[it.id] ?: 0
-            )
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    fun guarda(categoria: Categoria, alFallar: (String) -> Unit) {
-        viewModelScope.launch {
-            // El indice unico (nombre, padreId) rebota los duplicados. Vale mas
-            // explicarlo que dejar que la excepcion se lleve la pantalla.
-            runCatching { repo.guardaCategoria(categoria) }
-                .onFailure { alFallar("Ya existe una categoria con ese nombre en el mismo nivel.") }
-        }
-    }
-
-    fun elimina(renglon: RenglonCategoria) {
-        viewModelScope.launch {
-            if (renglon.sePuedeBorrar) repo.eliminaCategoria(renglon.categoria)
-            else repo.guardaCategoria(renglon.categoria.copy(archivada = true))
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoriasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
@@ -150,7 +100,9 @@ fun CategoriasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
                 val ordenado = delTipo.filter { it.esRaiz }.flatMap { raiz ->
                     listOf(raiz) + delTipo.filter { it.categoria.padreId == raiz.categoria.id }
                 }
-                val sueltas = delTipo.filter { !it.esRaiz && ordenado.none { o -> o.categoria.id == it.categoria.id } }
+                val sueltas = delTipo.filter {
+                    !it.esRaiz && ordenado.none { o -> o.categoria.id == it.categoria.id }
+                }
 
                 items(ordenado + sueltas, key = { it.categoria.id }) { renglon ->
                     RenglonCategoriaVista(renglon) { editando = renglon.categoria }
@@ -292,7 +244,10 @@ private fun DialogoCategoria(
                             .fillMaxWidth()
                             .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                     )
-                    ExposedDropdownMenu(expanded = abreTipo, onDismissRequest = { abreTipo = false }) {
+                    ExposedDropdownMenu(
+                        expanded = abreTipo,
+                        onDismissRequest = { abreTipo = false }
+                    ) {
                         TipoCategoria.entries.forEach { opcion ->
                             DropdownMenuItem(
                                 text = { Text(opcion.etiqueta) },
@@ -303,7 +258,10 @@ private fun DialogoCategoria(
                 }
 
                 if (!tieneHijas) {
-                    ExposedDropdownMenuBox(expanded = abrePadre, onExpandedChange = { abrePadre = it }) {
+                    ExposedDropdownMenuBox(
+                        expanded = abrePadre,
+                        onExpandedChange = { abrePadre = it }
+                    ) {
                         OutlinedTextField(
                             value = nombrePadre,
                             onValueChange = {},

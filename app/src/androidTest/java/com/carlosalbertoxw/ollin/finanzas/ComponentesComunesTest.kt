@@ -93,7 +93,9 @@ class ComponentesComunesTest {
             )
         }
         compose.onNodeWithText("Todavia no hay movimientos").assertIsDisplayed()
-        compose.onNodeWithText("Captura el primero o importa tu libro de Excel.").assertIsDisplayed()
+        compose.onNodeWithText(
+            "Captura el primero o importa tu libro de Excel."
+        ).assertIsDisplayed()
         compose.onNodeWithText("Importar").assertIsDisplayed()
     }
 

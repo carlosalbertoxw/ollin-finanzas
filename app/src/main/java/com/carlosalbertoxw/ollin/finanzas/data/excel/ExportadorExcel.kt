@@ -186,7 +186,9 @@ class ExportadorExcel(
                     datos.categoriaPorId[hija.padreId]?.nombre.orEmpty()
                 }.orEmpty()),
                 Celda.Texto(medios.getOrNull(i)?.etiqueta.orEmpty()),
-                Celda.Texto(contrapartes.getOrNull(i)?.let { "${it.codigo} - ${it.etiqueta}" }.orEmpty()),
+                Celda.Texto(
+                    contrapartes.getOrNull(i)?.let { "${it.codigo} - ${it.etiqueta}" }.orEmpty()
+                ),
                 Celda.Texto(tipos.getOrNull(i)?.etiqueta.orEmpty())
             )
         }
@@ -204,7 +206,9 @@ class ExportadorExcel(
     private fun hojaBalance(): Hoja {
         val filas = mutableListOf<List<Celda>>()
         filas += fila(Celda.Texto("Balance por cuenta", Estilo.TITULO))
-        filas += fila(Celda.Texto("Saldo vivo = suma de todos los movimientos de la cuenta.", Estilo.TENUE))
+        filas += fila(
+            Celda.Texto("Saldo vivo = suma de todos los movimientos de la cuenta.", Estilo.TENUE)
+        )
         filas += fila()
 
         var totalLiquido = 0L
@@ -232,12 +236,14 @@ class ExportadorExcel(
                 filas += listOf(
                     Celda.Texto(cuenta.nombre),
                     Celda.Formula(
-                        "SUMIFS(${rango(colCantidad)},${rango(colCuenta)},${Ooxml.criterioLiteral("\$A${filas.size + 1}")})",
+                        "SUMIFS(${rango(colCantidad)},${rango(colCuenta)}," +
+                            "${Ooxml.criterioLiteral("\$A${filas.size + 1}")})",
                         cache = centavosADouble(saldo),
                         estilo = if (saldo < 0) Estilo.DINERO_NEGATIVO else Estilo.DINERO
                     ),
                     Celda.Formula(
-                        "COUNTIFS(${rango(colCuenta)},${Ooxml.criterioLiteral("\$A${filas.size + 1}")})",
+                        "COUNTIFS(${rango(colCuenta)}," +
+                            "${Ooxml.criterioLiteral("\$A${filas.size + 1}")})",
                         cache = datos.movimientos.count {
                             datos.nombreCuenta(it.cuentaId) == cuenta.nombre
                         }.toDouble(),
@@ -281,7 +287,12 @@ class ExportadorExcel(
                 Estilo.NORMAL
             )
         )
-        filas += fila(Celda.Texto("Solo cuenta la liquidez; el patrimonio no liquido no paga la despensa.", Estilo.TENUE))
+        filas += fila(
+            Celda.Texto(
+                "Solo cuenta la liquidez; el patrimonio no liquido no paga la despensa.",
+                Estilo.TENUE
+            )
+        )
 
         return Hoja(
             nombre = "Balance",
@@ -309,7 +320,12 @@ class ExportadorExcel(
         if (esquema == EsquemaExportacion.EXTENDIDO) {
             bloquePorCategoria(filas, TipoCategoria.GASTO, TipoMovimiento.SALIDA, "Gastos")
             filas += fila()
-            bloquePorCategoria(filas, TipoCategoria.PATRIMONIO, TipoMovimiento.SALIDA, "Compra de patrimonio (no es gasto)")
+            bloquePorCategoria(
+                filas,
+                TipoCategoria.PATRIMONIO,
+                TipoMovimiento.SALIDA,
+                "Compra de patrimonio (no es gasto)"
+            )
             filas += fila()
             bloquePorCategoria(filas, TipoCategoria.INGRESO, TipoMovimiento.ENTRADA, "Ingresos")
         } else {
@@ -324,7 +340,9 @@ class ExportadorExcel(
         return Hoja(
             nombre = "Ingresos - Egresos",
             filas = filas,
-            anchos = listOf(AnchoColumna(1, 34.0)) + (2..(meses.size + 2)).map { AnchoColumna(it, 14.0) },
+            anchos = listOf(
+                AnchoColumna(1, 34.0)
+            ) + (2..(meses.size + 2)).map { AnchoColumna(it, 14.0) },
             congelarTrasFila = 0
         )
     }
@@ -360,7 +378,11 @@ class ExportadorExcel(
         val totalFila = mutableListOf<Celda>(Celda.Texto("Total $titulo", Estilo.NEGRITA))
         meses.forEachIndexed { i, ym ->
             val letra = Ooxml.letraColumna(i + 2)
-            val expr = if (filasHijas.isEmpty()) "0" else filasHijas.joinToString("+") { "$letra$it" }
+            val expr = if (filasHijas.isEmpty()) {
+                "0"
+            } else {
+                filasHijas.joinToString("+") { "$letra$it" }
+            }
             totalFila += Celda.Formula(
                 expr,
                 cache = centavosADouble(
@@ -429,7 +451,11 @@ class ExportadorExcel(
             val fila = mutableListOf<Celda>(Celda.Texto(descripcion))
             meses.forEach { ym ->
                 val valor = datos.movimientos
-                    .filter { it.tipo == tipo && it.descripcion == descripcion && YearMonth.from(it.fecha) == ym }
+                    .filter {
+                        it.tipo == tipo &&
+                            it.descripcion == descripcion &&
+                            YearMonth.from(it.fecha) == ym
+                    }
                     .sumOf { it.importeCentavos }
                 fila += Celda.Numero(centavosADouble(valor), Estilo.DINERO)
             }
@@ -455,7 +481,10 @@ class ExportadorExcel(
         filas += renglonSerie("Ingresos", ingresos)
         filas += renglonSerie("Gasto de consumo", consumo)
         filas += renglonSerie("Compra de patrimonio", patrimonio)
-        filas += renglonSerie("Neto (ingresos - consumo)", ingresos.indices.map { ingresos[it] + consumo[it] })
+        filas += renglonSerie(
+            "Neto (ingresos - consumo)",
+            ingresos.indices.map { ingresos[it] + consumo[it] }
+        )
 
         val tasas = ingresos.indices.map {
             if (ingresos[it] <= 0L) 0.0
@@ -482,12 +511,22 @@ class ExportadorExcel(
     private fun hojaPresupuesto(): Hoja {
         val filas = mutableListOf<List<Celda>>()
         filas += fila(Celda.Texto("Presupuesto contra realidad", Estilo.TITULO))
-        filas += fila(Celda.Texto("Meta positiva. Real en valor absoluto. Desviacion negativa = te pasaste.", Estilo.TENUE))
+        filas += fila(
+            Celda.Texto(
+                "Meta positiva. Real en valor absoluto. Desviacion negativa = te pasaste.",
+                Estilo.TENUE
+            )
+        )
         filas += fila()
 
         if (datos.presupuestos.isEmpty()) {
             filas += fila(Celda.Texto("Todavia no hay metas capturadas.", Estilo.TENUE))
-            filas += fila(Celda.Texto("Definelas en Ollin Finanzas, pestaña Presupuesto, y vuelve a exportar.", Estilo.TENUE))
+            filas += fila(
+                Celda.Texto(
+                    "Definelas en Ollin Finanzas, pestaña Presupuesto, y vuelve a exportar.",
+                    Estilo.TENUE
+                )
+            )
             return Hoja("Presupuesto", filas, listOf(AnchoColumna(1, 40.0)))
         }
 
@@ -519,11 +558,19 @@ class ExportadorExcel(
                     Celda.Formula(
                         "B$n-C$n",
                         cache = centavosADouble(p.montoCentavos - real),
-                        estilo = if (p.montoCentavos - real < 0) Estilo.DINERO_NEGATIVO else Estilo.DINERO
+                        estilo = if (p.montoCentavos - real < 0) {
+                            Estilo.DINERO_NEGATIVO
+                        } else {
+                            Estilo.DINERO
+                        }
                     ),
                     Celda.Formula(
                         "IF(B$n=0,0,C$n/B$n)",
-                        cache = if (p.montoCentavos == 0L) 0.0 else real.toDouble() / p.montoCentavos,
+                        cache = if (p.montoCentavos == 0L) {
+                            0.0
+                        } else {
+                            real.toDouble() / p.montoCentavos
+                        },
                         estilo = Estilo.PORCENTAJE
                     )
                 )
@@ -546,7 +593,12 @@ class ExportadorExcel(
     private fun hojaTransferencias(): Hoja {
         val filas = mutableListOf<List<Celda>>()
         filas += fila(Celda.Texto("Movimientos internos por cuenta", Estilo.TITULO))
-        filas += fila(Celda.Texto("El neto global debe dar cero. Si no, falta una pata de alguna transferencia.", Estilo.TENUE))
+        filas += fila(
+            Celda.Texto(
+                "El neto global debe dar cero. Si no, falta una pata de alguna transferencia.",
+                Estilo.TENUE
+            )
+        )
         filas += fila()
         filas += listOf(
             Celda.Texto("Cuenta", Estilo.ENCABEZADO),
@@ -563,29 +615,56 @@ class ExportadorExcel(
             filas += listOf(
                 Celda.Texto(cuenta.nombre),
                 Celda.Formula(
-                    "SUMIFS(${rango(colCantidad)},${rango(colCuenta)},${Ooxml.criterioLiteral("\$A$f")},${rango(colTipo)},\"${TipoMovimiento.TRANSFERENCIA_ENTRADA.etiqueta}\")",
-                    cache = centavosADouble(entradas), estilo = Estilo.DINERO
+                    "SUMIFS(${rango(colCantidad)},${rango(colCuenta)}," +
+                        "${Ooxml.criterioLiteral("\$A$f")},${rango(colTipo)}," +
+                        "\"${TipoMovimiento.TRANSFERENCIA_ENTRADA.etiqueta}\")",
+                    cache = centavosADouble(entradas),
+                    estilo = Estilo.DINERO
                 ),
                 Celda.Formula(
-                    "SUMIFS(${rango(colCantidad)},${rango(colCuenta)},${Ooxml.criterioLiteral("\$A$f")},${rango(colTipo)},\"${TipoMovimiento.TRANSFERENCIA_SALIDA.etiqueta}\")",
-                    cache = centavosADouble(salidas), estilo = Estilo.DINERO
+                    "SUMIFS(${rango(colCantidad)},${rango(colCuenta)}," +
+                        "${Ooxml.criterioLiteral("\$A$f")},${rango(colTipo)}," +
+                        "\"${TipoMovimiento.TRANSFERENCIA_SALIDA.etiqueta}\")",
+                    cache = centavosADouble(salidas),
+                    estilo = Estilo.DINERO
                 ),
-                Celda.Formula("B$f+C$f", cache = centavosADouble(entradas + salidas), estilo = Estilo.DINERO)
+                Celda.Formula(
+                    "B$f+C$f",
+                    cache = centavosADouble(entradas + salidas),
+                    estilo = Estilo.DINERO
+                )
             )
         }
         val ultima = filas.size
 
         filas += listOf(
             Celda.Texto("Total", Estilo.NEGRITA),
-            Celda.Formula("SUM(B$primera:B$ultima)", cache = centavosADouble(totalTransferenciasGlobal(TipoMovimiento.TRANSFERENCIA_ENTRADA)), estilo = Estilo.DINERO_TOTAL),
-            Celda.Formula("SUM(C$primera:C$ultima)", cache = centavosADouble(totalTransferenciasGlobal(TipoMovimiento.TRANSFERENCIA_SALIDA)), estilo = Estilo.DINERO_TOTAL),
+            Celda.Formula(
+                "SUM(B$primera:B$ultima)",
+                cache = centavosADouble(
+                    totalTransferenciasGlobal(TipoMovimiento.TRANSFERENCIA_ENTRADA)
+                ),
+                estilo = Estilo.DINERO_TOTAL
+            ),
+            Celda.Formula(
+                "SUM(C$primera:C$ultima)",
+                cache = centavosADouble(
+                    totalTransferenciasGlobal(TipoMovimiento.TRANSFERENCIA_SALIDA)
+                ),
+                estilo = Estilo.DINERO_TOTAL
+            ),
             Celda.Formula("SUM(D$primera:D$ultima)", cache = 0.0, estilo = Estilo.DINERO_TOTAL)
         )
 
         return Hoja(
             nombre = "Transferencias",
             filas = filas,
-            anchos = listOf(AnchoColumna(1, 28.0), AnchoColumna(2, 16.0), AnchoColumna(3, 16.0), AnchoColumna(4, 16.0))
+            anchos = listOf(
+                AnchoColumna(1, 28.0),
+                AnchoColumna(2, 16.0),
+                AnchoColumna(3, 16.0),
+                AnchoColumna(4, 16.0)
+            )
         )
     }
 
@@ -594,7 +673,9 @@ class ExportadorExcel(
     private fun hojaCompromisos(): Hoja {
         val filas = mutableListOf<List<Celda>>()
         filas += fila(Celda.Texto("Compromisos por venir", Estilo.TITULO))
-        filas += fila(Celda.Texto("Lo que ya esta comprometido y todavia no se ha pagado.", Estilo.TENUE))
+        filas += fila(
+            Celda.Texto("Lo que ya esta comprometido y todavia no se ha pagado.", Estilo.TENUE)
+        )
         filas += fila()
 
         if (datos.compromisos.isEmpty()) {
@@ -664,7 +745,10 @@ class ExportadorExcel(
 
     private fun renglonValor(etiqueta: String, centavos: Long): List<Celda> = listOf(
         Celda.Texto(etiqueta),
-        Celda.Numero(centavosADouble(centavos), if (centavos < 0) Estilo.DINERO_NEGATIVO else Estilo.DINERO)
+        Celda.Numero(
+            centavosADouble(centavos),
+            if (centavos < 0) Estilo.DINERO_NEGATIVO else Estilo.DINERO
+        )
     )
 
     private fun rango(columna: String): String =
@@ -686,7 +770,9 @@ class ExportadorExcel(
 
     private fun totalCategoriaMes(categoriaId: Long, tipo: TipoMovimiento, ym: YearMonth): Long =
         datos.movimientos
-            .filter { it.categoriaId == categoriaId && it.tipo == tipo && YearMonth.from(it.fecha) == ym }
+            .filter {
+                it.categoriaId == categoriaId && it.tipo == tipo && YearMonth.from(it.fecha) == ym
+            }
             .sumOf { it.importeCentavos }
 
     private fun totalTipoMes(tipo: TipoMovimiento, ym: YearMonth): Long =

@@ -170,7 +170,9 @@ class ActualizacionesTest {
     @Test
     fun `los dos domicilios del sitio se aceptan`() {
         listOf(SITIO, "https://carlosalbertoxw.com/ollin-finanzas/").forEach { sitio ->
-            val publicada = ComprobadorActualizaciones.lee("""{"version":"1.1.0","sitio":"$sitio"}""")
+            val publicada = ComprobadorActualizaciones.lee(
+                """{"version":"1.1.0","sitio":"$sitio"}"""
+            )
             assertEquals(sitio, publicada?.url)
         }
     }
@@ -230,7 +232,9 @@ class ActualizacionesTest {
         val ahora = 5_000_000_000L
         ajustes.guardaComprobacion(ahora, "1.0.0", SITIO, null)
 
-        val resultado = comprobador().compruebaSiToca(ahora + ComprobadorActualizaciones.UN_DIA_MS - 1)
+        val resultado = comprobador().compruebaSiToca(
+            ahora + ComprobadorActualizaciones.UN_DIA_MS - 1
+        )
 
         assertEquals(Resultado.NoTocaba, resultado)
     }
@@ -242,7 +246,10 @@ class ActualizacionesTest {
 
         val resultado = comprobador().compruebaSiToca(ahora + ComprobadorActualizaciones.UN_DIA_MS)
 
-        assertTrue("Se esperaba una version nueva, salio: $resultado", resultado is Resultado.HayVersionNueva)
+        assertTrue(
+            "Se esperaba una version nueva, salio: $resultado",
+            resultado is Resultado.HayVersionNueva
+        )
         assertEquals("1.1.0", ajustes.ajustes.first().versionPublicada)
     }
 

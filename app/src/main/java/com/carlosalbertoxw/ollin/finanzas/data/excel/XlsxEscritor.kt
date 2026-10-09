@@ -1,3 +1,8 @@
+// Las partes del paquete OOXML van escritas tal cual las define la norma, con
+// sus espacios de nombres completos. Partir esas URLs para caber en 100
+// columnas las haria ilegibles sin ganar nada, asi que aqui no aplica el tope.
+@file:Suppress("ktlint:standard:max-line-length")
+
 package com.carlosalbertoxw.ollin.finanzas.data.excel
 
 import java.io.OutputStream
