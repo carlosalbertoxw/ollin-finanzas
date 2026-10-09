@@ -39,12 +39,21 @@ object RegistroDeFallos {
         val app = contexto.applicationContext
         val previo = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { hilo, error ->
-            runCatching {
-                archivo(app).writeText(
-                    informe(error, version, System.currentTimeMillis(), Build.VERSION.SDK_INT)
-                )
-            }
+            guarda(app, error, version)
             previo?.uncaughtException(hilo, error)
+        }
+    }
+
+    /**
+     * Para los fallos que la app atrapa pero no puede remontar, como una base
+     * que no abre al arrancar: no cierran el proceso, y sin esto no quedaria
+     * rastro de ellos en Acerca de.
+     */
+    fun guarda(contexto: Context, error: Throwable, version: String) {
+        runCatching {
+            archivo(contexto).writeText(
+                informe(error, version, System.currentTimeMillis(), Build.VERSION.SDK_INT)
+            )
         }
     }
 

@@ -28,6 +28,7 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ### Añadido
 
+- **Si la base no abre, la app lo dice.** Antes se cerraba nada más abrirse, sin un mensaje. Ahora enseña qué pasó, aclara que no se tocó nada y deja una línea con el error para poder reportarlo; el detalle queda en el informe de fallos de *Acerca de*.
 - **Inventario de bibliotecas (SBOM) en cada release**, en formato CycloneDX, junto al APK y con su huella en `checksums.txt`. Dice qué versión exacta de cada biblioteca lleva ese APK.
 - El sitio de descarga declara una política de seguridad de contenido: el navegador no ejecuta nada que no venga del propio sitio.
 

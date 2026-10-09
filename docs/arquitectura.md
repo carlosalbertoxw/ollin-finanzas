@@ -86,14 +86,18 @@ En ese mismo arranque va la búsqueda de versiones nuevas, envuelta en `runCatch
 
 [`MainActivity`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/MainActivity.kt) es una `FragmentActivity` y no una `ComponentActivity`, porque el diálogo de huella y credencial del sistema se monta sobre el gestor de fragmentos.
 
-El árbol que se compone depende de dos señales:
+El árbol que se compone depende de cuatro señales, en este orden:
 
 | Estado | Qué se dibuja |
 |---|---|
+| La base no se pudo abrir | `ArranqueFallido`: qué pasó, que no se tocó nada, y una línea con el error para reportarlo |
 | Preferencias sin leer (`null`) | Telón: fondo liso, nunca datos |
 | Bloqueado y con modo de bloqueo activo | `BloqueoPantalla` |
 | Bloqueado pero sin modo definido aún | Telón |
-| Desbloqueado | `OllinRaiz` |
+| Desbloqueado, con la base todavía abriéndose | Telón |
+| Desbloqueado y con la base abierta | `OllinRaiz` |
+
+**La base se abre en `OllinApp`, fuera del hilo principal y antes que nadie.** Abrirla carga la biblioteca nativa de SQLCipher, desenvuelve la frase del Keystore y corre las migraciones; se fuerza con `openHelper.writableDatabase`, porque Room no abre el archivo hasta la primera consulta y una llave equivocada solo se nota ahí. Si falla, el error se guarda en el [registro de fallos](seguridad.md) —no cierra el proceso, así que el manejador no lo vería— y `MainActivity` enseña `ArranqueFallido` en vez de dejar que el primer ViewModel reviente en el hilo principal. Por eso `OllinRaiz` espera a `baseAbierta`: ninguna pantalla con datos toca la base antes de saber que abre.
 
 `BloqueoPantalla` **sustituye** al árbol de la app, no lo tapa: si fuera una capa encima, el contenido seguiría compuesto debajo y asomaría en la vista de apps recientes. Mientras hay candado configurado, la ventana lleva `FLAG_SECURE`.
 
