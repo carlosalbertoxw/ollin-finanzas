@@ -18,19 +18,26 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ### Seguridad
 
+- **Salir de la app la cierra en el acto.** Con candado puesto, la app seguía abierta durante un minuto después de mandarla al fondo: bastaba pulsar Inicio y pasarle el teléfono a alguien. Ese minuto ahora solo se concede al volver del selector de archivos o de la credencial del sistema, que es para lo que existía. Girar el teléfono no cuenta como salir.
+- **Un candado que no se puede leer ya no abre la app.** Si el modo de bloqueo guardado dejaba de reconocerse —un archivo de preferencias dañado, un cambio de versión—, la app lo tomaba como «sin bloqueo» y abría el libro sin pedir nada. Ahora lo deduce de lo que queda: el PIN si hay huella, y si no, la credencial del teléfono.
 - **El PIN de Ajustes ya tiene freno.** Para cambiar o quitar el PIN, *Ajustes* pide el actual, y ese diálogo lo comprobaba sin la espera de la pantalla de bloqueo: quien encontrara la app abierta podía probar los diez mil PIN ahí. Ahora los dos pasan por el mismo control, con la misma cuenta de fallos y la misma espera.
 - **La huella del PIN ya no se puede comprobar fuera del teléfono.** Además de PBKDF2, se sella con una llave del Keystore que no se puede extraer: con el archivo de preferencias copiado, probar los diez mil PIN ya no es cuestión de minutos. Los PIN puestos con versiones anteriores siguen abriendo, y se sellan solos la siguiente vez que aciertas.
 - **El aviso de versión nueva solo manda a este repositorio.** Bastaba con que el enlace fuera `https`. Si el dominio del sitio cambiara de manos, quien lo tuviera podría anunciar una «versión nueva» con su propio APK. Ahora la descarga solo puede venir de las releases de GitHub del proyecto, y el sitio y sus redirecciones, solo de sus dos direcciones conocidas.
+- **Un `.xlsx` en UTF-16 ya no se salta el filtro de `DOCTYPE`.** El lector buscaba la declaración comparando bytes, y en UTF-16 cada letra lleva un cero al lado: un archivo escrito así podía colar una bomba de entidades. Ahora el prólogo se lee con su propio juego de caracteres, y el parser ya no va a buscar entidades externas.
 - **Un `.xlsx` manipulado tampoco puede agotar la memoria con números de fila.** Una fila marcada como la dos mil millones, o una celda más allá de la última columna de Excel, son unos pocos bytes que obligaban a rellenar millones de celdas vacías. Ahora se rechazan, y el libro entero tiene un tope de celdas.
 
 ### Añadido
 
+- **Si la base no abre, la app lo dice.** Antes se cerraba nada más abrirse, sin un mensaje. Ahora enseña qué pasó, aclara que no se tocó nada y deja una línea con el error para poder reportarlo; el detalle queda en el informe de fallos de *Acerca de*.
 - **Inventario de bibliotecas (SBOM) en cada release**, en formato CycloneDX, junto al APK y con su huella en `checksums.txt`. Dice qué versión exacta de cada biblioteca lleva ese APK.
+- **Cada APK sale atestado.** Además de la firma, la release lleva una atestación de procedencia —de qué commit y con qué flujo se construyó— y otra que ata el SBOM al APK. Se comprueban con `gh attestation verify`; ver el README.
 - El sitio de descarga declara una política de seguridad de contenido: el navegador no ejecuta nada que no venga del propio sitio.
 
 ### Cambiado
 
-- El código Kotlin pasa por ktlint en cada cambio, y las dependencias del sitio por `npm audit`.
+- El código Kotlin pasa por ktlint en cada cambio, sin excepciones heredadas, y las dependencias del sitio por `npm audit`.
+- Cada biblioteca que descarga el build se compara contra su huella registrada, y CI rechaza cualquier dependencia con una licencia que no admita la del proyecto.
+- Las migraciones de la base se prueban en un emulador antes de cada publicación, y el análisis de seguridad cubre también el sitio y los flujos de CI.
 - La publicación se niega a etiquetar una versión con menor o parche por encima de 99, que repetiría el `versionCode` de otra.
 
 ## [1.2.0] - 2026-10-03

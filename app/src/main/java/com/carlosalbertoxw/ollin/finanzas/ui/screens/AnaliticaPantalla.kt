@@ -48,60 +48,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlin.math.abs
 
-data class GrupoGasto(
-    val nombre: String,
-    val totalCentavos: Long,
-    val porcentaje: Double,
-    val esPatrimonio: Boolean
-)
-
-class AnaliticaVm(private val repo: FinanzasRepositorio) : ViewModel() {
-
-    val flujo: StateFlow<List<FlujoMes>> = repo.observaFlujoMensual()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    /**
-     * Agrupa por categoria padre. Es el corte que hace visible un rubro grande
-     * repartido en varias descripciones distintas, que suelto no se nota.
-     */
-    val grupos: StateFlow<List<GrupoGasto>> = combine(
-        repo.observaMovimientos(incluyeTraspasos = false, limite = 20_000),
-        repo.observaCategorias()
-    ) { movimientos, categorias ->
-        construyeGrupos(movimientos, categorias)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    private fun construyeGrupos(
-        movimientos: List<MovimientoDetallado>,
-        categorias: List<Categoria>
-    ): List<GrupoGasto> {
-        val porId = categorias.associateBy { it.id }
-        val salidas = movimientos.filter { it.movimiento.tipo == TipoMovimiento.SALIDA }
-        if (salidas.isEmpty()) return emptyList()
-
-        val agrupado = salidas.groupBy { detalle ->
-            val categoria = detalle.movimiento.categoriaId?.let { porId[it] }
-            val padre = categoria?.padreId?.let { porId[it] } ?: categoria
-            (padre?.nombre ?: "Sin categoria") to (padre?.tipo == TipoCategoria.PATRIMONIO)
-        }.mapValues { (_, lista) -> lista.sumOf { it.movimiento.importeCentavos } }
-
-        // El porcentaje se mide contra el consumo real, no contra el total que
-        // incluye compras de patrimonio: mezclarlos distorsiona la lectura.
-        val consumo = agrupado.filterKeys { !it.second }.values.sumOf { abs(it) }
-
-        return agrupado.entries
-            .sortedBy { it.value }
-            .map { (clave, total) ->
-                GrupoGasto(
-                    nombre = clave.first,
-                    totalCentavos = total,
-                    porcentaje = if (clave.second || consumo == 0L) 0.0 else abs(total).toDouble() / consumo,
-                    esPatrimonio = clave.second
-                )
-            }
-    }
-}
-
 @Composable
 fun AnaliticaPantalla(repo: FinanzasRepositorio) {
     val vm = recuerdaVm("analitica") { AnaliticaVm(repo) }
@@ -125,7 +71,12 @@ fun AnaliticaPantalla(repo: FinanzasRepositorio) {
 
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 16.dp, 16.dp, 96.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            16.dp,
+            16.dp,
+            16.dp,
+            96.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item { Text("Analitica", style = MaterialTheme.typography.headlineSmall) }
@@ -152,7 +103,9 @@ fun AnaliticaPantalla(repo: FinanzasRepositorio) {
         item {
             Card(
                 Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                )
             ) {
                 Column(Modifier.padding(16.dp)) {
                     SeccionTitulo("Mes a mes")
@@ -174,7 +127,11 @@ fun AnaliticaPantalla(repo: FinanzasRepositorio) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(mes.periodo, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(58.dp))
+                Text(
+                    mes.periodo,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.width(58.dp)
+                )
                 Box(
                     Modifier
                         .weight(1f)
@@ -187,7 +144,9 @@ fun AnaliticaPantalla(repo: FinanzasRepositorio) {
                             .fillMaxWidth(mes.tasaAhorro.coerceIn(0.0, 1.0).toFloat())
                             .height(8.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(if (mes.tasaAhorro >= 0.2) colores.entrada else colores.alerta)
+                            .background(
+                                if (mes.tasaAhorro >= 0.2) colores.entrada else colores.alerta
+                            )
                     )
                 }
                 Text(
@@ -224,7 +183,9 @@ fun AnaliticaPantalla(repo: FinanzasRepositorio) {
                             .fillMaxWidth(grupo.porcentaje.coerceIn(0.0, 1.0).toFloat())
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp))
-                            .background(if (grupo.esPatrimonio) colores.patrimonio else colores.salida)
+                            .background(
+                                if (grupo.esPatrimonio) colores.patrimonio else colores.salida
+                            )
                     )
                 }
                 if (!grupo.esPatrimonio) {

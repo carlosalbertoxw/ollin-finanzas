@@ -48,81 +48,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class CalidadVm(
-    private val revisaCalidad: RevisaCalidad,
-    private val reparaDatos: ReparaDatos
-) : ViewModel() {
-
-    private val _hallazgos = MutableStateFlow<List<Hallazgo>>(emptyList())
-    val hallazgos: StateFlow<List<Hallazgo>> = _hallazgos
-
-    private val _cargando = MutableStateFlow(true)
-    val cargando: StateFlow<Boolean> = _cargando
-
-    /** Lo ultimo que paso por decision del usuario: una reparacion o una revision a mano. */
-    private val _aviso = MutableStateFlow<String?>(null)
-    val aviso: StateFlow<String?> = _aviso
-
-    /** Corre mientras el boton de la barra esta trabajando, para que se vea que trabaja. */
-    private val _revisando = MutableStateFlow(false)
-    val revisando: StateFlow<Boolean> = _revisando
-
-    /**
-     * Se vuelve a correr cada vez que la pantalla queda al frente, no solo al
-     * crearla. El aviso se limpia aqui: pertenece a la accion que lo produjo, y
-     * volver de otra pantalla ya no es esa accion.
-     */
-    fun revisa() {
-        viewModelScope.launch {
-            _aviso.value = null
-            audita()
-        }
-    }
-
-    /**
-     * El boton "Revisar" de la barra.
-     *
-     * La auditoria ya corre sola al entrar, asi que volver a correrla casi
-     * siempre devuelve exactamente lo mismo y la pantalla no se mueve un pixel.
-     * Sin anunciarla, el boton pareceria roto: por eso lleva indicador mientras
-     * trabaja y deja una linea con el resultado, para que se distinga "no cambio
-     * nada" de "no hizo nada".
-     */
-    fun revisaAPeticion() {
-        if (_revisando.value) return
-        viewModelScope.launch {
-            _revisando.value = true
-            val encontrados = audita()
-            _revisando.value = false
-            _aviso.value = when (encontrados.size) {
-                0 -> "Revisado: ya no queda nada por revisar."
-                1 -> "Revisado: queda 1 cosa por revisar."
-                else -> "Revisado: quedan ${encontrados.size} cosas por revisar."
-            }
-        }
-    }
-
-    private suspend fun audita(): List<Hallazgo> {
-        val encontrados = runCatching { revisaCalidad.ejecuta() }.getOrDefault(emptyList())
-        _hallazgos.value = encontrados
-        _cargando.value = false
-        return encontrados
-    }
-
-    fun repara(hallazgo: Hallazgo) {
-        viewModelScope.launch {
-            val n = runCatching { reparaDatos.repara(hallazgo.clave) }.getOrDefault(0)
-            _aviso.value = when {
-                n > 0 -> "Se corrigieron $n movimientos."
-                hallazgo.idsMovimiento.isNotEmpty() ->
-                    "Ninguno se podia corregir solo. Abrelos uno por uno para resolverlos a mano."
-                else -> "No hubo nada que corregir."
-            }
-            audita()
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalidadPantalla(
@@ -196,7 +121,11 @@ fun CalidadPantalla(
 
                 aviso?.let {
                     item {
-                        Text(it, style = MaterialTheme.typography.bodyMedium, color = colores.entrada)
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colores.entrada
+                        )
                     }
                 }
 
@@ -206,7 +135,8 @@ fun CalidadPantalla(
                         colors = CardDefaults.cardColors(
                             containerColor = when (hallazgo.gravedad) {
                                 GravedadHallazgo.ALTA -> MaterialTheme.colorScheme.errorContainer
-                                GravedadHallazgo.MEDIA -> MaterialTheme.colorScheme.tertiaryContainer
+                                GravedadHallazgo.MEDIA ->
+                                    MaterialTheme.colorScheme.tertiaryContainer
                                 GravedadHallazgo.BAJA -> MaterialTheme.colorScheme.surfaceContainer
                             }
                         )
@@ -234,7 +164,9 @@ fun CalidadPantalla(
                                         }
                                     }
                                     if (hallazgo.idsMovimiento.isNotEmpty()) {
-                                        TextButton(onClick = { alRevisarHallazgo(hallazgo.clave) }) {
+                                        TextButton(
+                                            onClick = { alRevisarHallazgo(hallazgo.clave) }
+                                        ) {
                                             Text("Ver los ${hallazgo.afectados}")
                                         }
                                     }

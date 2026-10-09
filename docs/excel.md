@@ -172,6 +172,10 @@ El lector rechaza los archivos que declaran un `DOCTYPE`. Es lo que corta de ra�
 
 **El rechazo se hace leyendo el prólogo a mano, no pidiéndoselo al parser.** El `SAXParserFactory` de Android está construido sobre Expat y solo reconoce las dos banderas de namespaces: `disallow-doctype-decl` y las de entidades externas lanzan `SAXNotRecognizedException`. Se siguen intentando por si la plataforma las admite, pero en silencio y como refuerzo — la defensa que sostiene es propia y se comporta igual en cualquier teléfono.
 
-Cuidado al tocar esta zona: convertir ese intento en un `throw` haría fallar **toda** importación en dispositivo, y las pruebas no lo verían, porque en la JVM el parser sí reconoce las banderas. Las pruebas unitarias no pueden decirte cómo se comporta el parser de Android.
+**El prólogo se lee con el juego de caracteres del archivo**, que se deduce de la marca de orden de bytes o de cómo viene escrito el primer `<`. Un XML en UTF-16 intercala ceros entre las letras, y una comparación byte a byte dejaba pasar su `DOCTYPE` sin verlo.
+
+Además del rechazo, el parser lleva un `EntityResolver` vacío, para que una entidad externa nunca se vaya a buscar, y se le pide `isXIncludeAware = false`. Todo eso va suelto y tolerado: el `SAXParserFactory` de Android ni siquiera implementa `setXIncludeAware`, y la clase base lanza `UnsupportedOperationException`.
+
+Cuidado al tocar esta zona: convertir cualquiera de esos intentos en un `throw` haría fallar **toda** importación en dispositivo, y las pruebas en la JVM no lo verían, porque ahí el parser es Xerces y lo admite todo. Para eso está [`XlsxLectorBlindajeTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/XlsxLectorBlindajeTest.kt): cambia la fábrica por una que se niega a lo mismo que la de Android, y comprueba que el libro se sigue leyendo.
 
 Los libros quedan en `app/build/pruebas/` para poder abrirlos a mano y comprobar el resultado.

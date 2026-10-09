@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
@@ -57,44 +58,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
-class CuentasVm(private val repo: FinanzasRepositorio) : ViewModel() {
-
-    val saldos: StateFlow<List<SaldoCuenta>> = repo.observaSaldos()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    val cuentas: StateFlow<List<Cuenta>> = repo.observaTodasLasCuentas()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    fun guarda(cuenta: Cuenta, alLograr: () -> Unit, alFallar: (String) -> Unit) {
-        viewModelScope.launch {
-            // El indice unico sobre el nombre rebota los duplicados. Se revisa
-            // antes para poder decir cual estorba: si la que choca esta archivada,
-            // el nombre se ve libre y el rechazo no se entiende solo.
-            val choque = repo.cuentaPorNombre(cuenta.nombre)
-            if (choque != null && choque.id != cuenta.id) {
-                alFallar(
-                    "Ya existe una cuenta llamada \"${choque.nombre}\"" +
-                        (if (choque.archivada) ", archivada" else "") +
-                        ". Usa otro nombre."
-                )
-                return@launch
-            }
-            runCatching { repo.guardaCuenta(cuenta) }
-                .onSuccess { alLograr() }
-                .onFailure { alFallar("No se pudo guardar la cuenta: revisa que el nombre no este repetido.") }
-        }
-    }
-
-    fun elimina(cuenta: Cuenta) {
-        // Room bloquea el borrado si la cuenta tiene movimientos (RESTRICT),
-        // asi que en ese caso se archiva en vez de romper el historial.
-        viewModelScope.launch {
-            runCatching { repo.eliminaCuenta(cuenta) }
-                .onFailure { repo.guardaCuenta(cuenta.copy(archivada = true)) }
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,7 +116,9 @@ fun CuentasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
                             Text(
                                 buildString {
                                     append("${saldo.movimientos} movimientos")
-                                    if (!saldo.incluirEnPatrimonio) append("  ·  fuera del patrimonio")
+                                    if (!saldo.incluirEnPatrimonio) {
+                                        append("  ·  fuera del patrimonio")
+                                    }
                                     if (cuenta?.archivada == true) append("  ·  archivada")
                                     saldo.limiteCentavos?.let {
                                         val uso = kotlin.math.abs(saldo.saldoCentavos) * 100.0 / it
@@ -257,9 +222,12 @@ private fun DialogoCuenta(
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(abierto) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                     )
-                    ExposedDropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
+                    ExposedDropdownMenu(
+                        expanded = abierto,
+                        onDismissRequest = { abierto = false }
+                    ) {
                         TipoCuenta.entries.forEach { opcion ->
                             DropdownMenuItem(
                                 text = { Text(opcion.etiqueta) },
@@ -300,7 +268,10 @@ private fun DialogoCuenta(
                                 color = LocalColoresOllin.current.textoTenue
                             )
                         }
-                        Switch(checked = soloElectronico, onCheckedChange = { soloElectronico = it })
+                        Switch(
+                            checked = soloElectronico,
+                            onCheckedChange = { soloElectronico = it }
+                        )
                     }
 
                     if (!soloElectronico) {

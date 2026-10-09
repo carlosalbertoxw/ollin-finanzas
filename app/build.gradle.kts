@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.cyclonedx)
+    alias(libs.plugins.licensee)
     alias(libs.plugins.ktlint)
 }
 
@@ -181,11 +182,31 @@ android {
         }
     }
 
+    lint {
+        // Un aviso que no rompe nada no se lee. Los que Lint marca como error
+        // --fugas de contexto, APIs por encima del minSdk, permisos que faltan--
+        // son cosas que en esta app se notarian en el telefono de alguien.
+        abortOnError = true
+        warningsAsErrors = false
+        // Tambien lo que traen las bibliotecas: un permiso o una API que entra
+        // por una dependencia llega al APK igual que uno escrito aqui.
+        checkDependencies = true
+        // La app es monolingue por decision explicita (localeFilters = "es"),
+        // asi que las quejas por traducciones ausentes son ruido.
+        disable += setOf("MissingTranslation", "ExtraTranslation")
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    // Los esquemas exportados viajan como assets de la suite instrumentada.
+    // MigrationTestHelper los lee de ahi para comparar la base migrada contra
+    // lo que Room espera; sin esta linea no encuentra ninguno y las pruebas de
+    // migracion pasan sin comprobar nada.
+    sourceSets.getByName("androidTest").assets.srcDir("$projectDir/schemas")
 }
 
 ksp {
@@ -212,6 +233,31 @@ tasks.named<CyclonedxDirectTask>("cyclonedxDirectBom") {
     xmlOutput.unsetConvention()
 }
 
+/*
+ * Las licencias que pueden viajar dentro del APK.
+ *
+ * El APK redistribuye cada biblioteca que lleva dentro, y cada una pone sus
+ * condiciones. Una nueva --o una transitiva que cambia de licencia al subir de
+ * version-- con condiciones que MIT no admite, como GPL, haria del APK algo que
+ * no se puede publicar como se publica. `licenseeAndroidRelease` corre en
+ * pruebas.yml y falla si aparece una que no este en esta lista.
+ *
+ * Tambien sirve para mantener al dia `res/raw/licencias_terceros.txt`: el
+ * informe `build/reports/licensee/androidRelease/artifacts.json` dice que lleva
+ * de verdad el APK.
+ */
+licensee {
+    allow("Apache-2.0")
+    allow("BSD-3-Clause")
+    // Su POM no declara un identificador SPDX, solo esta direccion. Lo que hay
+    // en ella es una BSD de tres clausulas, la misma que se reproduce en
+    // licencias_terceros.txt. Si cambiara de URL, licensee volveria a fallar,
+    // y eso es justo lo que se quiere: mirarla otra vez.
+    allowUrl("https://www.zetetic.net/sqlcipher/license/") {
+        because("BSD de tres clausulas, reproducida en licencias_terceros.txt")
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -219,6 +265,10 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
     implementation(libs.kotlinx.coroutines.android)
+    // No la usa la app directamente: la trae Navigation. Va explicita para
+    // subirla a la que pide room-testing en las pruebas de migracion; ver
+    // libs.versions.toml.
+    implementation(libs.kotlinx.serialization.core)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
@@ -233,7 +283,6 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.androidx.documentfile)
     implementation(libs.androidx.biometric)
     // Debe ir explicito: sin el, biometric fija fragment en 1.2.5 y los
     // launchers de ActivityResult truenan al abrirse. Ver libs.versions.toml.
@@ -250,6 +299,9 @@ dependencies {
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    // MigrationTestHelper: corre las migraciones de verdad contra los esquemas
+    // exportados en app/schemas/. Ver MigracionesTest.
+    androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
 }
@@ -258,12 +310,12 @@ dependencies {
  * ktlint: sangria, imports, espacios y largo de linea. Las reglas que piden
  * otro acomodo de lineas estan apagadas en .editorconfig, con su motivo.
  *
- * El baseline congela lo que ya habia cuando se agrego --casi todo, lineas de
- * mas de 100 caracteres--: CI falla solo con infracciones nuevas. Se encoge
- * arreglando y regenerandolo con `./gradlew ktlintGenerateBaseline`, nunca
- * regenerandolo para tapar una nueva. Ver docs/desarrollo.md.
+ * Sin baseline: el que habia congelaba 275 lineas de mas de 100 columnas por su
+ * numero de linea, asi que cualquier cambio que las moviera las hacia aparecer
+ * como nuevas. Ya no queda ninguna, y CI falla con la primera. La unica excepcion
+ * es XlsxEscritor, que la declara en su cabecera: sus partes OOXML van tal cual
+ * las define la norma. Ver docs/desarrollo.md.
  */
 ktlint {
     version.set(libs.versions.ktlint)
-    baseline.set(file("ktlint-baseline.xml"))
 }

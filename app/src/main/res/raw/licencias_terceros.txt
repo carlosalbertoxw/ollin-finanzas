@@ -28,7 +28,7 @@ https://www.apache.org/licenses/LICENSE-2.0
 
 Estas bibliotecas se distribuyen bajo la licencia Apache 2.0. El texto completo de la licencia está en la dirección de arriba.
 
-• Android Jetpack (AndroidX): Core, Activity, Fragment, Lifecycle, Navigation, Room, DataStore, DocumentFile, Biometric y Compose, incluido Material 3. Copyright The Android Open Source Project.
+• Android Jetpack (AndroidX): Core, Activity, Fragment, Lifecycle, Navigation, Room, DataStore, Biometric y Compose, incluido Material 3. Copyright The Android Open Source Project.
 
 • Kotlin Standard Library. Copyright JetBrains s.r.o. and Kotlin Programming Language contributors.
 

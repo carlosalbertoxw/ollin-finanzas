@@ -56,76 +56,6 @@ import kotlinx.coroutines.launch
 import java.time.YearMonth
 import kotlin.math.abs
 
-data class RenglonMeta(
-    val categoriaId: Long,
-    val nombre: String,
-    val metaCentavos: Long,
-    val realCentavos: Long
-) {
-    val avance: Double get() = if (metaCentavos <= 0L) 0.0 else abs(realCentavos).toDouble() / metaCentavos
-    val restanteCentavos: Long get() = metaCentavos - abs(realCentavos)
-}
-
-class PresupuestoVm(private val repo: FinanzasRepositorio) : ViewModel() {
-
-    private val _mes = MutableStateFlow(YearMonth.now())
-    val mes: StateFlow<YearMonth> = _mes
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val metasDelMes = _mes.flatMapLatest { repo.observaPresupuestos(it.year, it.monthValue) }
-
-    private val recalcula = MutableStateFlow(0)
-
-    val renglones: StateFlow<List<RenglonMeta>> =
-        combine(metasDelMes, repo.observaCategorias(), _mes, recalcula) { metas, categorias, mes, _ ->
-            val porCategoria = metas.associateBy { it.categoriaId }
-            categorias
-                .filter { it.padreId != null && it.tipo == TipoCategoria.GASTO }
-                .map { categoria ->
-                    RenglonMeta(
-                        categoriaId = categoria.id,
-                        nombre = categoria.nombre,
-                        metaCentavos = porCategoria[categoria.id]?.montoCentavos ?: 0L,
-                        realCentavos = repo.totalCategoriaEnPeriodo(categoria.id, mes.toString())
-                    )
-                }
-                // Primero lo que tiene meta, luego lo que gastaste sin tenerla.
-                .sortedWith(compareByDescending<RenglonMeta> { it.metaCentavos > 0L }
-                    .thenByDescending { abs(it.realCentavos) })
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    fun cambiaMes(delta: Long) {
-        _mes.value = _mes.value.plusMonths(delta)
-    }
-
-    fun guardaMeta(categoriaId: Long, texto: String) {
-        val centavos = Dinero.parsea(texto)?.let { abs(it) } ?: 0L
-        val mes = _mes.value
-        viewModelScope.launch {
-            if (centavos == 0L) repo.eliminaPresupuesto(categoriaId, mes.year, mes.monthValue)
-            else repo.guardaPresupuesto(
-                Presupuesto(
-                    categoriaId = categoriaId,
-                    anio = mes.year,
-                    mes = mes.monthValue,
-                    montoCentavos = centavos
-                )
-            )
-            recalcula.value++
-        }
-    }
-
-    fun copiaDelMesAnterior(alTerminar: (Int) -> Unit) {
-        val destino = _mes.value
-        val origen = destino.minusMonths(1)
-        viewModelScope.launch {
-            val n = repo.copiaPresupuesto(origen.year, origen.monthValue, destino.year, destino.monthValue)
-            recalcula.value++
-            alTerminar(n)
-        }
-    }
-}
-
 @Composable
 fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit) {
     val vm = recuerdaVm("presupuesto") { PresupuestoVm(repo) }
@@ -141,7 +71,12 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
 
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 16.dp, 16.dp, 96.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            16.dp,
+            16.dp,
+            16.dp,
+            96.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
@@ -155,7 +90,10 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
                 }
                 Text(mes.toString(), style = MaterialTheme.typography.titleLarge)
                 IconButton(onClick = { vm.cambiaMes(1) }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Mes siguiente")
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Mes siguiente"
+                    )
                 }
             }
         }
@@ -168,7 +106,9 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
                     -realTotal,
                     Modifier.weight(1f),
                     coloreado = true,
-                    nota = if (metaTotal > 0) "%.0f%% de la meta".format(realTotal * 100.0 / metaTotal) else null
+                    nota = if (metaTotal > 0) "%.0f%% de la meta".format(
+                        realTotal * 100.0 / metaTotal
+                    ) else null
                 )
             }
         }
@@ -221,7 +161,8 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
                     Text(renglon.nombre, style = MaterialTheme.typography.bodyLarge)
                     Text(
                         if (renglon.metaCentavos > 0)
-                            "${Dinero.formateaCorto(abs(renglon.realCentavos))} / ${Dinero.formateaCorto(renglon.metaCentavos)}"
+                            "${Dinero.formateaCorto(abs(renglon.realCentavos))} / " +
+                                Dinero.formateaCorto(renglon.metaCentavos)
                         else Dinero.formateaCorto(abs(renglon.realCentavos)),
                         style = MaterialTheme.typography.bodyMedium,
                         color = when {

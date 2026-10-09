@@ -151,7 +151,9 @@ fun TarjetaValor(
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
         shape = RoundedCornerShape(18.dp)
     ) {
         Column(Modifier.padding(16.dp)) {
@@ -256,14 +258,26 @@ fun LineaEvolucion(
         val relleno = Path()
         valores.forEachIndexed { i, v ->
             val x = paso * i
-            val y = size.height - ((v.toFloat() - minimo) / rango) * size.height * 0.9f - size.height * 0.05f
-            if (i == 0) { trazo.moveTo(x, y); relleno.moveTo(x, size.height); relleno.lineTo(x, y) } else { trazo.lineTo(x, y); relleno.lineTo(x, y) }
+            val proporcion = (v.toFloat() - minimo) / rango
+            val y = size.height - proporcion * size.height * 0.9f - size.height * 0.05f
+            if (i == 0) {
+                trazo.moveTo(x, y)
+                relleno.moveTo(x, size.height)
+                relleno.lineTo(x, y)
+            } else {
+                trazo.lineTo(x, y)
+                relleno.lineTo(x, y)
+            }
         }
         relleno.lineTo(size.width, size.height)
         relleno.close()
 
         drawPath(relleno, color = color.copy(alpha = 0.14f))
-        drawPath(trazo, color = color, style = Stroke(width = 2.5f.dp.toPx(), cap = StrokeCap.Round))
+        drawPath(
+            trazo,
+            color = color,
+            style = Stroke(width = 2.5f.dp.toPx(), cap = StrokeCap.Round)
+        )
     }
 }
 
@@ -336,7 +350,11 @@ fun Punto(color: Color, tamano: Int = 10) {
 }
 
 @Composable
-fun SeccionTitulo(texto: String, modifier: Modifier = Modifier, accion: @Composable (() -> Unit)? = null) {
+fun SeccionTitulo(
+    texto: String,
+    modifier: Modifier = Modifier,
+    accion: @Composable (() -> Unit)? = null
+) {
     Row(
         modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,

@@ -65,64 +65,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class AcercaDeVm(
-    private val comprobador: ComprobadorActualizaciones,
-    ajustes: AjustesRepositorio,
-    private val instalada: Version?
-) : ViewModel() {
-
-    private val _reciente = MutableStateFlow<Resultado?>(null)
-
-    /**
-     * Lo que se sabe de la version publicada: lo que dejo la comprobacion
-     * diaria, y encima lo que conteste una pedida a mano.
-     *
-     * Sin lo guardado, entrar aqui despues de que la comprobacion automatica
-     * encontrara una version nueva no enseñaria nada: habria que pulsar el
-     * boton para volver a preguntar lo que la app ya sabia.
-     */
-    val estado: StateFlow<Resultado?> =
-        combine(ajustes.ajustes, _reciente) { preferencias, reciente ->
-            reciente ?: loGuardado(preferencias)
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
-
-    private fun loGuardado(preferencias: Ajustes): Resultado? {
-        val publicada = Version.de(preferencias.versionPublicada) ?: return null
-        // Lo guardado pudo escribirlo una version anterior, que aceptaba
-        // cualquier https: se vuelve a pasar por la misma lista.
-        val url = preferencias.urlDeDescarga
-            ?.let { DestinosPermitidos.apk(it) ?: DestinosPermitidos.sitio(it) }
-            ?: return null
-
-        return if (instalada != null && publicada <= instalada) {
-            Resultado.AlDia
-        } else {
-            Resultado.HayVersionNueva(
-                VersionPublicada(publicada, url, preferencias.notasDeVersion)
-            )
-        }
-    }
-
-    private val _comprobando = MutableStateFlow(false)
-    val comprobando: StateFlow<Boolean> = _comprobando
-
-    /**
-     * La comprobacion a peticion no mira el reloj ni el interruptor de Ajustes:
-     * tocar un boton y que no ocurra nada se lee como una app rota. Lo que si
-     * respeta es el resto del trato --un GET al archivo del sitio, sin mandar
-     * nada--.
-     */
-    fun compruebaAhora() {
-        if (_comprobando.value) return
-        viewModelScope.launch {
-            _comprobando.value = true
-            _reciente.value = runCatching { comprobador.compruebaAhora() }
-                .getOrElse { Resultado.Fallo("No se pudo consultar el sitio.") }
-            _comprobando.value = false
-        }
-    }
-}
-
 /**
  * Quien es la app, de donde viene el nombre, que version traes y como trata
  * tus datos.
@@ -244,7 +186,9 @@ fun AcercaDePantalla(
             Vineta(
                 "Lleva presupuesto por categoria, tendencia mensual y compromisos por vencer."
             )
-            Vineta("Importa y exporta libros .xlsx que abren igual en Excel, WPS, LibreOffice y Sheets.")
+            Vineta(
+                "Importa y exporta libros .xlsx que abren igual en Excel, WPS, LibreOffice y Sheets."
+            )
 
             HorizontalDivider()
 
@@ -459,7 +403,11 @@ private fun SeccionVersion(
 @Composable
 private fun Vineta(texto: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("·", style = MaterialTheme.typography.bodyMedium, color = LocalColoresOllin.current.textoTenue)
+        Text(
+            "·",
+            style = MaterialTheme.typography.bodyMedium,
+            color = LocalColoresOllin.current.textoTenue
+        )
         Text(
             texto,
             style = MaterialTheme.typography.bodyMedium,

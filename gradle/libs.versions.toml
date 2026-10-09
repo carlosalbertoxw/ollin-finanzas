@@ -15,7 +15,11 @@ biometric = "1.1.0"
 fragment = "1.9.1"
 sqlcipher = "4.19.0"
 datastore = "1.1.4"
-documentfile = "1.1.0"
+# Navigation trae la 1.7.3. room-testing 2.8 (MigrationTestHelper) esta
+# compilado contra la 1.8.1, y con una anterior cada prueba de migracion
+# revienta con AbstractMethodError al leer los esquemas. Se fija aqui para que
+# la app y las pruebas usen la misma.
+kotlinxSerialization = "1.11.0"
 coroutines = "1.11.0"
 junit = "4.13.2"
 androidxJunit = "1.3.0"
@@ -23,6 +27,8 @@ espressoCore = "3.7.0"
 androidxTestCore = "1.7.0"
 robolectric = "4.17"
 cyclonedx = "3.4.1"
+# Que licencias viajan en el APK (ver app/build.gradle.kts, bloque licensee).
+licensee = "1.14.1"
 ktlintGradle = "14.2.0"
 ktlint = "1.8.0"
 
@@ -43,12 +49,13 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
-androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 androidx-fragment = { group = "androidx.fragment", name = "fragment", version.ref = "fragment" }
 sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-serialization-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-core", version.ref = "kotlinxSerialization" }
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
@@ -64,4 +71,5 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 cyclonedx = { id = "org.cyclonedx.bom", version.ref = "cyclonedx" }
+licensee = { id = "app.cash.licensee", version.ref = "licensee" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }

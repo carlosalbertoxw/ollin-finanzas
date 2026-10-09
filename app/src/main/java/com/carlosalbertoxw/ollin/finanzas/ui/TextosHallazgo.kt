@@ -33,8 +33,8 @@ fun Hallazgo.detalle(): String = when (clave) {
 
     ClaveHallazgo.TRANSFERENCIA_HUERFANA ->
         "Una transferencia debe mover dinero de una cuenta a otra, con dos renglones " +
-            "que se cancelan. Estas quedaron a medias, asi que el patrimonio total esta desviado. " +
-            "Abre cada una y completa la cuenta que falta."
+            "que se cancelan. Estas quedaron a medias, asi que el patrimonio total esta " +
+            "desviado. Abre cada una y completa la cuenta que falta."
 
     ClaveHallazgo.SALDO_INICIAL_DUPLICADO ->
         "Una cuenta arranca una sola vez, pero estas tienen varios y todos se " +
@@ -54,8 +54,11 @@ fun Hallazgo.detalle(): String = when (clave) {
     ClaveHallazgo.PATRIMONIO_SIN_ESPEJO ->
         "${Dinero.formatea(datos.montoCentavos ?: 0L)} en terreno, cripto o " +
             "bienes duraderos salieron de tus cuentas pero no entraron a ninguna cuenta de activo" +
-            if (datos.hayCuentaDeActivo) ". Registralas como transferencia hacia la cuenta de activo."
-            else ". Crea una cuenta de tipo Activo para reflejarlas."
+            if (datos.hayCuentaDeActivo) {
+                ". Registralas como transferencia hacia la cuenta de activo."
+            } else {
+                ". Crea una cuenta de tipo Activo para reflejarlas."
+            }
 
     ClaveHallazgo.DESCRIPCIONES_PARECIDAS ->
         "Probablemente sean la misma cosa escrita de dos formas, y el gasto se te " +

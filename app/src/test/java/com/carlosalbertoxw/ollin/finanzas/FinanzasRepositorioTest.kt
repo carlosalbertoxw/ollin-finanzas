@@ -41,7 +41,11 @@ class FinanzasRepositorioTest : BaseEnMemoria() {
 
         val patas = movimientoDao.todos()
         assertEquals(2, patas.size)
-        assertEquals("Comparten un solo grupo", 1, patas.mapNotNull { it.grupoTransferencia }.distinct().size)
+        assertEquals(
+            "Comparten un solo grupo",
+            1,
+            patas.mapNotNull { it.grupoTransferencia }.distinct().size
+        )
         assertEquals(0L, patas.sumOf { it.importeCentavos })
 
         val salida = patas.first { it.cuentaId == banorte }
@@ -174,7 +178,10 @@ class FinanzasRepositorioTest : BaseEnMemoria() {
 
         val porTipo = movimientoDao.todos().associateBy { it.tipo }
         assertEquals(Contraparte.TERCERO, porTipo.getValue(TipoMovimiento.SALIDA).contraparte)
-        assertEquals(Contraparte.PROPIA, porTipo.getValue(TipoMovimiento.BALANCE_INICIAL).contraparte)
+        assertEquals(
+            Contraparte.PROPIA,
+            porTipo.getValue(TipoMovimiento.BALANCE_INICIAL).contraparte
+        )
     }
 
     // ------------------------------------------------------- compromisos
@@ -362,7 +369,11 @@ class FinanzasRepositorioTest : BaseEnMemoria() {
         nuevoMovimiento(banorte, -10_000, TipoMovimiento.SALIDA, "Uno")
         nuevoMovimiento(banorte, -20_000, TipoMovimiento.SALIDA, "Dos")
 
-        assertEquals("Una lista vacia no toca nada", 0, repositorio.actualizaMovimientos(emptyList()))
+        assertEquals(
+            "Una lista vacia no toca nada",
+            0,
+            repositorio.actualizaMovimientos(emptyList())
+        )
 
         val antes = movimientoDao.todos()
         val n = repositorio.actualizaMovimientos(antes.map { it.copy(nota = "revisado") })
@@ -371,6 +382,10 @@ class FinanzasRepositorioTest : BaseEnMemoria() {
         val despues = movimientoDao.todos()
         assertTrue(despues.all { it.nota == "revisado" })
         assertNotNull(despues.first().actualizadoEn)
-        assertEquals("Los importes no se tocan", antes.map { it.importeCentavos }, despues.map { it.importeCentavos })
+        assertEquals(
+            "Los importes no se tocan",
+            antes.map { it.importeCentavos },
+            despues.map { it.importeCentavos }
+        )
     }
 }

@@ -28,6 +28,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
@@ -80,82 +81,6 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-
-/**
- * La lista partida en los dos estados que de verdad se miran distinto.
- *
- * [archivados] son los que ya no piden nada: el plan a plazos que llego a su
- * ultima mensualidad y el pago unico que se cumplio o se descarto. Siguen
- * existiendo -- son historia, y borrarlos es otra decision -- pero estorban
- * arriba, donde uno viene a ver que debe.
- */
-data class ListaCompromisos(
-    val activos: List<Compromiso> = emptyList(),
-    val archivados: List<Compromiso> = emptyList()
-) {
-    val vacia: Boolean get() = activos.isEmpty() && archivados.isEmpty()
-}
-
-class CompromisosVm(private val repo: FinanzasRepositorio) : ViewModel() {
-
-    /**
-     * Lo urgente arriba. El orden lo manda el proximo pago, que no es una
-     * columna sino la fecha del primero corrida por los pagos ya hechos, asi
-     * que se ordena aqui: en SQL, cumplir uno lo dejaria en su lugar viejo.
-     */
-    val compromisos: StateFlow<ListaCompromisos> = repo.observaCompromisos()
-        .map { lista ->
-            val (activos, archivados) = lista.partition { it.activo }
-            ListaCompromisos(
-                activos = activos.sortedWith(
-                    compareBy<Compromiso> { proximoPago(it) }.thenBy { it.nombre.lowercase() }
-                ),
-                // Al reves que los activos: en lo cerrado lo que se busca es lo
-                // ultimo que se cerro, no lo mas viejo del archivo.
-                archivados = archivados.sortedWith(
-                    compareByDescending<Compromiso> { proximoPago(it) }
-                        .thenBy { it.nombre.lowercase() }
-                )
-            )
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ListaCompromisos())
-
-    val cuentas: StateFlow<List<Cuenta>> = repo.observaCuentas()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    /** Solo las hojas: son las que se capturan, igual que en la pantalla de captura. */
-    val categorias: StateFlow<List<Categoria>> = repo.observaCategorias()
-        .map { lista -> lista.filter { it.padreId != null } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    fun guarda(compromiso: Compromiso) {
-        viewModelScope.launch { repo.guardaCompromiso(compromiso) }
-    }
-
-    fun elimina(compromiso: Compromiso) {
-        viewModelScope.launch { repo.eliminaCompromiso(compromiso) }
-    }
-
-    // El plan no avanza solo. Un pago sigue pendiente hasta que aqui se decide
-    // que se cumplio o que se descarta, porque el cargo puede llegar por fuera
-    // de la app, rebotar o simplemente no cobrarse este periodo.
-
-    fun cumple(id: Long) {
-        viewModelScope.launch { repo.avanzaCompromiso(id) }
-    }
-
-    fun deshaceCumplimiento(id: Long) {
-        viewModelScope.launch { repo.retrocedeCompromiso(id) }
-    }
-
-    fun descarta(id: Long) {
-        viewModelScope.launch { repo.descartaPagoCompromiso(id) }
-    }
-
-    fun deshaceDescarte(id: Long) {
-        viewModelScope.launch { repo.restauraPagoCompromiso(id) }
-    }
-}
 
 private fun proximoPago(c: Compromiso): LocalDate = c.proximoPago
 
@@ -232,7 +157,11 @@ private fun TarjetaCompromiso(
                     // marcado hasta que se cumpla o se descarte.
                     Text(
                         (if (vencido) "Vencio el $fecha" else "Proximo: $fecha") +
-                            if (pendiente(c) > 0) "  ·  faltan ${Dinero.formateaCorto(pendiente(c))}" else "",
+                            if (pendiente(c) > 0) {
+                                "  ·  faltan ${Dinero.formateaCorto(pendiente(c))}"
+                            } else {
+                                ""
+                            },
                         style = MaterialTheme.typography.bodySmall,
                         color = if (vencido) colores.alerta else colores.textoTenue,
                         modifier = Modifier.weight(1f)
@@ -444,12 +373,12 @@ fun CompromisosPantalla(
                     item {
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            "Desliza un compromiso a la derecha para darlo por cumplido o descartar " +
-                                "ese pago. Nada avanza solo: hasta que decidas, sigue pendiente y " +
-                                "Ollin Finanzas te lo recuerda una vez al dia. Lo que ya no pide " +
-                                "nada -- un pago unico resuelto o un plan que llego a su ultima " +
-                                "mensualidad -- se archiva y deja de avisar; el boton de la caja, " +
-                                "arriba, cambia a esa lista.",
+                            "Desliza un compromiso a la derecha para darlo por cumplido o " +
+                                "descartar ese pago. Nada avanza solo: hasta que decidas, " +
+                                "sigue pendiente y Ollin Finanzas te lo recuerda una vez al " +
+                                "dia. Lo que ya no pide nada -- un pago unico resuelto o un " +
+                                "plan que llego a su ultima mensualidad -- se archiva y deja " +
+                                "de avisar; el boton de la caja, arriba, cambia a esa lista.",
                             style = MaterialTheme.typography.bodySmall,
                             color = colores.textoTenue
                         )
@@ -485,10 +414,14 @@ private fun DialogoCompromiso(
 ) {
     var nombre by remember(compromiso.id) { mutableStateOf(compromiso.nombre) }
     var monto by remember(compromiso.id) {
-        mutableStateOf(if (compromiso.montoCentavos > 0) Dinero.aTextoHoja(compromiso.montoCentavos) else "")
+        mutableStateOf(
+            if (compromiso.montoCentavos > 0) Dinero.aTextoHoja(compromiso.montoCentavos) else ""
+        )
     }
     var periodicidad by remember(compromiso.id) { mutableStateOf(compromiso.periodicidad) }
-    var totalPagos by remember(compromiso.id) { mutableStateOf(compromiso.totalPagos?.toString() ?: "") }
+    var totalPagos by remember(compromiso.id) {
+        mutableStateOf(compromiso.totalPagos?.toString() ?: "")
+    }
     var cuentaId by remember(compromiso.id) { mutableStateOf(compromiso.cuentaId) }
     var categoriaId by remember(compromiso.id) { mutableStateOf(compromiso.categoriaId) }
     // Se pide el siguiente pago y no el primero: para una suscripcion que lleva
@@ -538,7 +471,9 @@ private fun DialogoCompromiso(
                 OutlinedTextField(
                     value = siguientePago.toString(),
                     onValueChange = {},
-                    label = { Text(if (periodicidad.esUnico) "Fecha del pago" else "Siguiente pago") },
+                    label = {
+                        Text(if (periodicidad.esUnico) "Fecha del pago" else "Siguiente pago")
+                    },
                     readOnly = true,
                     supportingText = {
                         // El dia del mes solo significa algo si el paso son
@@ -664,7 +599,7 @@ private fun MenuEnum(
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(abierto) },
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
         )
         ExposedDropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
             opciones.forEachIndexed { i, texto ->

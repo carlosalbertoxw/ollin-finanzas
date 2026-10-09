@@ -72,9 +72,15 @@ La misma huella se agrega al final de las notas de la release, para que quien de
 
 ## Qué se publica
 
-El **APK**, su **SBOM** y un `checksums.txt` con el SHA-256 de los dos.
+El **APK**, su **SBOM**, un `checksums.txt` con el SHA-256 de los dos, y dos **atestaciones**.
 
 El SBOM (`ollin-finanzas-x.y.z.cdx.json`, en CycloneDX) es el inventario de lo que viaja dentro de ese APK: sale de `./gradlew :app:cyclonedxDirectBom` en la misma compilación y solo mira `releaseRuntimeClasspath`, así que no trae las bibliotecas de pruebas ni de Gradle. Sirve para el día que aparezca una alerta sobre una biblioteca: dice qué versión exacta llevaba cada release sin tener que reconstruirla.
+
+Las atestaciones las firma Sigstore con la identidad del flujo, mediante [`actions/attest`](https://github.com/actions/attest): una procedencia SLSA que dice de qué commit y de qué workflow salió el APK, y otra que ata el SBOM a ese mismo APK. La firma de Android dice *quién* firmó; la atestación, *cómo* se construyó. Se comprueba con:
+
+```bash
+gh attestation verify ollin-finanzas-x.y.z.apk --repo carlosalbertoxw/ollin-finanzas
+```
 
 El `.aab` se compila —un fallo de bundling es un fallo igual y conviene verlo— pero no se adjunta: no se instala en ningún teléfono, solo sirve para subirlo a Play, y una descarga que no hace lo que promete confunde a quien llega de fuera. Si algún día hace falta, `./gradlew bundleRelease`.
 
@@ -87,18 +93,20 @@ La huella se publica junto al archivo para que cualquiera pueda comprobar que lo
 | Etiqueta contra `CHANGELOG` | `publicacion.yml` | Sí |
 | Pruebas unitarias, Lint, `assembleRelease` | `pruebas.yml`, invocado tal cual | Sí |
 | Actualizar sobre la versión anterior | [`actualizacion.yml`](../.github/workflows/actualizacion.yml), invocado tal cual | Sí |
-| `MigracionesTest` en emulador | `publicacion.yml` | Todavía no existe |
+| `MigracionesTest` en emulador | `publicacion.yml` | Sí |
+| Licencias de lo que viaja en el APK | `pruebas.yml` (`licenseeAndroidRelease`) | Sí |
+| Huellas de cada dependencia | `gradle/verification-metadata.xml`, en todo build | Sí |
 | Suite de interfaz completa | [`pruebas-instrumentadas.yml`](../.github/workflows/pruebas-instrumentadas.yml) | No |
 
 Las pruebas son **el mismo flujo** que corre en cualquier pull request, invocado con `workflow_call` en vez de copiado. Una etiqueta no puede pasar por una comprobación más floja que un cambio cualquiera, y dos copias de los mismos pasos divergen.
 
-Las migraciones bloquearán y las de interfaz no. Una migración equivocada deja la app sin abrir en el teléfono de quien actualiza y no hay forma de arreglarlo desde fuera; las de pantalla dependen de animaciones y relojes, y su intermitencia no puede ser lo que impida publicar una corrección. Esas corren solas los lunes y a mano cuando se ha tocado una pantalla.
+Las migraciones bloquean y las de interfaz no. Una migración equivocada deja la app sin abrir en el teléfono de quien actualiza y no hay forma de arreglarlo desde fuera; las de pantalla dependen de animaciones y relojes, y su intermitencia no puede ser lo que impida publicar una corrección. Esas corren solas los lunes y a mano cuando se ha tocado una pantalla.
 
 La prueba de actualización nació para ese grupo, después de que la 1.0.1 saliera cerrándose al abrirse en los teléfonos que venían de la 1.0.0: instala la versión de la etiqueta anterior, la abre para que escriba sus preferencias, instala la nueva encima y comprueba que sigue abriendo.
 
 Estuvo fuera del 3 al 9 de septiembre de 2026: al ponerla a bloquear dio tres falsos negativos seguidos contra la 1.0.3, una versión que abre perfectamente en un teléfono real, y un trabajo invocado con `uses:` no admite `continue-on-error`, así que dejarla dentro sin bloquear teñía de rojo publicaciones que habían salido bien. Los tres eran fallos del andamiaje; arreglados, volvió a `needs` el día que se la vio pasar en verde contra la 1.0.3. Ver [desarrollo](desarrollo.md#la-prueba-de-actualización).
 
-El esquema sigue en su versión inicial, así que no hay ninguna migración que ejecutar: el hueco está reservado en [`publicacion.yml`](../.github/workflows/publicacion.yml) con lo que tiene que ir ahí, y mientras tanto [`EsquemaDeBaseTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EsquemaDeBaseTest.kt) vigila en la JVM que la cadena no tenga huecos. Ver [modelo de datos](modelo-de-datos.md#migraciones).
+El esquema sigue en su versión inicial, así que [`MigracionesTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/db/MigracionesTest.kt) por ahora solo comprueba que `1.json` describe una base que Room acepta. Está en la publicación desde antes de la primera `Migration` para que esa no pueda llegar a una release sin pasar por él; [`EsquemaDeBaseTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EsquemaDeBaseTest.kt) vigila además en la JVM que la cadena no tenga huecos. Ver [modelo de datos](modelo-de-datos.md#migraciones).
 
 ## Cuando algo sale mal
 

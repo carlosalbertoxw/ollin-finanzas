@@ -27,7 +27,8 @@ data class Cuenta(
     val nombre: String,
     val tipo: TipoCuenta,
     /** Medio sugerido al capturar en esta cuenta. Evita el error de marcar la cartera como electronica. */
-    val medioPorDefecto: Medio = if (tipo == TipoCuenta.EFECTIVO) Medio.EFECTIVO else Medio.ELECTRONICO,
+    val medioPorDefecto: Medio =
+        if (tipo == TipoCuenta.EFECTIVO) Medio.EFECTIVO else Medio.ELECTRONICO,
     /**
      * Cierto cuando por esta cuenta no puede pasar dinero en mano: una tarjeta
      * no se cobra en efectivo. Un prestamo familiar registrado con el mismo tipo

@@ -23,7 +23,7 @@ import javax.crypto.spec.SecretKeySpec
 
 /**
  * El candado es codigo de seguridad y no tenia ni una prueba: arrancar cerrado,
- * la gracia del selector de archivos y el freno contra la fuerza bruta son
+ * la gracia del selector de archivos --y solo la de el-- y el freno contra la fuerza bruta son
  * justo las reglas donde un error deja la app abierta a quien no debia.
  *
  * Ni base ni Robolectric: el control recibe un flujo de preferencias y un reloj,
@@ -99,11 +99,12 @@ class ControlBloqueoTest {
     }
 
     @Test
-    fun `volver dentro de la gracia no vuelve a cerrar`() = runTest {
+    fun `volver del selector dentro de la gracia no vuelve a cerrar`() = runTest {
         conPin()
         val bloqueo = control()
         bloqueo.desbloquea()
 
+        bloqueo.esperaVueltaDelSistema()
         bloqueo.alIrAlFondo()
         ahora += ControlBloqueo.GRACIA_MILLIS - 1
         bloqueo.alVolverAlFrente()
@@ -112,13 +113,63 @@ class ControlBloqueoTest {
     }
 
     @Test
-    fun `volver despues de la gracia cierra otra vez`() = runTest {
+    fun `volver del selector despues de la gracia cierra otra vez`() = runTest {
+        conPin()
+        val bloqueo = control()
+        bloqueo.desbloquea()
+
+        bloqueo.esperaVueltaDelSistema()
+        bloqueo.alIrAlFondo()
+        ahora += ControlBloqueo.GRACIA_MILLIS
+        bloqueo.alVolverAlFrente()
+
+        assertTrue(bloqueo.bloqueado.value)
+    }
+
+    /**
+     * El caso que el candado quiere cubrir: pulsar Inicio y pasarle el telefono
+     * a alguien. Sin una vuelta esperada no hay gracia, ni de un milisegundo.
+     */
+    @Test
+    fun `salir al fondo sin avisar cierra de inmediato`() = runTest {
         conPin()
         val bloqueo = control()
         bloqueo.desbloquea()
 
         bloqueo.alIrAlFondo()
-        ahora += ControlBloqueo.GRACIA_MILLIS
+        bloqueo.alVolverAlFrente()
+
+        assertTrue(bloqueo.bloqueado.value)
+    }
+
+    /** La gracia se gasta en el primer regreso: no queda guardada para despues. */
+    @Test
+    fun `la gracia no se hereda al siguiente viaje`() = runTest {
+        conPin()
+        val bloqueo = control()
+        bloqueo.desbloquea()
+
+        bloqueo.esperaVueltaDelSistema()
+        bloqueo.alIrAlFondo()
+        bloqueo.alVolverAlFrente()
+        assertFalse(bloqueo.bloqueado.value)
+
+        bloqueo.alIrAlFondo()
+        ahora += 1
+        bloqueo.alVolverAlFrente()
+
+        assertTrue("El segundo viaje no se aviso", bloqueo.bloqueado.value)
+    }
+
+    /** Desbloquear tambien olvida un aviso que nadie llego a gastar. */
+    @Test
+    fun `un aviso sin gastar no sobrevive a desbloquear`() = runTest {
+        conPin()
+        val bloqueo = control()
+
+        bloqueo.esperaVueltaDelSistema()
+        bloqueo.desbloquea()
+        bloqueo.alIrAlFondo()
         bloqueo.alVolverAlFrente()
 
         assertTrue(bloqueo.bloqueado.value)
@@ -195,7 +246,11 @@ class ControlBloqueoTest {
         assertEquals(1, bloqueo.segundosDeEspera())
 
         ahora += 1_000
-        assertEquals("Cumplida la espera, se puede volver a intentar", 0, bloqueo.segundosDeEspera())
+        assertEquals(
+            "Cumplida la espera, se puede volver a intentar",
+            0,
+            bloqueo.segundosDeEspera()
+        )
     }
 
     @Test
@@ -260,7 +315,11 @@ class ControlBloqueoTest {
         )
 
         ahora += ControlBloqueo.esperaMillis(6)
-        assertEquals("Cumplida la espera, se puede volver a intentar", 0, bloqueo.segundosDeEspera())
+        assertEquals(
+            "Cumplida la espera, se puede volver a intentar",
+            0,
+            bloqueo.segundosDeEspera()
+        )
     }
 
     @Test

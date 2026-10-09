@@ -90,6 +90,23 @@ class ActualizacionesTest {
         assertEquals(Version(1, 1, 0), publicada?.version)
         assertEquals(APK, publicada?.url)
         assertEquals("2026-09-15", publicada?.publicadaEn)
+        assertEquals("Arregla lo que estorbaba.", publicada?.notas)
+    }
+
+    /**
+     * El sitio escribe una entradilla corta, pero quien respondiera en su lugar
+     * podria mandar un libro entero a la tarjeta de Acerca de.
+     */
+    @Test
+    fun `unas notas de mas se recortan`() {
+        val largas = "a".repeat(5_000)
+        val publicada = ComprobadorActualizaciones.lee(
+            """{"version":"1.1.0","apk":"$APK","notas":"$largas"}"""
+        )
+
+        val notas = publicada!!.notas!!
+        assertEquals(ComprobadorActualizaciones.TOPE_NOTAS, notas.length)
+        assertTrue(notas.endsWith("…"))
     }
 
     /** Sin apk se manda al sitio, que es donde estan las instrucciones. */
@@ -153,7 +170,9 @@ class ActualizacionesTest {
     @Test
     fun `los dos domicilios del sitio se aceptan`() {
         listOf(SITIO, "https://carlosalbertoxw.com/ollin-finanzas/").forEach { sitio ->
-            val publicada = ComprobadorActualizaciones.lee("""{"version":"1.1.0","sitio":"$sitio"}""")
+            val publicada = ComprobadorActualizaciones.lee(
+                """{"version":"1.1.0","sitio":"$sitio"}"""
+            )
             assertEquals(sitio, publicada?.url)
         }
     }
@@ -213,7 +232,9 @@ class ActualizacionesTest {
         val ahora = 5_000_000_000L
         ajustes.guardaComprobacion(ahora, "1.0.0", SITIO, null)
 
-        val resultado = comprobador().compruebaSiToca(ahora + ComprobadorActualizaciones.UN_DIA_MS - 1)
+        val resultado = comprobador().compruebaSiToca(
+            ahora + ComprobadorActualizaciones.UN_DIA_MS - 1
+        )
 
         assertEquals(Resultado.NoTocaba, resultado)
     }
@@ -225,7 +246,10 @@ class ActualizacionesTest {
 
         val resultado = comprobador().compruebaSiToca(ahora + ComprobadorActualizaciones.UN_DIA_MS)
 
-        assertTrue("Se esperaba una version nueva, salio: $resultado", resultado is Resultado.HayVersionNueva)
+        assertTrue(
+            "Se esperaba una version nueva, salio: $resultado",
+            resultado is Resultado.HayVersionNueva
+        )
         assertEquals("1.1.0", ajustes.ajustes.first().versionPublicada)
     }
 

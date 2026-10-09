@@ -1,15 +1,21 @@
-# Analisis estatico de seguridad del codigo de la app.
+# Analisis estatico de seguridad: el codigo de la app, el sitio y los flujos.
 #
 # Busca los patrones que una revision a ojo deja pasar: rutas de archivo
 # armadas con datos de fuera, intents con destino variable, criptografia mal
-# usada. No bloquea por si solo; los hallazgos aparecen en la pestana Security
-# del repositorio y en el propio pull request.
+# usada, y en los flujos, expresiones de `${{ }}` que meten texto de un pull
+# request en un `run:`. No bloquea por si solo; los hallazgos aparecen en la
+# pestana Security del repositorio y en el propio pull request.
+#
+# Es la configuracion avanzada y no el "default setup" del repositorio porque
+# Kotlin hay que compilarlo para analizarlo, y aqui se decide como: con el JDK
+# y el Gradle de los demas flujos. Los dos no conviven: con el default setup
+# encendido, GitHub rechaza lo que sube este flujo. Por eso tiene que estar
+# apagado en Settings -> Code security.
 #
 # Va en un flujo aparte y no dentro de pruebas.yml porque necesita su propia
 # compilacion instrumentada, que es mas lenta, y porque su permiso de escribir
 # eventos de seguridad no tiene por que tenerlo nadie mas.
 name: CodeQL
-
 on:
   push:
     branches: [main]
@@ -24,7 +30,10 @@ permissions:
 
 jobs:
   analizar:
-    name: Analizar Kotlin
+    # El nombre del job es el del check, y "Analizar Kotlin" es un check
+    # obligatorio de la regla de main: si cambia, el check exigido nunca llega y
+    # ningun PR se puede fusionar. Por eso cada entrada lleva su nombre a mano.
+    name: Analizar ${{ matrix.nombre }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -32,28 +41,47 @@ jobs:
       contents: read
       security-events: write
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Kotlin no se puede analizar sin compilar: CodeQL observa al
+          # compilador.
+          - nombre: Kotlin
+            lenguaje: java-kotlin
+            modo: manual
+          # El sitio y los flujos se leen tal cual.
+          - nombre: JavaScript
+            lenguaje: javascript-typescript
+            modo: none
+          - nombre: flujos
+            lenguaje: actions
+            modo: none
+
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      - if: matrix.modo == 'manual'
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: '21'
 
-      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - if: matrix.modo == 'manual'
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
 
       - name: Preparar CodeQL
         uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
-          languages: java-kotlin
-          build-mode: manual
+          languages: ${{ matrix.lenguaje }}
+          build-mode: ${{ matrix.modo }}
 
-      # Kotlin no se puede analizar sin compilar: CodeQL observa al compilador.
       # Sin cache de build y repitiendo las tareas, para que vea compilar todo.
       - name: Compilar
+        if: matrix.modo == 'manual'
         run: ./gradlew :app:compileDebugKotlin --no-daemon --no-build-cache --rerun-tasks
 
       - name: Analizar
         uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
-          category: '/language:java-kotlin'
+          category: '/language:${{ matrix.lenguaje }}'

@@ -41,7 +41,8 @@ class ReparaDatos(private val repo: FinanzasRepositorio) {
                 TipoMovimiento.ENTRADA -> TipoMovimiento.SALIDA
                 TipoMovimiento.SALIDA -> TipoMovimiento.ENTRADA
                 // Los internos admiten cualquier signo: no hay nada que alinear.
-                TipoMovimiento.BALANCE_INICIAL, TipoMovimiento.AJUSTE_VALOR -> return@mapNotNull null
+                TipoMovimiento.BALANCE_INICIAL,
+                TipoMovimiento.AJUSTE_VALOR -> return@mapNotNull null
             }
             m.copy(tipo = nuevo)
         }

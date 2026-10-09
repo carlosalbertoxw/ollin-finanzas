@@ -16,7 +16,7 @@ Room (OllinDatabase, cifrada con SQLCipher)
 
 ### `ui/`
 
-Una pantalla por archivo en `ui/screens/`, cada una con su `ViewModel` declarado en el mismo archivo. Los estados se exponen como `StateFlow` y se consumen con `collectAsStateWithLifecycle`.
+Una pantalla por archivo en `ui/screens/`, y su `ViewModel` al lado, en `XxxVm.kt`, junto con los modelos de estado que publica. Separados porque se leen por motivos distintos —el estado y sus reglas por un lado, cómo se dibuja por otro— y porque juntos hacían archivos de setecientas líneas; lo `private` de la interfaz se queda con la pantalla. Los estados se exponen como `StateFlow` y se consumen con `collectAsStateWithLifecycle`.
 
 No hay `Factory` por pantalla: [`recuerdaVm`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/Fabrica.kt) crea el ViewModel pasándole a mano lo que necesita.
 
@@ -86,14 +86,18 @@ En ese mismo arranque va la búsqueda de versiones nuevas, envuelta en `runCatch
 
 [`MainActivity`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/MainActivity.kt) es una `FragmentActivity` y no una `ComponentActivity`, porque el diálogo de huella y credencial del sistema se monta sobre el gestor de fragmentos.
 
-El árbol que se compone depende de dos señales:
+El árbol que se compone depende de cuatro señales, en este orden:
 
 | Estado | Qué se dibuja |
 |---|---|
+| La base no se pudo abrir | `ArranqueFallido`: qué pasó, que no se tocó nada, y una línea con el error para reportarlo |
 | Preferencias sin leer (`null`) | Telón: fondo liso, nunca datos |
 | Bloqueado y con modo de bloqueo activo | `BloqueoPantalla` |
 | Bloqueado pero sin modo definido aún | Telón |
-| Desbloqueado | `OllinRaiz` |
+| Desbloqueado, con la base todavía abriéndose | Telón |
+| Desbloqueado y con la base abierta | `OllinRaiz` |
+
+**La base se abre en `OllinApp`, fuera del hilo principal y antes que nadie.** Abrirla carga la biblioteca nativa de SQLCipher, desenvuelve la frase del Keystore y corre las migraciones; se fuerza con `openHelper.writableDatabase`, porque Room no abre el archivo hasta la primera consulta y una llave equivocada solo se nota ahí. Si falla, el error se guarda en el [registro de fallos](seguridad.md) —no cierra el proceso, así que el manejador no lo vería— y `MainActivity` enseña `ArranqueFallido` en vez de dejar que el primer ViewModel reviente en el hilo principal. Por eso `OllinRaiz` espera a `baseAbierta`: ninguna pantalla con datos toca la base antes de saber que abre.
 
 `BloqueoPantalla` **sustituye** al árbol de la app, no lo tapa: si fuera una capa encima, el contenido seguiría compuesto debajo y asomaría en la vista de apps recientes. Mientras hay candado configurado, la ventana lleva `FLAG_SECURE`.
 
@@ -113,7 +117,6 @@ Los agregados que SQL hace bien (saldo por cuenta, flujo por mes, totales por ca
 | SQLCipher (`net.zetetic:sqlcipher-android`) | Cifrado de la base |
 | DataStore Preferences | Ajustes |
 | AndroidX Biometric | Credencial del sistema |
-| DocumentFile | Selector de archivos para importar y exportar |
 | Robolectric + JUnit 4 | Pruebas en la JVM |
 
 No hay dependencia de Apache POI: el paquete `data/excel/` escribe y lee `.xlsx` por su cuenta. Ver [Excel](excel.md#cómo-está-hecho).

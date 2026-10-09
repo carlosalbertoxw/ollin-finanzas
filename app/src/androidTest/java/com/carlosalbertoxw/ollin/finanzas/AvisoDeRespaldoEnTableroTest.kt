@@ -67,7 +67,8 @@ class AvisoDeRespaldoEnTableroTest {
                     ) {
                         kotlinx.coroutines.delay(100)
                     }
-                    val hace8Dias = System.currentTimeMillis() - Respaldos.CADA_MS - 24L * 60 * 60 * 1000
+                    val unDia = 24L * 60 * 60 * 1000
+                    val hace8Dias = System.currentTimeMillis() - Respaldos.CADA_MS - unDia
                     ajustes.guardaAnclaDeRespaldo(hace8Dias)
                     ajustes.guardaRespaldoHecho(0L)
                 }

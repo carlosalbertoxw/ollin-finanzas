@@ -166,7 +166,9 @@ object LectorCatalogos {
                     cuentas.getOrPut(nombre.normalizaClave()) {
                         CuentaDeclarada(
                             nombre = nombre,
-                            tipo = TipoCuenta.desdeEtiqueta(naturaleza?.let { texto(fila.getOrNull(it)) })
+                            tipo = TipoCuenta.desdeEtiqueta(
+                                naturaleza?.let { texto(fila.getOrNull(it)) }
+                            )
                         )
                     }
                 }
@@ -188,7 +190,14 @@ object LectorCatalogos {
 
     // --------------------------------------------------------- Presupuesto
 
-    private val ALIAS_META = listOf("meta", "monto", "presupuesto", "importe", "cantidad", "planeado")
+    private val ALIAS_META = listOf(
+        "meta",
+        "monto",
+        "presupuesto",
+        "importe",
+        "cantidad",
+        "planeado"
+    )
     private val ALIAS_ANIO = listOf("anio", "año", "year")
     private val ALIAS_MES = listOf("mes", "periodo", "month")
 
@@ -254,14 +263,48 @@ object LectorCatalogos {
 
     // --------------------------------------------------------- Compromisos
 
-    private val ALIAS_COMPROMISO = listOf("compromiso", "compromisos", "nombre", "concepto", "descripcion")
-    private val ALIAS_MONTO = listOf("monto", "importe", "cantidad", "pago", "mensualidad", "monto del pago")
+    private val ALIAS_COMPROMISO = listOf(
+        "compromiso",
+        "compromisos",
+        "nombre",
+        "concepto",
+        "descripcion"
+    )
+    private val ALIAS_MONTO = listOf(
+        "monto",
+        "importe",
+        "cantidad",
+        "pago",
+        "mensualidad",
+        "monto del pago"
+    )
     private val ALIAS_PERIODICIDAD = listOf("periodicidad", "frecuencia")
     private val ALIAS_PROXIMO = listOf("proximo pago", "proximo", "siguiente pago", "fecha")
-    private val ALIAS_RESTANTES = listOf("pagos restantes", "restantes", "pagos por pagar", "faltan")
-    private val ALIAS_PRIMER_PAGO = listOf("fecha primer pago", "primer pago", "inicio", "fecha de inicio")
-    private val ALIAS_TOTAL_PAGOS = listOf("total pagos", "pagos totales", "plazos", "mensualidades", "numero de pagos")
-    private val ALIAS_REALIZADOS = listOf("pagos realizados", "realizados", "pagados", "pagos hechos")
+    private val ALIAS_RESTANTES = listOf(
+        "pagos restantes",
+        "restantes",
+        "pagos por pagar",
+        "faltan"
+    )
+    private val ALIAS_PRIMER_PAGO = listOf(
+        "fecha primer pago",
+        "primer pago",
+        "inicio",
+        "fecha de inicio"
+    )
+    private val ALIAS_TOTAL_PAGOS = listOf(
+        "total pagos",
+        "pagos totales",
+        "plazos",
+        "mensualidades",
+        "numero de pagos"
+    )
+    private val ALIAS_REALIZADOS = listOf(
+        "pagos realizados",
+        "realizados",
+        "pagados",
+        "pagos hechos"
+    )
     private val ALIAS_NOTAS = listOf("notas", "nota", "comentario")
 
     fun leeCompromisos(libro: LibroLeido): List<CompromisoDeclarado> {
@@ -299,7 +342,9 @@ object LectorCatalogos {
             val monto = fila.getOrNull(cMonto)?.takeIf { it.numero != null }?.let(::centavos)
                 ?: return@forEachIndexed
 
-            val periodicidad = Periodicidad.desdeEtiqueta(cPeriodicidad?.let { texto(fila.getOrNull(it)) })
+            val periodicidad = Periodicidad.desdeEtiqueta(
+                cPeriodicidad?.let { texto(fila.getOrNull(it)) }
+            )
                 ?: Periodicidad.MENSUAL
             val proximo = cProximo?.let { fecha(fila.getOrNull(it)) }
             val primerPago = cPrimerPago?.let { fecha(fila.getOrNull(it)) }

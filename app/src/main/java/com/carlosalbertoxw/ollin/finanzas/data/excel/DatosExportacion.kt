@@ -26,7 +26,9 @@ data class DatosExportacion(
 
     /** Categorias hoja agrupadas bajo su padre, en el orden del catalogo. */
     fun agrupadasPorPadre(tipo: TipoCategoria): List<Pair<Categoria, List<Categoria>>> {
-        val padres = categorias.filter { it.padreId == null && it.tipo == tipo }.sortedBy { it.orden }
+        val padres = categorias
+            .filter { it.padreId == null && it.tipo == tipo }
+            .sortedBy { it.orden }
         return padres.map { padre ->
             padre to categorias.filter { it.padreId == padre.id }.sortedBy { it.orden }
         }

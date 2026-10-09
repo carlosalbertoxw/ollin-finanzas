@@ -61,64 +61,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class AjustesVm(
-    private val prefs: AjustesRepositorio,
-    private val repo: FinanzasRepositorio,
-    private val bloqueo: ControlBloqueo
-) : ViewModel() {
-
-    val ajustes: StateFlow<Ajustes> = prefs.ajustes
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Ajustes())
-
-    val movimientos: StateFlow<Int> = repo.observaConteoMovimientos()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-
-    fun cambiaTema(oscuro: Boolean?) {
-        viewModelScope.launch { prefs.guardaTema(oscuro) }
-    }
-
-    fun cambiaColorDinamico(valor: Boolean) {
-        viewModelScope.launch { prefs.guardaColorDinamico(valor) }
-    }
-
-    fun cambiaMuestraSaldoInicial(valor: Boolean) {
-        viewModelScope.launch { prefs.guardaMuestraSaldoInicial(valor) }
-    }
-
-    fun cambiaMuestraTutoriales(valor: Boolean) {
-        viewModelScope.launch { prefs.guardaMuestraTutoriales(valor) }
-    }
-
-    fun cambiaRecuerdaRespaldo(valor: Boolean) {
-        viewModelScope.launch {
-            prefs.guardaRecuerdaRespaldo(valor, System.currentTimeMillis())
-        }
-    }
-
-    fun cambiaBuscarActualizaciones(valor: Boolean) {
-        viewModelScope.launch { prefs.guardaBuscarActualizaciones(valor) }
-    }
-
-    fun cambiaHoraDeAviso(hora: Int, minuto: Int) {
-        viewModelScope.launch { prefs.guardaHoraDeAviso(hora, minuto) }
-    }
-
-    fun quitaBloqueo() {
-        viewModelScope.launch { prefs.quitaBloqueo() }
-    }
-
-    fun usaBloqueoDelSistema() {
-        viewModelScope.launch { prefs.activaBloqueoSistema() }
-    }
-
-    fun usaBloqueoConPin(pin: String) {
-        viewModelScope.launch {
-            val (hash, sal) = bloqueo.huellaNueva(pin)
-            prefs.activaBloqueoPin(hash = hash, sal = sal)
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AjustesPantalla(
@@ -259,9 +201,10 @@ fun AjustesPantalla(
 
             Text("Tus datos", style = MaterialTheme.typography.titleMedium)
             Text(
-                "$movimientos movimientos guardados en este telefono. Ollin Finanzas no manda nada a " +
-                    "ningun servidor y el respaldo automatico del sistema esta desactivado " +
-                    "para la base: tu respaldo es la exportacion a .xlsx, que decides tu donde guardar.",
+                "$movimientos movimientos guardados en este telefono. Ollin Finanzas no manda " +
+                    "nada a ningun servidor y el respaldo automatico del sistema esta " +
+                    "desactivado para la base: tu respaldo es la exportacion a .xlsx, que " +
+                    "decides tu donde guardar.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = colores.textoTenue
             )
@@ -321,11 +264,12 @@ fun AjustesPantalla(
                 Column(Modifier.weight(1f)) {
                     Text("Avisarme de versiones nuevas", style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        "Ollin Finanzas no se instala desde Play, asi que nadie mas avisa de una " +
-                            "version nueva. Una vez al dia le pregunta al sitio del proyecto si " +
-                            "salio alguna, y lo enseña en Acerca de. Es una peticion a un archivo " +
-                            "fijo que no manda ningun dato tuyo: la comparacion pasa en el " +
-                            "telefono. Apagado, la app no toca internet en ningun momento.",
+                        "Ollin Finanzas no se instala desde Play, asi que nadie mas avisa de " +
+                            "una version nueva. Una vez al dia le pregunta al sitio del " +
+                            "proyecto si salio alguna, y lo enseña en Acerca de. Es una " +
+                            "peticion a un archivo fijo que no manda ningun dato tuyo: la " +
+                            "comparacion pasa en el telefono. Apagado, la app no toca internet " +
+                            "en ningun momento.",
                         style = MaterialTheme.typography.bodySmall,
                         color = colores.textoTenue
                     )
@@ -468,7 +412,8 @@ private fun SeccionBloqueo(
         actividad = actividad ?: return,
         titulo = "Confirma que eres tu",
         alLograr = { pendiente?.invoke(); pendiente = null },
-        alFallar = { pendiente = null; aviso = it }
+        alFallar = { pendiente = null; aviso = it },
+        alSalirAlSistema = bloqueo::esperaVueltaDelSistema
     )
 
     /**
@@ -529,10 +474,12 @@ private fun SeccionBloqueo(
         when (modoActual) {
             ModoBloqueo.NINGUNO ->
                 "Cualquiera que tome tu telefono desbloqueado puede abrir Ollin Finanzas."
-            ModoBloqueo.SISTEMA -> "Se usa el patron, PIN o huella con que desbloqueas el telefono. " +
-                "Ollin Finanzas no guarda ningun secreto."
-            ModoBloqueo.PIN -> "Se usa un PIN solo de Ollin Finanzas. Si lo olvidas no hay forma de " +
-                "recuperarlo: tendrias que reinstalar la app y perderias los datos."
+            ModoBloqueo.SISTEMA ->
+                "Se usa el patron, PIN o huella con que desbloqueas el telefono. " +
+                    "Ollin Finanzas no guarda ningun secreto."
+            ModoBloqueo.PIN ->
+                "Se usa un PIN solo de Ollin Finanzas. Si lo olvidas no hay forma de " +
+                    "recuperarlo: tendrias que reinstalar la app y perderias los datos."
         },
         style = MaterialTheme.typography.bodySmall,
         color = colores.textoTenue

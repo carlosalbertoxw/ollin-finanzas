@@ -26,13 +26,19 @@ class XlsxLectorSeguridadTest {
     /** Libro minimo pero valido, con una hoja y una celda de texto. */
     private fun libro(
         prologoDeHoja: String = "",
-        filas: String = """<row r="1"><c r="A1" t="inlineStr"><is><t>Hola</t></is></c></row>"""
+        filas: String = """<row r="1"><c r="A1" t="inlineStr"><is><t>Hola</t></is></c></row>""",
+        /** Como se escribe la hoja en bytes; las demas partes van siempre en UTF-8. */
+        codificaHoja: (String) -> ByteArray = { it.toByteArray(Charsets.UTF_8) }
     ): ByteArray {
         val salida = ByteArrayOutputStream()
         ZipOutputStream(salida).use { zip ->
-            fun parte(ruta: String, contenido: String) {
+            fun parte(
+                ruta: String,
+                contenido: String,
+                codifica: (String) -> ByteArray = { it.toByteArray(Charsets.UTF_8) }
+            ) {
                 zip.putNextEntry(ZipEntry(ruta))
-                zip.write(contenido.toByteArray(Charsets.UTF_8))
+                zip.write(codifica(contenido))
                 zip.closeEntry()
             }
             parte(
@@ -48,7 +54,8 @@ class XlsxLectorSeguridadTest {
             parte(
                 "xl/worksheets/sheet1.xml",
                 """<?xml version="1.0" encoding="UTF-8"?>$prologoDeHoja
-                   <worksheet><sheetData>$filas</sheetData></worksheet>"""
+                   <worksheet><sheetData>$filas</sheetData></worksheet>""",
+                codificaHoja
             )
         }
         return salida.toByteArray()
@@ -203,5 +210,82 @@ class XlsxLectorSeguridadTest {
         } catch (e: XlsxLector.ArchivoInvalido) {
             assertTrue(e.message!!.contains("DOCTYPE"))
         }
+    }
+
+    /**
+     * En UTF-16 cada letra lleva un cero al lado, y la comparacion byte a byte
+     * de antes no veia el DOCTYPE. El parser si lo leeria, y en Android con sus
+     * entidades.
+     */
+    @Test
+    fun `el DOCTYPE se detecta tambien en UTF-16`() {
+        val e = rechaza(
+            libro(
+                """<!DOCTYPE foo [<!ENTITY a "AAAAAAAAAA">]>""",
+                codificaHoja = { texto ->
+                    byteArrayOf(0xFF.toByte(), 0xFE.toByte()) +
+                        texto.replace("UTF-8", "UTF-16").toByteArray(Charsets.UTF_16LE)
+                }
+            ),
+            "Un DOCTYPE en UTF-16 no debe colarse"
+        )
+
+        assertTrue(e.message!!.contains("DOCTYPE"))
+    }
+
+    /** Y sin marca de orden de bytes: se reconoce por como viene escrito el `<`. */
+    @Test
+    fun `el DOCTYPE se detecta en UTF-16 sin marca de orden`() {
+        val e = rechaza(
+            libro(
+                "<!DOCTYPE foo>",
+                codificaHoja = { it.replace("UTF-8", "UTF-16").toByteArray(Charsets.UTF_16BE) }
+            ),
+            "Un DOCTYPE en UTF-16BE no debe colarse"
+        )
+
+        assertTrue(e.message!!.contains("DOCTYPE"))
+    }
+
+    /** Lo legitimo en UTF-16 se sigue leyendo: el arreglo no puede costar archivos. */
+    @Test
+    fun `una hoja en UTF-16 sin DOCTYPE se lee`() {
+        val leido = XlsxLector.lee(
+            ByteArrayInputStream(
+                libro(
+                    codificaHoja = { texto ->
+                        byteArrayOf(0xFF.toByte(), 0xFE.toByte()) +
+                            texto.replace("UTF-8", "UTF-16").toByteArray(Charsets.UTF_16LE)
+                    }
+                )
+            )
+        )
+
+        assertEquals("Hola", leido.hoja("Registros")!!.filas[0][0].comoTexto())
+    }
+
+    /** Un comentario que acaba en `--->` no debe hacer perder el cierre. */
+    @Test
+    fun `un DOCTYPE tras un comentario con guiones de mas se detecta`() {
+        rechaza(
+            libro("<!-- nota ---> <!DOCTYPE foo>"),
+            "El DOCTYPE tras el comentario no debe colarse"
+        )
+    }
+
+    /** Cientos de miles de partes vacias no pesan nada, pero llenan el mapa. */
+    @Test
+    fun `un zip con miles de partes se rechaza`() {
+        val muchas = ByteArrayOutputStream()
+        ZipOutputStream(muchas).use { zip ->
+            repeat(2_001) { i ->
+                zip.putNextEntry(ZipEntry("xl/vacia$i.xml"))
+                zip.closeEntry()
+            }
+        }
+
+        val e = rechaza(muchas.toByteArray(), "Un zip con miles de partes no debe leerse")
+
+        assertTrue(e.message!!.contains("demasiado grande"))
     }
 }

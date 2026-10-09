@@ -243,7 +243,10 @@ object Recordatorios {
      * pago por cumplido o lo descarta, asi que uno atrasado sigue pendiente
      * hasta que se decida. Se ordenan por fecha, lo mas atrasado primero.
      */
-    fun porVencer(compromisos: List<Compromiso>, hoy: LocalDate = LocalDate.now()): List<Pair<Compromiso, LocalDate>> =
+    fun porVencer(
+        compromisos: List<Compromiso>,
+        hoy: LocalDate = LocalDate.now()
+    ): List<Pair<Compromiso, LocalDate>> =
         compromisos.filter { it.activo }.mapNotNull { c ->
             if ((c.pagosRestantes ?: Int.MAX_VALUE) <= 0) return@mapNotNull null
             val proximo = c.proximoPago
@@ -262,11 +265,17 @@ class RecordatorioReceiver : BroadcastReceiver() {
             try {
                 avisaDeRespaldoSiToca(contexto, app)
 
-                val discreto = app.contenedor.ajustes.ajustes.first().modoBloqueo != ModoBloqueo.NINGUNO
+                val modo = app.contenedor.ajustes.ajustes.first().modoBloqueo
+                val discreto = modo != ModoBloqueo.NINGUNO
                 val compromisos = app.contenedor.repositorio.listaCompromisos()
                 val hoy = LocalDate.now()
                 Recordatorios.porVencer(compromisos).forEachIndexed { i, (compromiso, fecha) ->
-                    val (titulo, texto) = Recordatorios.textoDelAviso(compromiso, fecha, hoy, discreto)
+                    val (titulo, texto) = Recordatorios.textoDelAviso(
+                        compromiso,
+                        fecha,
+                        hoy,
+                        discreto
+                    )
                     Recordatorios.notifica(contexto, id = 2000 + i, titulo = titulo, texto = texto)
                 }
             } finally {

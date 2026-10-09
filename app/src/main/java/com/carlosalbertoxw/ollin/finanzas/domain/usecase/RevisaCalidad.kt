@@ -144,7 +144,8 @@ class RevisaCalidad(private val repo: FinanzasRepositorio) {
 
         val implicados = repetidos.values.flatten()
         val inflado = repetidos.values.sumOf { porCuenta ->
-            porCuenta.sumOf { it.importeCentavos } - porCuenta.maxBy { abs(it.importeCentavos) }.importeCentavos
+            val mayor = porCuenta.maxBy { abs(it.importeCentavos) }
+            porCuenta.sumOf { it.importeCentavos } - mayor.importeCentavos
         }
         return Hallazgo(
             clave = ClaveHallazgo.SALDO_INICIAL_DUPLICADO,

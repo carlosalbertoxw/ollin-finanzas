@@ -143,25 +143,86 @@ jobs:
     uses: ./.github/workflows/actualizacion.yml
 
   # ---------------------------------------------------------------------------
-  # Aqui va tambien el job de migraciones en emulador, y todavia no existe
-  # porque no hay ninguna que correr: el esquema sigue en su version inicial. En
-  # cuanto se escriba la primera Migration entra aqui una `MigracionesTest`,
-  # bloqueando igual, porque una migracion equivocada deja la app sin abrir y
-  # tampoco se arregla desde fuera. Mientras tanto, EsquemaDeBaseTest vigila en
-  # la JVM que la cadena no tenga huecos. Ver docs/modelo-de-datos.md.
+  # Las migraciones, sobre un emulador de verdad.
+  #
+  # Solo esta clase, no la suite de interfaz entera: una migracion equivocada
+  # deja la app sin abrir en el telefono de quien actualiza y no hay forma de
+  # arreglarlo desde fuera, asi que no puede quedar sin comprobar. Las pruebas
+  # de pantalla dependen de animaciones y relojes, y su intermitencia no puede
+  # ser lo que impida publicar una correccion.
+  #
+  # Mientras el esquema siga en 1 solo comprueba que 1.json describe una base
+  # que Room acepta. Esta aqui desde antes de la primera Migration para que esa
+  # no pueda llegar a una release sin pasar por el. EsquemaDeBaseTest vigila
+  # ademas en la JVM que la cadena no tenga huecos. Ver docs/modelo-de-datos.md.
   # ---------------------------------------------------------------------------
+  migraciones:
+    name: Migraciones en emulador
+    needs: etiqueta
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      # La virtualizacion por hardware no viene activada en los runners de
+      # Linux; sin esto el emulador arranca en modo software y tarda de mas.
+      - name: Habilitar KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Correr MigracionesTest
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          # `lenient` por el ejecutor de pruebas en dispositivo (UTP): se
+          # descarga solo con un emulador conectado y no esta en
+          # gradle/verification-metadata.xml. Este job solo prueba; el APK que
+          # se publica sale del job `publicar`, en estricto.
+          script: >
+            ./gradlew connectedDebugAndroidTest
+            -Pandroid.testInstrumentationRunnerArguments.class=com.carlosalbertoxw.ollin.finanzas.db.MigracionesTest
+            --dependency-verification=lenient
+            --no-daemon
+
+      - name: Guardar el informe
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: informe-migraciones
+          path: app/build/reports/androidTests/
+          retention-days: 14
+          if-no-files-found: ignore
 
   # ---------------------------------------------------------------------------
   # El artefacto firmado y la release.
   # ---------------------------------------------------------------------------
   publicar:
     name: Compilar y publicar
-    needs: [etiqueta, pruebas, actualizacion]
+    needs: [etiqueta, pruebas, migraciones, actualizacion]
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
     permissions:
       contents: write
+      # Los tres para atestar el APK y su SBOM: el token OIDC con el que
+      # Sigstore emite el certificado, y guardar la atestacion en el repo.
+      id-token: write
+      attestations: write
+      artifact-metadata: write
 
     # Los secretos de firma van en este environment y no en los del repositorio:
     # asi solo existen para este job, y con la regla de tags `v*` (y, si se
@@ -311,6 +372,22 @@ jobs:
           # comprobar que lo que bajo es lo que salio de esta compilacion.
           ( cd entrega && sha256sum ./*.apk ./*.cdx.json > checksums.txt )
           cat entrega/checksums.txt
+
+      # La firma dice quien firmo; la atestacion dice desde que commit y con
+      # que flujo salio el binario, firmada por Sigstore con la identidad de
+      # este workflow. Se comprueba con `gh attestation verify` (ver el README).
+      # Va antes de crear la release: lo que se atesta es la huella del archivo,
+      # y la release sube exactamente estos bytes.
+      - name: Atestar la procedencia del APK
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: entrega/*.apk
+
+      - name: Atestar el SBOM del APK
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: entrega/*.apk
+          sbom-path: entrega/ollin-finanzas-${{ needs.etiqueta.outputs.version }}.cdx.json
 
       - name: Crear la release
         env:

@@ -184,7 +184,9 @@ interface MovimientoDao {
     suspend fun porGrupo(grupo: String): List<Movimiento>
 
     /** Una cuenta deberia tener un solo saldo inicial; sirve para avisar antes de duplicarlo. */
-    @Query("SELECT * FROM movimiento WHERE cuentaId = :cuentaId AND tipo = 'BALANCE_INICIAL' LIMIT 1")
+    @Query(
+        "SELECT * FROM movimiento WHERE cuentaId = :cuentaId AND tipo = 'BALANCE_INICIAL' LIMIT 1"
+    )
     suspend fun balanceInicialDe(cuentaId: Long): Movimiento?
 
     @Transaction
@@ -304,7 +306,9 @@ interface PresupuestoDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guardaTodos(presupuestos: List<Presupuesto>)
 
-    @Query("DELETE FROM presupuesto WHERE categoriaId = :categoriaId AND anio = :anio AND mes = :mes")
+    @Query(
+        "DELETE FROM presupuesto WHERE categoriaId = :categoriaId AND anio = :anio AND mes = :mes"
+    )
     suspend fun elimina(categoriaId: Long, anio: Int, mes: Int)
 
     @Query("DELETE FROM presupuesto")

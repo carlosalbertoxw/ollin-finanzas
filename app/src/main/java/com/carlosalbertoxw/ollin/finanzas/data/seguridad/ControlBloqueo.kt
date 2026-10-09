@@ -74,6 +74,13 @@ class ControlBloqueo(
     private var fallosDePin = 0
     private var salidaEnMillis: Long? = null
 
+    /**
+     * Cierto mientras Ollin espera que el sistema le devuelva algo --el selector
+     * de archivos, la pantalla de credencial-- y por eso su marcha al fondo no
+     * cuenta como salir de la app.
+     */
+    private var vueltaEsperada = false
+
     init {
         ambito.launch {
             var primeraLectura = true
@@ -101,6 +108,17 @@ class ControlBloqueo(
     fun desbloquea() {
         _bloqueado.value = false
         salidaEnMillis = null
+        vueltaEsperada = false
+    }
+
+    /**
+     * Avisa de que lo siguiente que va a mandar Ollin al fondo es una pantalla
+     * del sistema de la que se espera volver: el selector de archivos al
+     * importar o exportar, o la credencial del telefono. Solo esas salidas
+     * tienen gracia.
+     */
+    fun esperaVueltaDelSistema() {
+        vueltaEsperada = true
     }
 
     fun alIrAlFondo() {
@@ -110,12 +128,19 @@ class ControlBloqueo(
     /**
      * Se usa el reloj monotono y no la hora del sistema: cambiar la hora del
      * telefono no debe poder alargar la gracia.
+     *
+     * Sin una vuelta esperada la gracia es cero y Ollin se cierra en cuanto
+     * sale al fondo, que es justo el caso que el candado quiere cubrir: pulsar
+     * Inicio y pasarle el telefono a alguien. La gracia se gasta en el primer
+     * regreso, vuelva a tiempo o no: no se hereda al siguiente viaje.
      */
     fun alVolverAlFrente() {
         val salida = salidaEnMillis ?: return
         salidaEnMillis = null
+        val gracia = if (vueltaEsperada) GRACIA_MILLIS else 0L
+        vueltaEsperada = false
         if (modo == ModoBloqueo.NINGUNO) return
-        if (reloj() - salida >= GRACIA_MILLIS) _bloqueado.value = true
+        if (reloj() - salida >= gracia) _bloqueado.value = true
     }
 
     // ------------------------------------------------------- intentos de PIN
@@ -183,9 +208,10 @@ class ControlBloqueo(
 
     companion object {
         /**
-         * Un minuto de gracia. Importar y exportar abren el selector de archivos
-         * del sistema, que manda la app al fondo; sin este margen, elegir un
-         * .xlsx te expulsaria de la app a medio camino.
+         * Un minuto de gracia, solo para una vuelta esperada. Importar y
+         * exportar abren el selector de archivos del sistema, que manda la app
+         * al fondo; sin este margen, elegir un .xlsx te expulsaria de la app a
+         * medio camino. Ver [esperaVueltaDelSistema].
          */
         const val GRACIA_MILLIS = 60_000L
 
