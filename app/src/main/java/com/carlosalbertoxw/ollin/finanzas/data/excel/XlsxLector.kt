@@ -1,10 +1,16 @@
 package com.carlosalbertoxw.ollin.finanzas.data.excel
 
 import org.xml.sax.Attributes
+import org.xml.sax.EntityResolver
+import org.xml.sax.InputSource
 import org.xml.sax.SAXException
 import org.xml.sax.helpers.DefaultHandler
 import java.io.ByteArrayInputStream
 import java.io.InputStream
+import java.io.InputStreamReader
+import java.io.Reader
+import java.io.StringReader
+import java.nio.charset.Charset
 import java.util.zip.ZipInputStream
 import javax.xml.parsers.SAXParserFactory
 
@@ -192,7 +198,8 @@ object XlsxLector {
     private val BANDERAS_SEGURAS = listOf(
         "http://apache.org/xml/features/disallow-doctype-decl" to true,
         "http://xml.org/sax/features/external-general-entities" to false,
-        "http://xml.org/sax/features/external-parameter-entities" to false
+        "http://xml.org/sax/features/external-parameter-entities" to false,
+        "http://apache.org/xml/features/nonvalidating/load-external-dtd" to false
     )
 
     /**
@@ -202,18 +209,31 @@ object XlsxLector {
      *
      * Se rechaza leyendo el prologo a mano en vez de pedirselo al parser,
      * porque en Android el parser no sabe hacerlo. Una comprobacion propia
-     * sobre los bytes funciona igual en todas partes.
+     * sobre el texto funciona igual en todas partes.
+     *
+     * Lo demas es por si acaso, cada cosa suelta y tolerada: ninguna puede
+     * tumbar una importacion por no estar disponible. `isXIncludeAware` es el
+     * caso real --el SAXParserFactory de Android no lo implementa y la clase
+     * base lanza UnsupportedOperationException--, y en la JVM no se nota porque
+     * ahi lo sirve Xerces. El [EntityResolver] vacio cubre las entidades
+     * externas: con el `DefaultHandler` como resolvedor, el parser iria a
+     * buscarlas por su cuenta.
      */
     private fun parsea(bytes: ByteArray, handler: DefaultHandler) {
         rechazaDoctype(bytes)
         val factory = SAXParserFactory.newInstance().apply {
             isNamespaceAware = false
+            runCatching { isXIncludeAware = false }
             BANDERAS_SEGURAS.forEach { (nombre, valor) ->
                 runCatching { setFeature(nombre, valor) }
             }
         }
         try {
-            factory.newSAXParser().parse(ByteArrayInputStream(bytes), handler)
+            val lector = factory.newSAXParser().xmlReader
+            lector.contentHandler = handler
+            lector.errorHandler = handler
+            lector.entityResolver = EntityResolver { _, _ -> InputSource(StringReader("")) }
+            lector.parse(InputSource(ByteArrayInputStream(bytes)))
         } catch (e: Exception) {
             // Un rechazo lanzado desde el handler puede llegar envuelto en una
             // SAXException, segun el parser. Se desenvuelve para que el mensaje
@@ -229,47 +249,81 @@ object XlsxLector {
             .firstOrNull()
 
     /**
-     * Recorre el prologo —lo que va antes del elemento raiz— y aborta si
+     * Recorre el prologo --lo que va antes del elemento raiz-- y aborta si
      * encuentra un DOCTYPE. Solo mira ahi: mas adelante un `<` literal viaja
      * escapado como `&lt;`, asi que la secuencia no puede aparecer en el texto
      * de una celda y buscarla en todo el archivo daria falsos positivos.
+     *
+     * Se lee con el juego de caracteres del archivo y no byte a byte: un XML en
+     * UTF-16 intercala ceros entre las letras, y comparar bytes dejaba pasar su
+     * DOCTYPE sin verlo. Por la misma razon, cualquier cosa que no sea espacio
+     * ni `<` termina el prologo: saltarsela era otra forma de no verlo.
      */
     private fun rechazaDoctype(bytes: ByteArray) {
-        var i = 0
-        while (i < bytes.size) {
-            val b = bytes[i].toInt().toChar()
-            if (b != '<') { i++; continue }
+        val lector = InputStreamReader(ByteArrayInputStream(bytes), codificacion(bytes)).buffered()
+        while (true) {
+            val c = lector.read()
+            if (c < 0) return
+            if (c.toChar().isWhitespace() || c == 0xFEFF) continue
+            if (c.toChar() != '<') return
+            lector.mark(16)
+            val bufer = CharArray(8)
+            val siguiente = bufer.concatToString(0, lector.read(bufer, 0, 8).coerceAtLeast(0))
             when {
                 // Declaracion XML o instruccion de proceso: <? ... ?>
-                coincide(bytes, i, "<?") -> i = tras(bytes, i, "?>") ?: return
+                siguiente.startsWith("?") -> {
+                    lector.reset()
+                    lector.read()
+                    if (!saltaHasta(lector, "?>")) return
+                }
+
                 // Comentario: <!-- ... -->
-                coincide(bytes, i, "<!--") -> i = tras(bytes, i, "-->") ?: return
-                coincide(bytes, i, "<!DOCTYPE") -> throw ArchivoInvalido(
+                siguiente.startsWith("!--") -> {
+                    lector.reset()
+                    repeat(3) { lector.read() }
+                    if (!saltaHasta(lector, "-->")) return
+                }
+
+                siguiente.startsWith("!DOCTYPE", ignoreCase = true) -> throw ArchivoInvalido(
                     "El archivo declara un DOCTYPE, que Ollin Finanzas no acepta. " +
                         "Vuelve a guardarlo como .xlsx desde tu hoja de calculo."
                 )
+
                 // Cualquier otra cosa ya es el elemento raiz: el prologo acabo.
                 else -> return
             }
         }
     }
 
-    /** Compara sin distinguir mayusculas, sobre ASCII, sin crear cadenas. */
-    private fun coincide(bytes: ByteArray, desde: Int, texto: String): Boolean {
-        if (desde + texto.length > bytes.size) return false
-        return texto.indices.all { j ->
-            bytes[desde + j].toInt().toChar().uppercaseChar() == texto[j].uppercaseChar()
+    /** Consume hasta justo despues de [cierre]; falso si el archivo se acaba antes. */
+    private fun saltaHasta(lector: Reader, cierre: String): Boolean {
+        // Una ventana con los ultimos caracteres leidos, y no un contador de
+        // coincidencias: con "-->" un contador que se reinicia se pierde el
+        // cierre de "--->", porque el tercer guion ya era el principio.
+        val ventana = StringBuilder()
+        while (true) {
+            val c = lector.read()
+            if (c < 0) return false
+            ventana.append(c.toChar())
+            if (ventana.length > cierre.length) ventana.deleteCharAt(0)
+            if (ventana.contentEquals(cierre)) return true
         }
     }
 
-    /** Indice justo despues de [cierre], o null si el archivo se acaba antes. */
-    private fun tras(bytes: ByteArray, desde: Int, cierre: String): Int? {
-        var i = desde
-        while (i < bytes.size) {
-            if (coincide(bytes, i, cierre)) return i + cierre.length
-            i++
+    /**
+     * El juego de caracteres por la marca de orden de bytes, o por como viene
+     * escrito el primer `<` si no la trae. Sin ninguna de las dos, UTF-8, que es
+     * lo que escriben todas las hojas de calculo.
+     */
+    private fun codificacion(bytes: ByteArray): Charset {
+        fun b(i: Int) = bytes.getOrNull(i)?.toInt()?.and(0xFF) ?: -1
+        return when {
+            b(0) == 0xFF && b(1) == 0xFE -> Charsets.UTF_16LE
+            b(0) == 0xFE && b(1) == 0xFF -> Charsets.UTF_16BE
+            b(0) == 0x3C && b(1) == 0x00 -> Charsets.UTF_16LE
+            b(0) == 0x00 && b(1) == 0x3C -> Charsets.UTF_16BE
+            else -> Charsets.UTF_8
         }
-        return null
     }
 
     private fun leeSharedStrings(bytes: ByteArray): List<String> {

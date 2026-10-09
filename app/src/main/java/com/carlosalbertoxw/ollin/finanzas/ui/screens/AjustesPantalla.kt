@@ -468,7 +468,8 @@ private fun SeccionBloqueo(
         actividad = actividad ?: return,
         titulo = "Confirma que eres tu",
         alLograr = { pendiente?.invoke(); pendiente = null },
-        alFallar = { pendiente = null; aviso = it }
+        alFallar = { pendiente = null; aviso = it },
+        alSalirAlSistema = bloqueo::esperaVueltaDelSistema
     )
 
     /**

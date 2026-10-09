@@ -63,6 +63,7 @@ import com.carlosalbertoxw.ollin.finanzas.data.excel.XlsxLector
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.Ajustes
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
+import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ControlBloqueo
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.RevisaCalidad
 import com.carlosalbertoxw.ollin.finanzas.ui.components.Marco
 import com.carlosalbertoxw.ollin.finanzas.ui.components.SeccionTitulo
@@ -243,6 +244,11 @@ fun ArchivoPantalla(
     ajustes: AjustesRepositorio,
     revisaCalidad: RevisaCalidad,
     alAbrirCalidad: () -> Unit,
+    /**
+     * Avisa al candado de que el selector de archivos va a mandar la app al
+     * fondo y se espera volver. Ver [ControlBloqueo.esperaVueltaDelSistema].
+     */
+    alSalirAlSistema: () -> Unit,
     alCerrar: () -> Unit
 ) {
     val vm = recuerdaVm("archivo") { ArchivoVm(repo, ajustes, revisaCalidad) }
@@ -359,7 +365,7 @@ fun ArchivoPantalla(
 
             Button(
                 onClick = {
-                    lanza(vm, "abrir") {
+                    lanza(vm, "abrir", alSalirAlSistema) {
                         abrir.launch(arrayOf(MIME_XLSX, "application/octet-stream", "*/*"))
                     }
                 },
@@ -428,7 +434,7 @@ fun ArchivoPantalla(
             }
 
             Button(
-                onClick = { lanza(vm, "guardar") { crear.launch(vm.nombreSugerido()) } },
+                onClick = { lanza(vm, "guardar", alSalirAlSistema) { crear.launch(vm.nombreSugerido()) } },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = total > 0
             ) {
@@ -455,8 +461,16 @@ fun ArchivoPantalla(
  * de trabajo restringidos), pero cualquier otro fallo del sistema al abrir el
  * selector merece un mensaje, no un cierre en seco.
  */
-private inline fun lanza(vm: ArchivoVm, accion: String, bloque: () -> Unit) {
+private inline fun lanza(
+    vm: ArchivoVm,
+    accion: String,
+    alSalirAlSistema: () -> Unit,
+    bloque: () -> Unit
+) {
     try {
+        // Antes de lanzar y no en el resultado: el candado decide al volver al
+        // frente, y para entonces el aviso ya tiene que estar dado.
+        alSalirAlSistema()
         bloque()
     } catch (e: ActivityNotFoundException) {
         vm.avisa(

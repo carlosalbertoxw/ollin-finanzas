@@ -10,7 +10,7 @@ Lo que se protege es el libro: importes, cuentas, a quién se paga y cuándo. Y,
 
 | Entrada | Quién | Qué lo detiene | Riesgo aceptado |
 |---|---|---|---|
-| El teléfono en otras manos, desbloqueado | Alguien cercano | Candado con PIN propio o credencial del sistema; se vuelve a cerrar tras un minuto fuera; `FLAG_SECURE` sin capturas ni miniatura; freno con espera creciente para todo PIN, también el de *Ajustes* | Dentro del minuto de gracia la app sigue abierta: es lo que permite elegir un archivo sin que te expulse |
+| El teléfono en otras manos, desbloqueado | Alguien cercano | Candado con PIN propio o credencial del sistema; se vuelve a cerrar en cuanto la app sale al fondo; `FLAG_SECURE` sin capturas ni miniatura; freno con espera creciente para todo PIN, también el de *Ajustes* | La vuelta del selector de archivos o de la credencial del sistema tiene un minuto de gracia: es lo que permite elegir un archivo sin que te expulse |
 | El teléfono en otras manos, con root o por adb | Alguien con tiempo y herramientas | Base cifrada con una llave del Keystore; huella del PIN sellada con otra; nada de eso entra al respaldo | Con root se puede *usar* el Keystore aunque no copiarlo: dentro de un teléfono comprometido no hay defensa desde la app |
 | Un `.xlsx` ajeno que se importa | Quien te mande un «respaldo» | Sin `DOCTYPE` (bomba de entidades); tope de bytes por parte y de partes (zip bomb); tope de filas, columnas y celdas; la importación entera va en una transacción | Lo que el archivo diga se importa: si alguien te convence de importar datos falsos, quedan en tu libro |
 | El aviso de versión nueva (`version.json`) | Quien controle la red o el dominio | Solo `https`; un salto como mucho, y solo hacia el sitio; el enlace solo puede ir a las releases de este repositorio o al sitio; la app nunca descarga ni instala | Quien tome la cuenta de GitHub controla las releases y el sitio a la vez; ver la fila siguiente |
@@ -55,13 +55,17 @@ Tres modos ([`ModoBloqueo`](../app/src/main/java/com/carlosalbertoxw/ollin/finan
 Detalles del comportamiento:
 
 - **Arranca bloqueada.** Todavía no se sabe si hay candado puesto, y equivocarse hacia el lado cerrado solo cuesta un parpadeo; hacia el lado abierto enseña tus finanzas a quien no debía.
-- **Un minuto de gracia** al volver del fondo. Importar y exportar abren el selector de archivos del sistema, que manda la app al fondo; sin ese margen, elegir un `.xlsx` te expulsaría a medio camino.
+- **Sin gracia al salir.** Pulsar Inicio, cambiar de app o apagar la pantalla la cierra en cuanto vuelve: es justo el caso que el candado quiere cubrir, el teléfono que pasa a otras manos.
+- **Un minuto de gracia solo para las vueltas esperadas.** Importar y exportar abren el selector de archivos del sistema, y antes de Android 11 confirmar con la credencial abre la pantalla de desbloqueo del sistema; las dos mandan la app al fondo, y sin margen elegir un `.xlsx` te expulsaría a medio camino. La pantalla avisa al candado justo antes de abrirlas (`esperaVueltaDelSistema`), y la gracia se gasta en ese regreso: no se hereda al siguiente.
+- **Girar el teléfono no es salir.** La actividad se detiene y se recrea, pero `isChangingConfigurations` la distingue de una salida de verdad.
 - Se mide con el **reloj monótono** (`elapsedRealtime`): cambiar la hora del teléfono no debe poder alargar la gracia.
 - Con candado configurado la ventana lleva `FLAG_SECURE`: ni capturas de pantalla ni miniatura en la vista de apps recientes. Mientras no se sabe, se asume que sí.
 - **Cambiar o quitar el candado exige antes la llave que hay puesta.** Sin eso, quien encuentre la app abierta la desprotege en dos toques y el candado solo estorba a su dueño.
 - Elegir el modo del teléfono cuando el teléfono no tiene patrón ni PIN no hace nada: avisa que hay que configurarlo en Android primero.
 
 Las transiciones de bloqueo se escriben de golpe en DataStore. Si el modo y el PIN se guardaran por separado podría quedar un "modo PIN" sin PIN, y eso deja la app cerrada sin llave.
+
+**Un modo que no se puede leer no abre la app.** El resto de las preferencias, si no se entienden, vuelven a su valor de fábrica, y para el candado el de fábrica es no tenerlo. Por eso `AjustesRepositorio.leeModoBloqueo` distingue no haber puesto candado (la clave no está, que es lo que deja quitarlo) de no poder leer cuál se puso: un enum renombrado, una clave que cambió de tipo, un archivo dañado. En ese caso lo deduce de lo que sí se lee: si hay huella de PIN, el PIN; si no, la credencial del teléfono. Solo se queda abierta si el teléfono no tiene ningún bloqueo, porque entonces no hay con qué cerrar. Los enums que se guardan por nombre están además fijados en `proguard-rules.pro`, para que R8 no los renombre.
 
 ### El PIN propio
 
@@ -133,7 +137,7 @@ Se apaga en `Ajustes → Respaldo`. Encenderlo o apagarlo reinicia la cuenta.
 
 La notificación se pierde entre las demás, y una vez descartada no vuelve hasta la semana siguiente. Por eso, mientras toque respaldar, el mismo aviso sale también **arriba del tablero cada vez que se abre la app**, con el mismo texto y con las mismas reglas: si no saldría la notificación, tampoco sale esto. Tocarlo lleva a Archivo, y **en cuanto se exporta desaparece solo**, porque exportar guarda la fecha del último respaldo y el tablero la está escuchando.
 
-La cruz lo quita **solo por esta vez**: «ahora no» no es «nunca». Vuelve la siguiente vez que se abra la app, que aquí significa arrancarla de cero o regresar después de más de un minuto fuera. Es la misma gracia del candado y por la misma razón: importar y exportar abren el selector de archivos del sistema, que manda la app al fondo, y volver de ahí no es abrirla otra vez. Las reglas están en [`AvisoDeRespaldo`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/notify/AvisoDeRespaldo.kt), que vive en el contenedor para que girar el teléfono no lo traiga de vuelta.
+La cruz lo quita **solo por esta vez**: «ahora no» no es «nunca». Vuelve la siguiente vez que se abra la app, que aquí significa arrancarla de cero o regresar después de más de un minuto fuera. Es el mismo minuto que el candado le da a la vuelta del selector, y por la misma razón: importar y exportar abren el selector de archivos del sistema, que manda la app al fondo, y volver de ahí no es abrirla otra vez. Las reglas están en [`AvisoDeRespaldo`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/notify/AvisoDeRespaldo.kt), que vive en el contenedor para que girar el teléfono no lo traiga de vuelta.
 
 ## Permisos
 

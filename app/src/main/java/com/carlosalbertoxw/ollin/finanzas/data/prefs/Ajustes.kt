@@ -1,5 +1,6 @@
 package com.carlosalbertoxw.ollin.finanzas.data.prefs
 
+import android.app.KeyguardManager
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -98,7 +99,17 @@ data class Ajustes(
     val pinFallos: Int = 0
 )
 
-class AjustesRepositorio(private val contexto: Context) {
+class AjustesRepositorio(
+    private val contexto: Context,
+    /**
+     * Si el telefono tiene patron, PIN o contrasena. Solo se pregunta cuando el
+     * modo de bloqueo guardado no se puede leer; ver [leeModoBloqueo]. Se
+     * inyecta para poder probar los dos lados sin un telefono de verdad.
+     */
+    private val telefonoAsegurado: () -> Boolean = {
+        contexto.getSystemService(KeyguardManager::class.java)?.isDeviceSecure == true
+    }
+) {
 
     private object Claves {
         val ESQUEMA = stringPreferencesKey("esquema")
@@ -194,13 +205,42 @@ class AjustesRepositorio(private val contexto: Context) {
         // la hora, y la app se quedaria sin avisos sin decir por que.
         horaAviso = (p.lee(Claves.HORA_AVISO) ?: HORA_AVISO_PREDETERMINADA).coerceIn(0, 23),
         minutoAviso = (p.lee(Claves.MINUTO_AVISO) ?: MINUTO_AVISO_PREDETERMINADO).coerceIn(0, 59),
-        modoBloqueo = p.lee(Claves.BLOQUEO)
-            ?.let { runCatching { ModoBloqueo.valueOf(it) }.getOrNull() }
-            ?: ModoBloqueo.NINGUNO,
+        modoBloqueo = leeModoBloqueo(p),
         pinHash = p.lee(Claves.PIN_HASH),
         pinSal = p.lee(Claves.PIN_SAL),
         pinFallos = p.lee(Claves.PIN_FALLOS) ?: 0
     )
+
+    /**
+     * El candado que hay puesto, sin abrirlo nunca por no entender lo guardado.
+     *
+     * El resto de las preferencias, si no se leen, vuelven a su valor de
+     * fabrica, y para el bloqueo el de fabrica es no tenerlo. Esta es la unica en
+     * la que eso es peligroso: un modo que alguien puso y que hoy no se reconoce
+     * --un enum renombrado, una clave que cambio de tipo, un archivo danado--
+     * abria el libro sin pedir nada y sin avisar.
+     *
+     * Por eso se distingue no haber puesto candado (la clave no esta: es lo que
+     * deja [quitaBloqueo]) de no poder leer cual se puso. En el segundo caso se
+     * deduce de lo que si se lee: si hay huella de PIN, el PIN; si no, la
+     * credencial del telefono. Solo se abre si el telefono no tiene ningun
+     * bloqueo, porque entonces no hay con que cerrar y la alternativa seria
+     * dejar a su dueno fuera de su propio libro.
+     */
+    private fun leeModoBloqueo(p: Map<Preferences.Key<*>, Any>): ModoBloqueo {
+        if (Claves.BLOQUEO !in p) return ModoBloqueo.NINGUNO
+
+        p.lee(Claves.BLOQUEO)
+            ?.let { runCatching { ModoBloqueo.valueOf(it) }.getOrNull() }
+            ?.let { return it }
+
+        return when {
+            !p.lee(Claves.PIN_HASH).isNullOrBlank() && !p.lee(Claves.PIN_SAL).isNullOrBlank() ->
+                ModoBloqueo.PIN
+            telefonoAsegurado() -> ModoBloqueo.SISTEMA
+            else -> ModoBloqueo.NINGUNO
+        }
+    }
 
     suspend fun guardaFallosDePin(fallos: Int) {
         contexto.almacen.edit {

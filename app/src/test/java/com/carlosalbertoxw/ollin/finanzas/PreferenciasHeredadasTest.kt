@@ -90,16 +90,76 @@ class PreferenciasHeredadasTest {
     fun `una clave con el tipo equivocado se ignora y no revienta`() {
         val revueltas = mutablePreferencesOf(
             stringPreferencesKey("hora_aviso") to "las siete",
-            intPreferencesKey("modo_bloqueo") to 3,
             longPreferencesKey("muestra_tutoriales") to 1L
         )
 
         val ajustes = repositorio.interpreta(revueltas)
 
         assertEquals(9, ajustes.horaAviso)
-        assertEquals(ModoBloqueo.NINGUNO, ajustes.modoBloqueo)
         assertTrue(ajustes.muestraTutoriales)
     }
+
+    // ------------------------------------------------- el candado no se abre
+
+    /**
+     * El modo de bloqueo es la excepcion a "lo que no se lee vuelve a fabrica":
+     * de fabrica es no tener candado, y caer ahi por no entender lo guardado
+     * abriria el libro sin pedir nada.
+     */
+    @Test
+    fun `un modo de bloqueo ilegible con huella de PIN sigue pidiendo el PIN`() {
+        val preferencias = mutablePreferencesOf(
+            stringPreferencesKey("modo_bloqueo") to "PIN_RENOMBRADO",
+            stringPreferencesKey("pin_hash") to "unahuella",
+            stringPreferencesKey("pin_sal") to "unasal"
+        )
+
+        val ajustes = conTelefono(asegurado = true).interpreta(preferencias)
+
+        assertEquals(ModoBloqueo.PIN, ajustes.modoBloqueo)
+    }
+
+    @Test
+    fun `un modo de bloqueo con el tipo equivocado tampoco abre la app`() {
+        val preferencias = mutablePreferencesOf(intPreferencesKey("modo_bloqueo") to 3)
+
+        val ajustes = conTelefono(asegurado = true).interpreta(preferencias)
+
+        assertEquals(
+            "Sin huella de PIN, se cierra con la credencial del telefono",
+            ModoBloqueo.SISTEMA,
+            ajustes.modoBloqueo
+        )
+    }
+
+    /**
+     * Sin PIN y sin bloqueo en el telefono no hay con que cerrar: insistir dejaria
+     * a su dueno fuera de su propio libro.
+     */
+    @Test
+    fun `un modo ilegible sin nada con que cerrar se queda sin candado`() {
+        val preferencias = mutablePreferencesOf(stringPreferencesKey("modo_bloqueo") to "???")
+
+        val ajustes = conTelefono(asegurado = false).interpreta(preferencias)
+
+        assertEquals(ModoBloqueo.NINGUNO, ajustes.modoBloqueo)
+    }
+
+    /** No haber puesto candado no es lo mismo que no poder leerlo. */
+    @Test
+    fun `sin la clave del modo no se deduce nada aunque quede una huella`() {
+        val preferencias = mutablePreferencesOf(
+            stringPreferencesKey("pin_hash") to "unahuella",
+            stringPreferencesKey("pin_sal") to "unasal"
+        )
+
+        val ajustes = conTelefono(asegurado = true).interpreta(preferencias)
+
+        assertEquals(ModoBloqueo.NINGUNO, ajustes.modoBloqueo)
+    }
+
+    private fun conTelefono(asegurado: Boolean) =
+        AjustesRepositorio(ApplicationProvider.getApplicationContext()) { asegurado }
 
     /** Una instalación nueva no lee nada y sale con lo de fábrica. */
     @Test

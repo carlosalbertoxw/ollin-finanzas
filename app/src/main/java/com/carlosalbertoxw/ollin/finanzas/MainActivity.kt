@@ -63,8 +63,14 @@ class MainActivity : FragmentActivity() {
             val bloqueado by bloqueo.bloqueado.collectAsStateWithLifecycle()
 
             LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
-                bloqueo.alIrAlFondo()
-                contenedor.avisoDeRespaldo.alIrAlFondo()
+                // Girar el telefono, cambiar de tema o de tamano de ventana
+                // tambien detiene la actividad, pero para recrearla al instante:
+                // no es salir de la app. Sin esto, ahora que solo las vueltas
+                // esperadas tienen gracia, cada giro pediria otra vez la llave.
+                if (!isChangingConfigurations) {
+                    bloqueo.alIrAlFondo()
+                    contenedor.avisoDeRespaldo.alIrAlFondo()
+                }
             }
             LifecycleEventEffect(Lifecycle.Event.ON_START) {
                 bloqueo.alVolverAlFrente()

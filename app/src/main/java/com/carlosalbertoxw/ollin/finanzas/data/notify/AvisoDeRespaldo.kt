@@ -17,9 +17,11 @@ import kotlinx.coroutines.flow.asStateFlow
  * Se puede quitar con su boton, pero solo por esta vez: "ahora no" no es
  * "nunca". Vuelve la siguiente vez que se abra la app, que aqui significa
  * arrancarla de cero o regresar despues de haber estado fuera mas de un
- * minuto. Es la misma gracia del candado, y por la misma razon: exportar o
- * importar abre el selector de archivos del sistema, que manda la app al
- * fondo, y volver de ahi no es abrirla otra vez.
+ * minuto. Es el mismo minuto que el candado le concede a la vuelta del
+ * selector de archivos, y por la misma razon: exportar o importar abre el
+ * selector del sistema, que manda la app al fondo, y volver de ahi no es
+ * abrirla otra vez. El candado es mas estricto --sin una vuelta esperada no da
+ * gracia ninguna--, pero aqui equivocarse solo cuesta ver el aviso de mas.
  *
  * Quien no quiere el recordatorio lo apaga en Ajustes, y entonces no sale ni la
  * notificacion ni esto.

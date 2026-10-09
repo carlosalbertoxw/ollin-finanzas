@@ -12,6 +12,7 @@ import androidx.biometric.BiometricPrompt
 import androidx.compose.runtime.Composable
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ControlBloqueo
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.LlaveDeDesbloqueo
 
 /** Hay patron, PIN o contrasena que pedir prestada. */
@@ -40,7 +41,16 @@ fun pedirCredencialDelSistema(
     actividad: FragmentActivity,
     titulo: String,
     alLograr: () -> Unit,
-    alFallar: (String) -> Unit
+    alFallar: (String) -> Unit,
+    /**
+     * Se invoca solo cuando se abre la pantalla de desbloqueo del sistema --antes
+     * de Android 11, o si el Keystore no deja preparar la llave--, que es el
+     * unico camino que abre otra actividad y por lo tanto manda Ollin al fondo.
+     * El dialogo unificado de Android 11 en adelante se monta encima sin
+     * detenerla, asi que avisar ahi dejaria concedida una gracia que nadie va a
+     * gastar. Ver [ControlBloqueo.esperaVueltaDelSistema].
+     */
+    alSalirAlSistema: () -> Unit = {}
 ): () -> Unit {
     val lanzador = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -57,8 +67,12 @@ fun pedirCredencialDelSistema(
             titulo,
             "Usa tu patron, PIN o contrasena"
         )
-        if (intencion != null) lanzador.launch(intencion)
-        else alFallar("Tu telefono ya no tiene patron ni PIN configurado.")
+        if (intencion != null) {
+            alSalirAlSistema()
+            lanzador.launch(intencion)
+        } else {
+            alFallar("Tu telefono ya no tiene patron ni PIN configurado.")
+        }
     }
 
     return {
