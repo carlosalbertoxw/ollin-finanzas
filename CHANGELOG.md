@@ -30,11 +30,14 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 - **Si la base no abre, la app lo dice.** Antes se cerraba nada más abrirse, sin un mensaje. Ahora enseña qué pasó, aclara que no se tocó nada y deja una línea con el error para poder reportarlo; el detalle queda en el informe de fallos de *Acerca de*.
 - **Inventario de bibliotecas (SBOM) en cada release**, en formato CycloneDX, junto al APK y con su huella en `checksums.txt`. Dice qué versión exacta de cada biblioteca lleva ese APK.
+- **Cada APK sale atestado.** Además de la firma, la release lleva una atestación de procedencia —de qué commit y con qué flujo se construyó— y otra que ata el SBOM al APK. Se comprueban con `gh attestation verify`; ver el README.
 - El sitio de descarga declara una política de seguridad de contenido: el navegador no ejecuta nada que no venga del propio sitio.
 
 ### Cambiado
 
 - El código Kotlin pasa por ktlint en cada cambio, y las dependencias del sitio por `npm audit`.
+- Cada biblioteca que descarga el build se compara contra su huella registrada, y CI rechaza cualquier dependencia con una licencia que no admita la del proyecto.
+- Las migraciones de la base se prueban en un emulador antes de cada publicación, y el análisis de seguridad cubre también el sitio y los flujos de CI.
 - La publicación se niega a etiquetar una versión con menor o parche por encima de 99, que repetiría el `versionCode` de otra.
 
 ## [1.2.0] - 2026-10-03

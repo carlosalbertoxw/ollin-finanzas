@@ -34,6 +34,13 @@ lo instales. En el teléfono, sin computadora, lo comprueba también
 [AppVerifier](https://github.com/soupslurpr/AppVerifier). El flujo de publicación se niega
 a publicar un APK firmado con otra llave.
 
+Y para comprobar además que el APK salió del flujo de publicación de este repositorio —de
+qué commit y con qué workflow—, cada release lleva una atestación de procedencia:
+
+```bash
+gh attestation verify ollin-finanzas-x.y.z.apk --repo carlosalbertoxw/ollin-finanzas
+```
+
 ---
 
 ## Qué hace
@@ -154,6 +161,7 @@ Decisiones que no son las de default, y por qué:
 - [Publicación](docs/publicacion.md) — versionado, firma, release automatizado y cómo se entera la app de una versión nueva.
 - [El sitio](docs/sitio.md) — la página de descarga con Vite, GitHub Pages y de dónde salen sus datos.
 - [Registro de cambios](CHANGELOG.md) — qué trae cada versión. De aquí salen la versión del APK y las notas de cada lanzamiento.
+- [Contribuir](CONTRIBUTING.md) — cómo se reportan fallos y se proponen cambios, y lo que pide cada pull request.
 
 ---
 

@@ -6,7 +6,9 @@
 # tenerlas. Van una vez por semana y a mano cuando se ha tocado una pantalla.
 #
 # La prueba de actualizacion se mudo a su propio flujo el dia que empezo a
-# bloquear una publicacion. Ver .github/workflows/actualizacion.yml.
+# bloquear una publicacion. Ver .github/workflows/actualizacion.yml. Las de
+# migracion corren aqui con las demas, y ademas, solas y bloqueando, en el flujo
+# de publicacion.
 name: Pruebas de interfaz
 
 on:
@@ -56,7 +58,16 @@ jobs:
           target: google_apis
           arch: x86_64
           disable-animations: true
-          script: ./gradlew connectedDebugAndroidTest --no-daemon
+          # Sin perfil el emulador arranca en 320x640, mas chico que cualquier
+          # telefono: lo que queda abajo de una lista perezosa no se compone y
+          # las pruebas no lo encuentran.
+          profile: pixel_6
+          # `lenient`: el ejecutor de pruebas en dispositivo (UTP) se descarga
+          # solo con un emulador conectado, y por eso no esta en
+          # gradle/verification-metadata.xml. Aqui un checksum que no cuadre se
+          # avisa en vez de cortar: este job no produce nada que se publique.
+          # Lo que se firma y publica sigue verificado en estricto.
+          script: ./gradlew connectedDebugAndroidTest --dependency-verification=lenient --no-daemon
 
       - name: Guardar el informe
         if: always()

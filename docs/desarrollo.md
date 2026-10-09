@@ -53,6 +53,7 @@ sdk.dir=C\:\\Users\\<usuario>\\AppData\\Local\\Android\\Sdk
 ./gradlew :app:assembleRelease    # con minify y shrink de recursos
 ./gradlew :app:ktlintCheck        # estilo de Kotlin (falla solo con infracciones nuevas)
 ./gradlew :app:ktlintFormat       # arregla lo que ktlint sabe arreglar solo
+./gradlew :app:licenseeAndroidRelease  # que lo que viaja en el APK tenga una licencia permitida
 ./gradlew :app:cyclonedxDirectBom # SBOM del APK de release, en app/build/reports/sbom/
 ./gradlew clean
 ```
@@ -191,6 +192,7 @@ Requieren un emulador o teléfono con **API 26 o superior**; no corren en la JVM
 | [`CandadoPinTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/CandadoPinTest.kt) | El candado por PIN en pantalla con el Keystore de verdad: el PIN correcto abre, el incorrecto avisa y cuenta, con fallos guardados hay que esperar aunque el PIN sea el bueno, y el diálogo de *Ajustes* respeta el mismo freno. Cada prueba arma su propio `ControlBloqueo` con un reloj que no avanza solo |
 | [`LlaveDelPinTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/LlaveDelPinTest.kt) | El sello del PIN con el Keystore: determinista en el mismo teléfono, y una huella sellada que no coincide fuera de él |
 | [`ExportarImportarTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/ExportarImportarTest.kt) | Exportar e importar por el `ContentResolver`, sobre bases en memoria: el round trip sin perder centavos, y que sobrescribir un respaldo grande con uno chico lo trunque |
+| [`MigracionesTest`](../app/src/androidTest/java/com/carlosalbertoxw/ollin/finanzas/db/MigracionesTest.kt) | Las migraciones de verdad contra los esquemas de `app/schemas/`, de la primera versión a la actual y salto por salto. Corre también sola, bloqueando, en `publicacion.yml` |
 
 Cinco cosas que hay que saber antes de escribir más:
 
@@ -246,24 +248,54 @@ Siete flujos, todos con **JDK 21**, en [`.github/workflows/`](../.github/workflo
 
 | Flujo | Cuándo | Qué corre |
 |---|---|---|
-| `pruebas.yml` | push a `main` y cada PR | `testDebugUnitTest`, `lintDebug`, `ktlintCheck`, `assembleDebugAndroidTest`, `assembleRelease`, y `npm audit` y el build del sitio |
+| `pruebas.yml` | push a `main` y cada PR | `licenseeAndroidRelease`, `testDebugUnitTest`, `lintDebug`, `ktlintCheck`, `assembleDebugAndroidTest`, `assembleRelease`; y del sitio, `npm audit`, el build y que `version.json` siga trayendo lo que lee la app |
 | `pruebas-instrumentadas.yml` | lunes, y a mano | La suite de interfaz sobre un emulador |
 | `actualizacion.yml` | al etiquetar, lunes, y a mano | Instala la versión nueva sobre la anterior y comprueba que abre |
-| `publicacion.yml` | tag `vX.Y.Z` | Comprueba la etiqueta contra el CHANGELOG, invoca `pruebas.yml`, firma y publica el APK con su SBOM |
+| `publicacion.yml` | tag `vX.Y.Z` | Comprueba la etiqueta contra el CHANGELOG, invoca `pruebas.yml` y `actualizacion.yml`, corre `MigracionesTest` en emulador, firma, atesta y publica el APK con su SBOM |
 | `sitio.yml` | `web/**`, `CHANGELOG.md`, o al terminar una publicación | Construye el sitio y lo publica en GitHub Pages |
-| `codeql.yml` | push a `main`, cada PR y los lunes | Análisis estático de seguridad del código Kotlin |
+| `codeql.yml` | push a `main`, cada PR y los lunes | Análisis estático de seguridad del código Kotlin, del JavaScript del sitio y de los propios flujos |
 | `dependencias.yml` | push a `main` que toque Gradle, y a mano | Envía a GitHub el grafo real de dependencias de Gradle, para que lleguen sus alertas |
 
 Las acciones van **fijadas por SHA**, con la versión en un comentario (`@<sha> # v4.4.0`). Una etiqueta como `@v4` la puede mover quien controle esa acción, y el job que firma la release corre con las contraseñas del almacén en el entorno: una acción alterada podría llevárselas. [Dependabot](../.github/dependabot.yml) propone cada lunes las versiones nuevas de las acciones, de Gradle y del sitio, así que fijar no significa congelar. El wrapper lleva también `distributionSha256Sum`, para que Gradle compruebe la distribución que descarga.
 
-`publicacion.yml` **invoca** a `pruebas.yml` y a `actualizacion.yml` con `workflow_call` en vez de copiar sus pasos: una etiqueta no puede pasar por una comprobación más floja que un pull request cualquiera. Los dos bloquean la publicación — si fallan, no se firma nada ni se crea la release.
+`publicacion.yml` **invoca** a `pruebas.yml` y a `actualizacion.yml` con `workflow_call` en vez de copiar sus pasos: una etiqueta no puede pasar por una comprobación más floja que un pull request cualquiera. Los dos bloquean la publicación, igual que las migraciones en emulador — si fallan, no se firma nada ni se crea la release.
+
+CodeQL va en la configuración avanzada y no en el *default setup* del repositorio, porque Kotlin hay que compilarlo para analizarlo y aquí se decide cómo. Los dos no conviven: con el *default setup* encendido, GitHub rechaza lo que sube el flujo, así que tiene que estar apagado en *Settings → Code security*.
+
+### Dependencias verificadas
+
+Gradle comprueba el SHA-256 de cada artefacto que descarga —bibliotecas, plugins, sus POM— contra [`gradle/verification-metadata.xml`](../gradle/verification-metadata.xml). Fijar versiones en el catálogo dice *qué* se pide; esto dice que lo que llegó es lo mismo que se revisó. Con un repositorio Maven comprometido, o un artefacto sustituido en el camino, el build falla en vez de meter el cambio en un APK firmado con la llave oficial, que además lee el libro descifrado.
+
+El precio es que **cada cambio de dependencias tiene que traer su metadata**. Los PR de Dependabot no la traen y fallarán con `Dependency verification failed`. Al revisar uno, se regenera en su rama y se empuja junto con el cambio:
+
+```bash
+gh pr checkout <número>
+./gradlew --write-verification-metadata sha256 --refresh-dependencies --no-configuration-cache \
+  ktlintCheck licenseeAndroidRelease testDebugUnitTest lintDebug assembleDebug \
+  assembleDebugAndroidTest assembleRelease bundleRelease :app:cyclonedxDirectBom :app:dependencies
+git diff gradle/verification-metadata.xml   # solo deben aparecer las versiones del PR
+```
+
+Las tareas son las que corren los flujos: si falta una, el flujo que la usa resolverá algo que no está en la lista y fallará. **`--refresh-dependencies` no es opcional.** Sin él, Gradle sirve de la caché local los POM padre y los BOM sin volver a pedirlos, no los apunta, y el runner, que empieza con la caché vacía, falla.
+
+**`aapt2` va aparte.** Es un JAR distinto por sistema operativo (`aapt2-<versión>-windows.jar`, `-linux.jar`…) y Gradle solo apunta el de la máquina que genera la lista, pero los runners son Linux. Cada vez que suba el Android Gradle Plugin, hay que agregar a mano el de Linux dentro del `<component name="aapt2">`, comprobando antes que el SHA-1 coincida con el publicado:
+
+```bash
+V=<versión de aapt2 que aparece en la lista>
+B=https://dl.google.com/dl/android/maven2/com/android/tools/build/aapt2/$V
+curl -fsSLO "$B/aapt2-$V-linux.jar" && curl -fsSL "$B/aapt2-$V-linux.jar.sha1"; echo
+sha1sum aapt2-$V-linux.jar     # tiene que coincidir con la línea anterior
+sha256sum aapt2-$V-linux.jar   # este va en <sha256 value="...">
+```
+
+Tres sitios corren en `--dependency-verification=lenient`, y solo esos: las pruebas en emulador (el ejecutor de pruebas en dispositivo se descarga solo con un emulador conectado y no está en la lista) y el envío del grafo de dependencias (la acción inyecta su propio plugin). Ninguno produce nada que se publique; lo que se firma sigue verificado en estricto.
 
 Cuando CI falla, el reporte HTML de pruebas y el de lint quedan como artefacto del run durante 14 días — se leen mucho mejor que el rastro de la consola.
 
 Lo mismo que corre allá corre aquí:
 
 ```bash
-./gradlew testDebugUnitTest lintDebug ktlintCheck assembleDebugAndroidTest assembleRelease
+./gradlew licenseeAndroidRelease testDebugUnitTest lintDebug ktlintCheck assembleDebugAndroidTest assembleRelease
 ```
 
 El proceso completo de publicar una versión está en [publicación](publicacion.md).

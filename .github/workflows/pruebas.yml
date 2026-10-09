@@ -43,8 +43,10 @@ jobs:
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
 
       # Todo en una invocacion para que Gradle reutilice la configuracion y las
-      # tareas comunes en vez de arrancar cuatro veces.
+      # tareas comunes en vez de arrancar cinco veces.
       #
+      #   licenseeAndroidRelease   que lo que viaja en el APK tenga una licencia
+      #                            de la lista de app/build.gradle.kts
       #   testDebugUnitTest        las pruebas en la JVM, EsquemaDeBaseTest incluido
       #   lintDebug                falla la compilacion si Lint encuentra errores
       #   ktlintCheck              estilo de Kotlin; solo falla con infracciones
@@ -55,6 +57,7 @@ jobs:
       - name: Pruebas, Lint y compilacion
         run: >
           ./gradlew
+          licenseeAndroidRelease
           testDebugUnitTest
           lintDebug
           ktlintCheck
@@ -70,6 +73,7 @@ jobs:
           path: |
             app/build/reports/tests/
             app/build/reports/lint-results-debug.html
+            app/build/reports/licensee/
           retention-days: 14
           if-no-files-found: ignore
 
@@ -106,3 +110,25 @@ jobs:
       - name: Compilar
         working-directory: web
         run: npm run build
+
+      # El version.json es un contrato con cada APK ya instalado, que trae
+      # compilada su manera de leerlo (ComprobadorActualizaciones.lee y
+      # DestinosPermitidos) y no se puede corregir desde fuera. Renombrar un
+      # campo en genera-version.mjs, o mover la descarga fuera de las releases
+      # del repositorio, apagaria el aviso de actualizacion en todos ellos sin
+      # que fallara nada: aqui se comprueba que siga trayendo lo que la app acepta.
+      - name: El version.json cumple con lo que lee la app
+        working-directory: web
+        run: |
+          set -euo pipefail
+          jq -e '
+            (.version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) and
+            (.apk | type == "string" and startswith("https://github.com/carlosalbertoxw/ollin-finanzas/releases/")) and
+            (.sitio | type == "string" and startswith("https://"))
+          ' dist/version.json > /dev/null || {
+            echo "::error::dist/version.json ya no trae version, apk y sitio como los lee la app."
+            cat dist/version.json
+            exit 1
+          }
+          echo "version.json en regla:"
+          cat dist/version.json

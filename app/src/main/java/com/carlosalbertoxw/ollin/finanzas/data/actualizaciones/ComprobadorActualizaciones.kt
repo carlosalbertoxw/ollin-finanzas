@@ -134,10 +134,21 @@ class ComprobadorActualizaciones(
             return VersionPublicada(
                 version = version,
                 url = url,
-                notas = objeto.optString("notas").takeIf { it.isNotBlank() },
+                notas = objeto.optString("notas").takeIf { it.isNotBlank() }?.let(::recorta),
                 publicadaEn = objeto.optString("publicada").takeIf { it.isNotBlank() }
             )
         }
+
+        /**
+         * Lo que la tarjeta de Acerca de y la notificacion ensenan de las notas.
+         * El sitio genera una entradilla corta; esto es por si lo que llega no
+         * lo genero el sitio, que de otro modo podria llenar la pantalla --o
+         * DataStore, donde se guarda-- con lo que quisiera.
+         */
+        internal const val TOPE_NOTAS = 300
+
+        private fun recorta(notas: String): String =
+            if (notas.length <= TOPE_NOTAS) notas else notas.take(TOPE_NOTAS - 1).trimEnd() + "…"
     }
 }
 

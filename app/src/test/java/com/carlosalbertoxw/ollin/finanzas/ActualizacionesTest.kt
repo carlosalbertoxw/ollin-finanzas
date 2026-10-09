@@ -90,6 +90,23 @@ class ActualizacionesTest {
         assertEquals(Version(1, 1, 0), publicada?.version)
         assertEquals(APK, publicada?.url)
         assertEquals("2026-09-15", publicada?.publicadaEn)
+        assertEquals("Arregla lo que estorbaba.", publicada?.notas)
+    }
+
+    /**
+     * El sitio escribe una entradilla corta, pero quien respondiera en su lugar
+     * podria mandar un libro entero a la tarjeta de Acerca de.
+     */
+    @Test
+    fun `unas notas de mas se recortan`() {
+        val largas = "a".repeat(5_000)
+        val publicada = ComprobadorActualizaciones.lee(
+            """{"version":"1.1.0","apk":"$APK","notas":"$largas"}"""
+        )
+
+        val notas = publicada!!.notas!!
+        assertEquals(ComprobadorActualizaciones.TOPE_NOTAS, notas.length)
+        assertTrue(notas.endsWith("…"))
     }
 
     /** Sin apk se manda al sitio, que es donde estan las instrucciones. */

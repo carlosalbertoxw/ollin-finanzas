@@ -117,7 +117,6 @@ Los agregados que SQL hace bien (saldo por cuenta, flujo por mes, totales por ca
 | SQLCipher (`net.zetetic:sqlcipher-android`) | Cifrado de la base |
 | DataStore Preferences | Ajustes |
 | AndroidX Biometric | Credencial del sistema |
-| DocumentFile | Selector de archivos para importar y exportar |
 | Robolectric + JUnit 4 | Pruebas en la JVM |
 
 No hay dependencia de Apache POI: el paquete `data/excel/` escribe y lee `.xlsx` por su cuenta. Ver [Excel](excel.md#cómo-está-hecho).

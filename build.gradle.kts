@@ -3,5 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.cyclonedx) apply false
+    alias(libs.plugins.licensee) apply false
     alias(libs.plugins.ktlint) apply false
 }
