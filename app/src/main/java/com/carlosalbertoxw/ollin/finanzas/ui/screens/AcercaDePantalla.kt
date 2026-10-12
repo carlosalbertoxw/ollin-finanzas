@@ -203,8 +203,9 @@ fun AcercaDePantalla(
             Text(
                 "La app hace una sola llamada a internet: preguntarle al sitio del proyecto " +
                     "si hay una version mas nueva, una vez al dia. Es una peticion a un " +
-                    "archivo fijo que no manda ningun dato tuyo -- ni siquiera que version " +
-                    "traes -- y se apaga en Ajustes.",
+                    "archivo fijo que no manda ningun dato tuyo -- ni que version traes, ni " +
+                    "que telefono tienes -- y se apaga en Ajustes. El sitio lo sirve GitHub " +
+                    "Pages, que ve tu IP como con cualquier pagina web.",
                 style = MaterialTheme.typography.bodySmall,
                 color = colores.textoTenue
             )

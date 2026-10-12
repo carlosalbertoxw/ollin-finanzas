@@ -268,7 +268,8 @@ fun AjustesPantalla(
                             "una version nueva. Una vez al dia le pregunta al sitio del " +
                             "proyecto si salio alguna, y lo enseña en Acerca de. Es una " +
                             "peticion a un archivo fijo que no manda ningun dato tuyo: la " +
-                            "comparacion pasa en el telefono. Apagado, la app no toca internet " +
+                            "comparacion pasa en el telefono, y GitHub Pages, que sirve el " +
+                            "sitio, solo ve tu IP. Apagado, la app no toca internet " +
                             "en ningun momento.",
                         style = MaterialTheme.typography.bodySmall,
                         color = colores.textoTenue
@@ -413,7 +414,8 @@ private fun SeccionBloqueo(
         titulo = "Confirma que eres tu",
         alLograr = { pendiente?.invoke(); pendiente = null },
         alFallar = { pendiente = null; aviso = it },
-        alSalirAlSistema = bloqueo::esperaVueltaDelSistema
+        alSalirAlSistema = bloqueo::esperaVueltaDelSistema,
+        alNoSalirAlSistema = bloqueo::cancelaVueltaEsperada
     )
 
     /**

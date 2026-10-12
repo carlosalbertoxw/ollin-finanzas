@@ -1,6 +1,6 @@
 # Exportación e importación en Excel
 
-La pantalla **Archivo** —en Ajustes → Importar y exportar— genera un `.xlsx` con todo el libro y lo vuelve a leer. Es el respaldo real de la app: la base cifrada no se puede restaurar en otro teléfono.
+La pantalla **Archivo** —en Ajustes → Importar y exportar— genera un `.xlsx` con todo el libro y lo vuelve a leer. Es el respaldo real de la app: la base cifrada no se puede restaurar en otro teléfono. El archivo sale **sin cifrar** —para eso se abre en cualquier hoja de cálculo—, y la pantalla lo avisa antes de guardarlo; ver [respaldos](seguridad.md#respaldos).
 
 Todo el paquete `data/excel/` es propio, **sin dependencias externas**. Apache POI pesa del orden de 15 MB en Android, mete decenas de miles de métodos y obliga a desugaring; aquí el formato producido está bajo control, así que un escritor de ~400 líneas es más pequeño, arranca más rápido y no sorprende.
 

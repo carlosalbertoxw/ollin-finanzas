@@ -15,8 +15,9 @@ Una petición `GET` a un archivo estático. Nada más.
 - **No lleva identificador**, ni de instalación ni de dispositivo.
 - **No lleva la versión instalada.** La comparación ocurre en el teléfono, con el JSON ya descargado.
 - **No lleva nada del libro**, evidentemente: ni un saldo, ni una cuenta, ni un movimiento.
+- **No lleva el modelo del teléfono.** Sin un `User-Agent` propio, Android manda el suyo —`Dalvik/2.1.0 (Linux; U; Android 14; <modelo> Build/<id>)`—, que dice el modelo exacto, la versión de Android y la compilación. La petición manda `OllinFinanzas` y nada más ([`AGENTE`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/actualizaciones/ComprobadorActualizaciones.kt)), y una prueba lo exige.
 
-Lo único que el otro extremo puede deducir es que alguien, desde una dirección IP, pidió ese archivo: exactamente lo mismo que si se abriera la dirección en el navegador. Ver [seguridad](seguridad.md#la-comprobación-de-actualizaciones).
+Quien la recibe es GitHub Pages, que sirve el sitio: el `.github.io` y el dominio propio al que redirige. Lo único que puede deducir es que alguien, desde una dirección IP, pidió ese archivo con Ollin Finanzas: lo mismo que si se abriera la dirección en el navegador, con menos detalle. Ver [seguridad](seguridad.md#por-dónde-podría-entrar-alguien).
 
 ## Qué no hace
 

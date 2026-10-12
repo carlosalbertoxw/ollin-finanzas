@@ -75,11 +75,17 @@ class ControlBloqueo(
     private var salidaEnMillis: Long? = null
 
     /**
-     * Cierto mientras Ollin espera que el sistema le devuelva algo --el selector
-     * de archivos, la pantalla de credencial-- y por eso su marcha al fondo no
-     * cuenta como salir de la app.
+     * Instante del reloj monotono en que se aviso que el sistema va a tapar a
+     * Ollin --el selector de archivos, la pantalla de credencial--. Nulo si no
+     * hay aviso pendiente. Ver [esperaVueltaDelSistema].
      */
-    private var vueltaEsperada = false
+    private var avisoDeVueltaEn: Long? = null
+
+    /**
+     * Cierto si la salida en curso es la que se aviso, y por eso no cuenta como
+     * salir de la app. Se decide al irse al fondo y se gasta al volver.
+     */
+    private var salidaEsperada = false
 
     init {
         ambito.launch {
@@ -108,7 +114,8 @@ class ControlBloqueo(
     fun desbloquea() {
         _bloqueado.value = false
         salidaEnMillis = null
-        vueltaEsperada = false
+        avisoDeVueltaEn = null
+        salidaEsperada = false
     }
 
     /**
@@ -116,13 +123,32 @@ class ControlBloqueo(
      * del sistema de la que se espera volver: el selector de archivos al
      * importar o exportar, o la credencial del telefono. Solo esas salidas
      * tienen gracia.
+     *
+     * El aviso caduca a los [VIGENCIA_AVISO_MILLIS]: la pantalla del sistema
+     * tapa a Ollin al instante o no la tapa. Sin caducidad, un selector que no
+     * llega a abrirse dejaba el aviso armado, y la siguiente salida de verdad
+     * --pulsar Inicio un rato despues-- se llevaba el minuto de gracia.
      */
     fun esperaVueltaDelSistema() {
-        vueltaEsperada = true
+        avisoDeVueltaEn = reloj()
+    }
+
+    /**
+     * Retira el aviso de [esperaVueltaDelSistema] cuando la pantalla del
+     * sistema no llego a abrirse: no hay telefono de archivos, el lanzamiento
+     * fallo. La caducidad lo cubriria igual; esto lo cierra en el acto.
+     */
+    fun cancelaVueltaEsperada() {
+        avisoDeVueltaEn = null
     }
 
     fun alIrAlFondo() {
-        if (!_bloqueado.value) salidaEnMillis = reloj()
+        val aviso = avisoDeVueltaEn
+        avisoDeVueltaEn = null
+        if (_bloqueado.value) return
+        val ahora = reloj()
+        salidaEnMillis = ahora
+        salidaEsperada = aviso != null && ahora - aviso <= VIGENCIA_AVISO_MILLIS
     }
 
     /**
@@ -137,8 +163,8 @@ class ControlBloqueo(
     fun alVolverAlFrente() {
         val salida = salidaEnMillis ?: return
         salidaEnMillis = null
-        val gracia = if (vueltaEsperada) GRACIA_MILLIS else 0L
-        vueltaEsperada = false
+        val gracia = if (salidaEsperada) GRACIA_MILLIS else 0L
+        salidaEsperada = false
         if (modo == ModoBloqueo.NINGUNO) return
         if (reloj() - salida >= gracia) _bloqueado.value = true
     }
@@ -214,6 +240,14 @@ class ControlBloqueo(
          * medio camino. Ver [esperaVueltaDelSistema].
          */
         const val GRACIA_MILLIS = 60_000L
+
+        /**
+         * Lo que puede tardar la pantalla del sistema en tapar a Ollin despues
+         * del aviso. Abrir una actividad es cosa de milisegundos; esto deja
+         * margen para un telefono lento sin dejar el aviso vivo para despues.
+         * Si se queda corto, lo peor es pedir la llave al volver del selector.
+         */
+        const val VIGENCIA_AVISO_MILLIS = 5_000L
 
         /** Los primeros cuatro fallos salen gratis: teclear mal el PIN es normal. */
         const val FALLOS_DE_GRACIA = 4

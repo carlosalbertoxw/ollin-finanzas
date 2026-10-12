@@ -175,6 +175,62 @@ class ControlBloqueoTest {
         assertTrue(bloqueo.bloqueado.value)
     }
 
+    /**
+     * El selector no llego a abrirse --un telefono sin gestor de archivos-- y
+     * la pantalla retira el aviso. La siguiente salida es pulsar Inicio, y esa
+     * no tiene gracia.
+     */
+    @Test
+    fun `un aviso retirado no da gracia a la siguiente salida`() = runTest {
+        conPin()
+        val bloqueo = control()
+        bloqueo.desbloquea()
+
+        bloqueo.esperaVueltaDelSistema()
+        bloqueo.cancelaVueltaEsperada()
+        bloqueo.alIrAlFondo()
+        bloqueo.alVolverAlFrente()
+
+        assertTrue(bloqueo.bloqueado.value)
+    }
+
+    /**
+     * Lo mismo cuando nadie retira el aviso: si la app no se va al fondo en
+     * cuanto se aviso, la salida que llegue despues no es la que se aviso.
+     */
+    @Test
+    fun `un aviso caducado no da gracia a una salida posterior`() = runTest {
+        conPin()
+        val bloqueo = control()
+        bloqueo.desbloquea()
+
+        bloqueo.esperaVueltaDelSistema()
+        ahora += ControlBloqueo.VIGENCIA_AVISO_MILLIS + 1
+        bloqueo.alIrAlFondo()
+        bloqueo.alVolverAlFrente()
+
+        assertTrue(
+            "Pulsar Inicio un rato despues no es volver del selector",
+            bloqueo.bloqueado.value
+        )
+    }
+
+    /** Un telefono lento tarda en abrir el selector; dentro de la vigencia sigue contando. */
+    @Test
+    fun `un aviso dentro de su vigencia si da la gracia`() = runTest {
+        conPin()
+        val bloqueo = control()
+        bloqueo.desbloquea()
+
+        bloqueo.esperaVueltaDelSistema()
+        ahora += ControlBloqueo.VIGENCIA_AVISO_MILLIS
+        bloqueo.alIrAlFondo()
+        ahora += ControlBloqueo.GRACIA_MILLIS - 1
+        bloqueo.alVolverAlFrente()
+
+        assertFalse(bloqueo.bloqueado.value)
+    }
+
     /** Sin candado configurado, el tiempo fuera no cierra nada. */
     @Test
     fun `sin candado, tardarse fuera no cierra la app`() = runTest {

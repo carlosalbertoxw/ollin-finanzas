@@ -24,6 +24,8 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 - **La huella del PIN ya no se puede comprobar fuera del teléfono.** Además de PBKDF2, se sella con una llave del Keystore que no se puede extraer: con el archivo de preferencias copiado, probar los diez mil PIN ya no es cuestión de minutos. Los PIN puestos con versiones anteriores siguen abriendo, y se sellan solos la siguiente vez que aciertas.
 - **El aviso de versión nueva solo manda a este repositorio.** Bastaba con que el enlace fuera `https`. Si el dominio del sitio cambiara de manos, quien lo tuviera podría anunciar una «versión nueva» con su propio APK. Ahora la descarga solo puede venir de las releases de GitHub del proyecto, y el sitio y sus redirecciones, solo de sus dos direcciones conocidas.
 - **Un `.xlsx` en UTF-16 ya no se salta el filtro de `DOCTYPE`.** El lector buscaba la declaración comparando bytes, y en UTF-16 cada letra lleva un cero al lado: un archivo escrito así podía colar una bomba de entidades. Ahora el prólogo se lee con su propio juego de caracteres, y el parser ya no va a buscar entidades externas.
+- **Un selector de archivos que no llega a abrirse ya no deja la app abierta al salir.** Si el teléfono no tenía con qué elegir el `.xlsx`, el minuto de gracia del selector se quedaba guardado y se lo llevaba la siguiente salida de verdad, la de pulsar Inicio. Ahora se retira en cuanto el selector falla, y además caduca si la app no sale al fondo en unos segundos.
+- **La consulta de versión nueva ya no dice qué teléfono tienes.** Sin un nombre propio, Android la mandaba con el suyo, que incluye el modelo del teléfono, la versión de Android y la compilación. Ahora solo dice «OllinFinanzas». El aviso de privacidad dice además quién la recibe: GitHub Pages, que ve la IP como con cualquier página web.
 - **Un `.xlsx` manipulado tampoco puede agotar la memoria con números de fila.** Una fila marcada como la dos mil millones, o una celda más allá de la última columna de Excel, son unos pocos bytes que obligaban a rellenar millones de celdas vacías. Ahora se rechazan, y el libro entero tiene un tope de celdas.
 
 ### Añadido
@@ -32,6 +34,7 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 - **Inventario de bibliotecas (SBOM) en cada release**, en formato CycloneDX, junto al APK y con su huella en `checksums.txt`. Dice qué versión exacta de cada biblioteca lleva ese APK.
 - **Cada APK sale atestado.** Además de la firma, la release lleva una atestación de procedencia —de qué commit y con qué flujo se construyó— y otra que ata el SBOM al APK. Se comprueban con `gh attestation verify`; ver el README.
 - El sitio de descarga declara una política de seguridad de contenido: el navegador no ejecuta nada que no venga del propio sitio.
+- **Exportar avisa que el archivo no va cifrado.** La base sí lo va, y es fácil suponer que la copia también; el `.xlsx` es el libro completo en claro, para que se abra en cualquier hoja de cálculo.
 
 ### Cambiado
 
@@ -39,6 +42,9 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 - Cada biblioteca que descarga el build se compara contra su huella registrada, y CI rechaza cualquier dependencia con una licencia que no admita la del proyecto.
 - Las migraciones de la base se prueban en un emulador antes de cada publicación, y el análisis de seguridad cubre también el sitio y los flujos de CI.
 - La publicación se niega a etiquetar una versión con menor o parche por encima de 99, que repetiría el `versionCode` de otra.
+- **La salud de los datos se revisa unas nueve veces más rápido en libros grandes.** Buscar descripciones casi idénticas comparaba cada una contra todas las demás con la tabla completa de distancias; ahora se detiene en cuanto dos textos ya se alejan más de lo que importa, con el mismo resultado. Se nota al abrir el tablero con miles de descripciones distintas.
+- Los flujos de CI ya no dejan el token de GitHub guardado en el disco del runner mientras compilan.
+- CI mide la cobertura de las pruebas, y hay una prueba de rendimiento, que se corre a mano, con un libro de cincuenta mil movimientos.
 
 ## [1.2.0] - 2026-10-03
 

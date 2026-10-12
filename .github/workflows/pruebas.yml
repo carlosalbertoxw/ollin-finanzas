@@ -29,6 +29,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # JDK 21 para correr Gradle. Desde Gradle 9.8 y Kotlin 2.4 tambien sirve
       # uno mas nuevo, pero el 21 es LTS y es con el que se publica. El
@@ -48,6 +50,8 @@ jobs:
       #   licenseeAndroidRelease   que lo que viaja en el APK tenga una licencia
       #                            de la lista de app/build.gradle.kts
       #   testDebugUnitTest        las pruebas en la JVM, EsquemaDeBaseTest incluido
+      #   koverHtmlReportDebug     la cobertura de esas pruebas, sin umbral: se
+      #   koverXmlReportDebug      guarda como artefacto para ver que falta
       #   lintDebug                falla la compilacion si Lint encuentra errores
       #   ktlintCheck              estilo de Kotlin; sin baseline, falla con la
       #                            primera infraccion
@@ -59,6 +63,8 @@ jobs:
           ./gradlew
           licenseeAndroidRelease
           testDebugUnitTest
+          koverHtmlReportDebug
+          koverXmlReportDebug
           lintDebug
           ktlintCheck
           assembleDebugAndroidTest
@@ -74,6 +80,7 @@ jobs:
             app/build/reports/tests/
             app/build/reports/lint-results-debug.html
             app/build/reports/licensee/
+            app/build/reports/kover/
           retention-days: 14
           if-no-files-found: ignore
 
@@ -84,6 +91,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Preparar Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0

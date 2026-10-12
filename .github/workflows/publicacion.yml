@@ -35,6 +35,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: La etiqueta tiene que encabezar el CHANGELOG
         id: leer
@@ -164,6 +166,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -235,7 +239,12 @@ jobs:
       VERSION: ${{ needs.etiqueta.outputs.version }}
 
     steps:
+      # Sin dejar el token en .git/config: este job tiene permiso de escribir
+      # en el repositorio y corre Gradle con todos sus plugins. Ningun paso hace
+      # git push; `gh` usa GH_TOKEN. Lo mismo en todos los flujos.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -430,6 +439,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Desplegar desde main
         env:

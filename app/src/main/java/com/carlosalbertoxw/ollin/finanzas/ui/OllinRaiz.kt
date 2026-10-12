@@ -188,6 +188,7 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
                         revisaCalidad = revisaCalidad,
                         alAbrirCalidad = { nav.navigate(Rutas.CALIDAD) },
                         alSalirAlSistema = contenedor.controlBloqueo::esperaVueltaDelSistema,
+                        alNoSalirAlSistema = contenedor.controlBloqueo::cancelaVueltaEsperada,
                         alCerrar = { nav.popBackStack() }
                     )
                 }

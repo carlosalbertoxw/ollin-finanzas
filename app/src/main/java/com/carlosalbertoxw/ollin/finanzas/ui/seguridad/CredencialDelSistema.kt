@@ -50,7 +50,9 @@ fun pedirCredencialDelSistema(
      * detenerla, asi que avisar ahi dejaria concedida una gracia que nadie va a
      * gastar. Ver [ControlBloqueo.esperaVueltaDelSistema].
      */
-    alSalirAlSistema: () -> Unit = {}
+    alSalirAlSistema: () -> Unit = {},
+    /** Retira ese aviso si la pantalla de desbloqueo no llego a abrirse. */
+    alNoSalirAlSistema: () -> Unit = {}
 ): () -> Unit {
     val lanzador = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -69,7 +71,14 @@ fun pedirCredencialDelSistema(
         )
         if (intencion != null) {
             alSalirAlSistema()
-            lanzador.launch(intencion)
+            try {
+                lanzador.launch(intencion)
+            } catch (e: Exception) {
+                // Sin pantalla de desbloqueo no hay vuelta que esperar, y un
+                // aviso armado le regalaria la gracia a la siguiente salida.
+                alNoSalirAlSistema()
+                alFallar("No se pudo abrir la pantalla de desbloqueo del telefono.")
+            }
         } else {
             alFallar("Tu telefono ya no tiene patron ni PIN configurado.")
         }
