@@ -5,12 +5,14 @@ import androidx.test.core.app.ApplicationProvider
 import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.ComprobadorActualizaciones
 import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.Resultado
 import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.Version
+import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.preparaPeticion
 import com.carlosalbertoxw.ollin.finanzas.data.actualizaciones.siguienteSalto
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -18,6 +20,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
  * El aviso de actualizaciones, sin red.
@@ -302,6 +306,26 @@ class ActualizacionesTest {
         val resultado = comprobador(respuesta = "<html>404</html>").compruebaAhora()
 
         assertTrue(resultado is Resultado.Fallo)
+    }
+
+    // ------------------------------------------------------------- peticion
+
+    /**
+     * Sin un User-Agent propio, Android manda el suyo, con el modelo del
+     * telefono, la version de Android y la compilacion. El aviso de privacidad
+     * promete que la consulta no lleva nada tuyo. `openConnection` no conecta:
+     * aqui solo se mira lo que se mandaria.
+     */
+    @Test
+    fun `la peticion no cuenta que telefono la hace`() {
+        val conexion =
+            URL("https://ejemplo.invalido/version.json").openConnection() as HttpURLConnection
+
+        preparaPeticion(conexion)
+
+        assertEquals("OllinFinanzas", conexion.getRequestProperty("User-Agent"))
+        assertEquals("GET", conexion.requestMethod)
+        assertFalse("Los saltos se siguen a mano", conexion.instanceFollowRedirects)
     }
 
     private companion object {

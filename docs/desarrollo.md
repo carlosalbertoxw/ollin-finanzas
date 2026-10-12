@@ -87,9 +87,9 @@ cp keystore.properties.example keystore.properties
 Y rellena los cuatro valores:
 
 ```properties
-storeFile=ollin-release.jks
+storeFile=ollin-finanzas-release.jks
 storePassword=<la del almacén>
-keyAlias=ollin
+keyAlias=ollin-finanzas
 keyPassword=<la de la llave>
 ```
 
@@ -141,7 +141,7 @@ Hay dos suites: las **unitarias**, en la JVM, y las **de interfaz**, que necesit
 | [`RevisaCalidadTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/RevisaCalidadTest.kt) | Los nueve detectores, uno por prueba, más el libro sano que no debe reportar nada. Afirma sobre los **datos** del hallazgo (cuentas citadas, periodos, importe), no sobre su prosa |
 | [`ReparaDatosTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ReparaDatosTest.kt) | Las tres reparaciones automáticas, y sobre todo que **ninguna toque el importe** |
 | [`FinanzasRepositorioTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/FinanzasRepositorioTest.kt) | Los invariantes de la puerta única de escritura: una transferencia nace con sus dos patas y muere con las dos, el origen no puede ser el destino, la contraparte se deriva aunque le manden otra, y el plan de un compromiso avanza y se deshace sin perder el día del mes |
-| [`ControlBloqueoTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ControlBloqueoTest.kt) | Arrancar cerrado, la gracia del selector de archivos con reloj monótono, el freno contra la fuerza bruta —escalada de la espera, tope y persistencia del contador— e `intentaPin`: en espera no se comprueba ni el PIN correcto, una huella vieja se guarda sellada al acertar, y una sellada no coincide con otro sello |
+| [`ControlBloqueoTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ControlBloqueoTest.kt) | Arrancar cerrado, la gracia del selector de archivos con reloj monótono —y que un aviso retirado o caducado no se la regale a la siguiente salida—, el freno contra la fuerza bruta —escalada de la espera, tope y persistencia del contador— e `intentaPin`: en espera no se comprueba ni el PIN correcto, una huella vieja se guarda sellada al acertar, y una sellada no coincide con otro sello |
 | [`RecordatoriosTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/RecordatoriosTest.kt) | Qué avisa y qué no: la ventana, lo vencido primero, planes apagados o ya terminados, y la fecha formateada para una persona. También cuándo se programa la alarma: la hora en punto, la madrugada, el fin de mes, una hora movida por el usuario y una imposible guardada en disco |
 | [`ImportadorExcelTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ImportadorExcelTest.kt) | Round trip exportar→importar, sinónimos de encabezado, renglones incompletos, emparejado de transferencias e inferencia de tipo de cuenta |
 | [`ImportadorHojasTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ImportadorHojasTest.kt) | El regreso de Diccionarios, Presupuesto y Compromisos: naturaleza declarada, jerarquía de categorías, metas por mes, compromisos reconstruidos desde el próximo pago y el libro sin hoja de movimientos |
@@ -152,9 +152,28 @@ Hay dos suites: las **unitarias**, en la JVM, y las **de interfaz**, que necesit
 | [`EsquemaDeBaseTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EsquemaDeBaseTest.kt) | La guardia de la base: cada versión con su json exportado y la cadena de migraciones sin huecos. Ver [modelo de datos](modelo-de-datos.md#migraciones) |
 | [`RespaldosTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/RespaldosTest.kt) | Cuándo toca recordar un respaldo: la semana desde el último, el ancla cuando no hay ninguno, el reloj movido hacia atrás y qué dice el aviso. Ver [seguridad](seguridad.md#el-recordatorio) |
 | [`PreferenciasHeredadasTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/PreferenciasHeredadasTest.kt) | Actualizar por encima de una versión anterior: unas preferencias escritas por la 1.0.0 se leen sin cerrar la app, y una clave con el tipo equivocado se trata como ausente. Ver [modelo de datos](modelo-de-datos.md#las-preferencias-también-son-datos-guardados) |
-| [`ActualizacionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ActualizacionesTest.kt) | El aviso de versión nueva sin red: comparación semántica (`1.10.0` es posterior a `1.9.0`), el `version.json` con sus aristas, el salto de redirección que solo se sigue hacia `https` y hacia el sitio, los enlaces que solo pueden ir a las releases del repositorio o al sitio (con `..`, `%2e`, usuario y puerto rechazados), cuándo toca preguntar y que un día sin respuesta no gaste el turno |
+| [`ActualizacionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ActualizacionesTest.kt) | El aviso de versión nueva sin red: comparación semántica (`1.10.0` es posterior a `1.9.0`), el `version.json` con sus aristas, el salto de redirección que solo se sigue hacia `https` y hacia el sitio, los enlaces que solo pueden ir a las releases del repositorio o al sitio (con `..`, `%2e`, usuario y puerto rechazados), cuándo toca preguntar, que un día sin respuesta no gaste el turno, y que la petición no diga qué teléfono la hace (`User-Agent` propio) |
+| [`RendimientoTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/RendimientoTest.kt) | Un libro de 50 000 movimientos y 5 000 descripciones: revisar la calidad, exportar e importar. No falla por tiempo —los runners varían demasiado—; comprueba el resultado y deja los tiempos en `app/build/pruebas/rendimiento.txt` para compararlos entre versiones. Tarda cerca de un minuto, así que **solo corre si se pide** (abajo) |
 
 Las pruebas de Excel escriben libros reales en `app/build/pruebas/`, útiles para abrirlos a mano y comprobar el resultado. El reporte HTML queda en `app/build/reports/tests/`.
+
+### Rendimiento
+
+```bash
+./gradlew :app:testDebugUnitTest -Pollin.rendimiento=true --tests '*RendimientoTest'
+```
+
+Sin la propiedad, `RendimientoTest` aparece como omitida. Conviene correrla antes de tocar la revisión de calidad, el importador o el exportador, y comparar el `rendimiento.txt` de antes y de después. Fue la que mostró que comparar cinco mil descripciones con Levenshtein completo tardaba 31.7 s en una computadora; con la distancia acotada (`distanciaHasta`, comprobada contra la completa en `DistanciaTest`) bajó a 3.4 s. En un teléfono las dos cifras son varias veces mayores, y la revisión corre cada vez que se abre el tablero.
+
+### Cobertura
+
+[Kover](https://github.com/Kotlin/kotlinx-kover) mide qué líneas recorren las pruebas unitarias:
+
+```bash
+./gradlew :app:koverHtmlReportDebug
+```
+
+El informe queda en `app/build/reports/kover/htmlDebug/`, y CI lo guarda como artefacto en cada corrida. **No hay umbral** a propósito: sirve para ver qué se quedó sin probar —sobre todo en `data/excel/` y en las reglas de `data/seguridad/`—, no para perseguir un porcentaje. Las pantallas de Compose casi no aparecen cubiertas porque se prueban en la suite de interfaz, que Kover no mide. Se excluye solo el código generado (Room, `BuildConfig`, los singletons de Compose).
 
 ### La base en memoria
 
@@ -248,7 +267,7 @@ Siete flujos, todos con **JDK 21**, en [`.github/workflows/`](../.github/workflo
 
 | Flujo | Cuándo | Qué corre |
 |---|---|---|
-| `pruebas.yml` | push a `main` y cada PR | `licenseeAndroidRelease`, `testDebugUnitTest`, `lintDebug`, `ktlintCheck`, `assembleDebugAndroidTest`, `assembleRelease`; y del sitio, `npm audit`, el build y que `version.json` siga trayendo lo que lee la app |
+| `pruebas.yml` | push a `main` y cada PR | `licenseeAndroidRelease`, `testDebugUnitTest` con su cobertura (`koverXmlReportDebug`, `koverHtmlReportDebug`), `lintDebug`, `ktlintCheck`, `assembleDebugAndroidTest`, `assembleRelease`; y del sitio, `npm audit`, el build y que `version.json` siga trayendo lo que lee la app |
 | `pruebas-instrumentadas.yml` | lunes, y a mano | La suite de interfaz sobre un emulador |
 | `actualizacion.yml` | al etiquetar, lunes, y a mano | Instala la versión nueva sobre la anterior y comprueba que abre |
 | `publicacion.yml` | tag `vX.Y.Z` | Comprueba la etiqueta contra el CHANGELOG, invoca `pruebas.yml` y `actualizacion.yml`, corre `MigracionesTest` en emulador, firma, atesta y publica el APK con su SBOM |
@@ -271,7 +290,7 @@ El precio es que **cada cambio de dependencias tiene que traer su metadata**. Lo
 ```bash
 gh pr checkout <número>
 ./gradlew --write-verification-metadata sha256 --refresh-dependencies --no-configuration-cache \
-  ktlintCheck licenseeAndroidRelease testDebugUnitTest lintDebug assembleDebug \
+  ktlintCheck licenseeAndroidRelease testDebugUnitTest koverHtmlReportDebug koverXmlReportDebug lintDebug assembleDebug \
   assembleDebugAndroidTest assembleRelease bundleRelease :app:cyclonedxDirectBom :app:dependencies
 git diff gradle/verification-metadata.xml   # solo deben aparecer las versiones del PR
 ```
@@ -302,10 +321,10 @@ El proceso completo de publicar una versión está en [publicación](publicacion
 
 ## El sitio
 
-En [`web/`](../web): Vite sin framework, cuatro archivos de fuente y ninguna dependencia en tiempo de ejecución.
+En [`web/`](../web): Vite sin framework, cuatro archivos de fuente y ninguna dependencia en tiempo de ejecución. Pide Node 22.12 o superior —lo declaran `engines` en `package.json` y `web/.nvmrc`, y es la versión de CI—; con una anterior Vite se niega a arrancar.
 
 ```bash
-npm --prefix web install
+npm --prefix web ci
 npm --prefix web run dev      # http://localhost:5173/ollin-finanzas/
 npm --prefix web run build
 ```

@@ -244,7 +244,7 @@ class RevisaCalidad(private val repo: FinanzasRepositorio) {
                 val b = claves[j]
                 if (a == b) continue
                 if (abs(a.length - b.length) > 2) continue
-                if (distancia(a, b) <= 2) sospechosas += distintas[i] to distintas[j]
+                if (distanciaHasta(a, b, 2) <= 2) sospechosas += distintas[i] to distintas[j]
             }
         }
         if (sospechosas.isEmpty()) return null
@@ -297,20 +297,46 @@ class RevisaCalidad(private val repo: FinanzasRepositorio) {
             datos = DatosHallazgo(cuentas = negativas.map { it.nombre })
         )
     }
+}
 
-    /** Levenshtein acotado; suficiente para detectar erratas de captura. */
-    private fun distancia(a: String, b: String): Int {
-        if (a == b) return 0
-        val anterior = IntArray(b.length + 1) { it }
-        val actual = IntArray(b.length + 1)
-        for (i in 1..a.length) {
-            actual[0] = i
-            for (j in 1..b.length) {
-                val costo = if (a[i - 1] == b[j - 1]) 0 else 1
-                actual[j] = min(min(actual[j - 1] + 1, anterior[j] + 1), anterior[j - 1] + costo)
-            }
-            System.arraycopy(actual, 0, anterior, 0, actual.size)
+/**
+ * Distancia de Levenshtein entre [a] y [b], o `tope + 1` si pasa de [tope].
+ *
+ * La revision de descripciones solo pregunta si dos textos estan a 2 o menos,
+ * y compara cada descripcion contra todas las demas: con cinco mil distintas
+ * son doce millones de pares. Calcular la tabla entera para cada uno costaba
+ * mas de treinta segundos en una computadora (ver RendimientoTest), y corre
+ * cada vez que se abre el tablero.
+ *
+ * Dos atajos que no cambian la respuesta:
+ * - **Solo la franja diagonal.** Una celda a mas de [tope] de la diagonal ya
+ *   cuesta mas de [tope] ediciones, asi que se trata como "demasiado lejos".
+ * - **Corte temprano.** Las celdas de una fila nunca bajan en la siguiente; si
+ *   toda la fila ya paso de [tope], el resultado tambien.
+ *
+ * Interna para poder compararla en una prueba contra la tabla completa.
+ */
+internal fun distanciaHasta(a: String, b: String, tope: Int): Int {
+    val lejos = tope + 1
+    if (a == b) return 0
+    if (abs(a.length - b.length) > tope) return lejos
+
+    var anterior = IntArray(b.length + 1) { if (it <= tope) it else lejos }
+    var actual = IntArray(b.length + 1)
+    for (i in 1..a.length) {
+        actual.fill(lejos)
+        actual[0] = if (i <= tope) i else lejos
+        var menorDeLaFila = actual[0]
+        for (j in maxOf(1, i - tope)..minOf(b.length, i + tope)) {
+            val costo = if (a[i - 1] == b[j - 1]) 0 else 1
+            val celda = minOf(actual[j - 1] + 1, anterior[j] + 1, anterior[j - 1] + costo)
+            actual[j] = min(celda, lejos)
+            if (actual[j] < menorDeLaFila) menorDeLaFila = actual[j]
         }
-        return anterior[b.length]
+        if (menorDeLaFila > tope) return lejos
+        val previo = anterior
+        anterior = actual
+        actual = previo
     }
+    return anterior[b.length]
 }

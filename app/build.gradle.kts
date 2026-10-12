@@ -11,6 +11,7 @@ plugins {
     alias(libs.plugins.cyclonedx)
     alias(libs.plugins.licensee)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.kover)
 }
 
 /**
@@ -179,6 +180,14 @@ android {
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
+            all { prueba ->
+                // RendimientoTest tarda cerca de un minuto: solo corre si se
+                // pide con -Pollin.rendimiento=true. Ver la prueba.
+                prueba.systemProperty(
+                    "ollin.rendimiento",
+                    providers.gradleProperty("ollin.rendimiento").getOrElse("false")
+                )
+            }
         }
     }
 
@@ -318,4 +327,32 @@ dependencies {
  */
 ktlint {
     version.set(libs.versions.ktlint)
+}
+
+/*
+ * Cobertura de las pruebas unitarias: que lineas recorren de verdad.
+ *
+ * Sin umbral a proposito. Sirve para ver que se quedo sin probar --sobre todo
+ * en data/excel/ y data/seguridad/--, no para perseguir un numero: un minimo
+ * obligatorio acaba premiando pruebas que pasan por el codigo sin afirmar
+ * nada. CI guarda el informe HTML como artefacto (pruebas.yml).
+ *
+ * Solo se excluye lo generado: las implementaciones de Room, BuildConfig y los
+ * singletons que el compilador de Compose saca de cada pantalla. Las pantallas
+ * se quedan: que salgan sin cubrir es cierto, porque las prueba la suite de
+ * interfaz y Kover no la mide.
+ */
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "*_Impl",
+                    "*_Impl\$*",
+                    "*.BuildConfig",
+                    "*.ComposableSingletons*"
+                )
+            }
+        }
+    }
 }

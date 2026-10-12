@@ -41,10 +41,11 @@ sealed interface Resultado {
  * minimo que sirve para cumplir ese fin y nada mas.
  *
  * **Que sale del telefono.** Una peticion GET a un archivo estatico. No lleva
- * identificador, ni la version instalada, ni un solo importe del libro: la
- * comparacion ocurre aqui dentro, con el JSON ya descargado. Lo unico que el
- * otro extremo puede deducir es que alguien, desde una IP, pidio ese archivo
- * --lo mismo que si se abriera la direccion en el navegador--. Ver
+ * identificador, ni la version instalada, ni el modelo del telefono, ni un solo
+ * importe del libro: la comparacion ocurre aqui dentro, con el JSON ya
+ * descargado. Lo unico que el otro extremo --GitHub Pages, que sirve el sitio--
+ * puede deducir es que alguien, desde una IP, pidio ese archivo con Ollin
+ * Finanzas. Ver [AGENTE] y
  * docs/seguridad.md.
  *
  * **Que no hace.** No descarga el APK ni lo instala: cuando hay version nueva,
@@ -189,17 +190,7 @@ private sealed interface Respuesta {
 }
 
 private fun pide(url: String): Respuesta {
-    val conexion = (URL(url).openConnection() as HttpURLConnection).apply {
-        requestMethod = "GET"
-        connectTimeout = 10_000
-        readTimeout = 10_000
-        // Las redirecciones se siguen a mano, no automaticamente: asi se puede
-        // exigir que el destino tambien sea https. `HttpURLConnection` ni
-        // siquiera sigue solo las que cambian de protocolo, y una que se
-        // quedara en http dejaria la respuesta viajando en claro.
-        instanceFollowRedirects = false
-        setRequestProperty("Accept", "application/json")
-    }
+    val conexion = (URL(url).openConnection() as HttpURLConnection).also(::preparaPeticion)
 
     try {
         val codigo = conexion.responseCode
@@ -237,6 +228,38 @@ private fun pide(url: String): Respuesta {
         conexion.disconnect()
     }
 }
+
+/**
+ * Como sale la peticion: metodo, tiempos, redirecciones y cabeceras.
+ *
+ * Separada de [pide] para poder comprobar en una prueba lo que viaja sin abrir
+ * ninguna conexion: `openConnection` no conecta hasta pedir la respuesta.
+ */
+internal fun preparaPeticion(conexion: HttpURLConnection) {
+    conexion.requestMethod = "GET"
+    conexion.connectTimeout = 10_000
+    conexion.readTimeout = 10_000
+    // Las redirecciones se siguen a mano, no automaticamente: asi se puede
+    // exigir que el destino tambien sea https. `HttpURLConnection` ni
+    // siquiera sigue solo las que cambian de protocolo, y una que se
+    // quedara en http dejaria la respuesta viajando en claro.
+    conexion.instanceFollowRedirects = false
+    conexion.setRequestProperty("Accept", "application/json")
+    conexion.setRequestProperty("User-Agent", AGENTE)
+}
+
+/**
+ * El User-Agent de la peticion: el nombre de la app y nada mas.
+ *
+ * Sin fijarlo, Android manda el de `http.agent` --`Dalvik/2.1.0 (Linux; U;
+ * Android 14; <modelo> Build/<id>)`--, que le cuenta a quien sirva el sitio el
+ * modelo exacto del telefono, su version de Android y su compilacion. Junto
+ * con la IP, eso distingue a un telefono de otro cada dia, y el aviso de
+ * privacidad promete que la consulta no lleva nada tuyo. Tampoco la version de
+ * Ollin: la comparacion se hace aqui dentro, y mandarla diria quien no ha
+ * actualizado.
+ */
+internal const val AGENTE = "OllinFinanzas"
 
 /**
  * A donde saltar, o nulo si no hay que saltar a ningun sitio.

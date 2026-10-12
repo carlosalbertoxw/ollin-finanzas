@@ -25,88 +25,6 @@ import java.time.LocalDate
 import java.util.UUID
 import kotlin.math.abs
 
-enum class Severidad { INFO, AVISO, ERROR }
-
-data class Diagnostico(
-    val severidad: Severidad,
-    val mensaje: String,
-    val fila: Int? = null
-)
-
-data class OpcionesImportacion(
-    /** Alinea el Tipo con el signo del importe cuando se contradicen. */
-    val corregirTipoSegunSigno: Boolean = true,
-    /** Recalcula Contraparte en vez de confiar en lo que traiga esa columna. */
-    val derivarContraparte: Boolean = true,
-    /** Empareja las dos patas de cada transferencia. */
-    val emparejarTransferencias: Boolean = true,
-    val crearCuentasFaltantes: Boolean = true,
-    val autoCategorizar: Boolean = true,
-    /**
-     * Vacia los movimientos antes de importar y, ya sin ellos, se lleva tambien
-     * las cuentas y categorias que quedaron sin uso y que el libro no nombra.
-     * Si es falso, agrega y no borra nada.
-     */
-    val reemplazarTodo: Boolean = true,
-    /** Lee tambien Diccionarios, Presupuesto y Compromisos cuando el libro las trae. */
-    val importarOtrasHojas: Boolean = true
-)
-
-data class ResultadoImportacion(
-    val filasLeidas: Int = 0,
-    val importados: Int = 0,
-    val omitidos: Int = 0,
-    val cuentasCreadas: List<String> = emptyList(),
-    val categoriasCreadas: List<String> = emptyList(),
-    val sinCategoria: Int = 0,
-    val tiposCorregidos: Int = 0,
-    val contrapartesRecalculadas: Int = 0,
-    val transferenciasEmparejadas: Int = 0,
-    val transferenciasHuerfanas: Int = 0,
-    /** Metas leidas de la pestaña Presupuesto. */
-    val presupuestosImportados: Int = 0,
-    /** Compromisos leidos de la pestaña Compromisos. */
-    val compromisosImportados: Int = 0,
-    /** Cuentas que al reemplazar quedaron sin uso y sin respaldo en el libro. */
-    val cuentasEliminadas: List<String> = emptyList(),
-    val categoriasEliminadas: Int = 0,
-    val diagnosticos: List<Diagnostico> = emptyList()
-) {
-    val huboProblemas: Boolean get() = diagnosticos.any { it.severidad != Severidad.INFO }
-
-    /**
-     * Los diagnosticos como se muestran: un mensaje que se repite renglon por
-     * renglon se cuenta una sola vez, con la lista de renglones a los que le
-     * paso. Sin esto, un libro con doscientas filas incompletas devuelve
-     * doscientas lineas identicas y ninguna se lee.
-     */
-    fun diagnosticosAgrupados(): List<DiagnosticoAgrupado> = diagnosticos
-        .groupBy { it.severidad to it.mensaje }
-        .map { (clave, iguales) ->
-            DiagnosticoAgrupado(
-                severidad = clave.first,
-                mensaje = clave.second,
-                filas = iguales.mapNotNull { it.fila }
-            )
-        }
-        .sortedWith(compareBy({ ordenSeveridad(it.severidad) }, { -it.veces }))
-
-    private fun ordenSeveridad(severidad: Severidad): Int = when (severidad) {
-        Severidad.ERROR -> 0
-        Severidad.AVISO -> 1
-        Severidad.INFO -> 2
-    }
-}
-
-/** Un mensaje de diagnostico con los renglones que lo provocaron. */
-data class DiagnosticoAgrupado(
-    val severidad: Severidad,
-    val mensaje: String,
-    val filas: List<Int>
-) {
-    val veces: Int get() = maxOf(filas.size, 1)
-}
-
 /**
  * Lee un libro de Excel y lo vuelca en la base de Ollin Finanzas.
  *
@@ -278,14 +196,82 @@ class ImportadorExcel(private val db: OllinDatabase) {
         return MapaColumnas(indices)
     }
 
+    /**
+     * La hoja de movimientos, de punta a punta. Cada etapa es una funcion con
+     * nombre y van en este orden porque cada una se apoya en la anterior: el
+     * emparejado necesita los tipos ya corregidos, y la insercion, cuentas y
+     * categorias resueltas. Los diagnosticos se acumulan en el orden en que
+     * aparecen.
+     */
     private suspend fun procesa(
         hoja: HojaLeida,
         opciones: OpcionesImportacion,
         diccionarios: LectorCatalogos.Diccionarios,
         delLibro: ClavesDelLibro
     ): ResultadoImportacion {
-        val columnas = mapaColumnas(hoja)
         val diagnosticos = mutableListOf<Diagnostico>()
+        val lectura = leeRenglones(hoja, diagnosticos)
+
+        if (lectura.filas.isEmpty()) {
+            return ResultadoImportacion(
+                filasLeidas = hoja.filas.size - 1,
+                omitidos = lectura.omitidos,
+                diagnosticos = diagnosticos + Diagnostico(
+                    Severidad.ERROR,
+                    "No hubo ningun renglon aprovechable."
+                )
+            )
+        }
+
+        val alineado = alineaTipos(lectura.filas, opciones, diagnosticos)
+        val filas = alineado.filas
+        val pares = emparejaTransferencias(filas, opciones, diagnosticos)
+        val cuentas = resuelveCuentas(filas, diccionarios, opciones, diagnosticos, delLibro)
+        val categorias = preparaCategorias(filas, diccionarios, opciones, diagnosticos, delLibro)
+        val insercion = inserta(filas, cuentas.indice, pares.grupos, categorias, opciones)
+
+        if (insercion.contrapartesRecalculadas > 0) {
+            diagnosticos += Diagnostico(
+                Severidad.INFO,
+                "Recalcule la contraparte de ${insercion.contrapartesRecalculadas} movimientos: " +
+                    "el archivo los marcaba como si intervinera un tercero, pero son traspasos " +
+                    "entre cuentas tuyas."
+            )
+        }
+        if (categorias.sinCategoria > 0) {
+            diagnosticos += Diagnostico(
+                Severidad.AVISO,
+                "${categorias.sinCategoria} movimientos quedaron sin categoria. " +
+                    "Puedes asignarlas en lote desde la lista."
+            )
+        }
+
+        return ResultadoImportacion(
+            filasLeidas = hoja.filas.size - 1,
+            importados = insercion.importados,
+            omitidos = lectura.omitidos + insercion.omitidos,
+            cuentasCreadas = cuentas.creadas,
+            categoriasCreadas = categorias.creadas,
+            sinCategoria = categorias.sinCategoria,
+            tiposCorregidos = alineado.corregidos,
+            contrapartesRecalculadas = insercion.contrapartesRecalculadas,
+            transferenciasEmparejadas = pares.emparejadas,
+            transferenciasHuerfanas = pares.huerfanas,
+            diagnosticos = diagnosticos
+        )
+    }
+
+    // ---------------------------------------------- etapas de la hoja
+
+    private class Lectura(val filas: List<FilaCruda>, val omitidos: Int)
+
+    /**
+     * Interpreta cada renglon con las columnas que se reconocieron. Uno sin
+     * fecha, cantidad o cuenta no se puede ubicar en el libro: se omite y se
+     * dice en que renglon estaba.
+     */
+    private fun leeRenglones(hoja: HojaLeida, diagnosticos: MutableList<Diagnostico>): Lectura {
+        val columnas = mapaColumnas(hoja)
         val crudas = mutableListOf<FilaCruda>()
         var omitidos = 0
 
@@ -293,9 +279,11 @@ class ImportadorExcel(private val db: OllinDatabase) {
             val numeroFila = indice + 2
             if (fila.all { it.estaVacia }) return@forEachIndexed
 
-            val fecha = columnas["fecha"]?.let { fila.getOrNull(it) }?.let(::leeFecha)
-            val importe = columnas["cantidad"]?.let { fila.getOrNull(it) }?.let(::leeImporte)
-            val cuenta = columnas["cuenta"]?.let { fila.getOrNull(it) }?.comoTexto()?.trim()
+            fun celda(clave: String): CeldaLeida? = columnas[clave]?.let { fila.getOrNull(it) }
+
+            val fecha = celda("fecha")?.let(::leeFecha)
+            val importe = celda("cantidad")?.let(::leeImporte)
+            val cuenta = celda("cuenta")?.comoTexto()?.trim()
 
             if (fecha == null || importe == null || cuenta.isNullOrBlank()) {
                 omitidos++
@@ -307,10 +295,8 @@ class ImportadorExcel(private val db: OllinDatabase) {
                 return@forEachIndexed
             }
 
-            val descripcion = columnas["descripcion"]?.let { fila.getOrNull(it) }
-                ?.comoTexto()?.trim().orEmpty()
-            val tipo = columnas["tipo"]?.let { fila.getOrNull(it) }?.comoTexto()
-                ?.let(TipoMovimiento::desdeEtiqueta)
+            val descripcion = celda("descripcion")?.comoTexto()?.trim().orEmpty()
+            val tipo = celda("tipo")?.comoTexto()?.let(TipoMovimiento::desdeEtiqueta)
                 ?: infiereTipo(importe, descripcion)
 
             crudas += FilaCruda(
@@ -318,34 +304,32 @@ class ImportadorExcel(private val db: OllinDatabase) {
                 fecha = fecha,
                 importeCentavos = importe,
                 cuenta = cuenta,
-                categoria = columnas["categoria"]?.let { fila.getOrNull(it) }
-                    ?.comoTexto()?.trim()?.ifBlank { null },
+                categoria = celda("categoria")?.comoTexto()?.trim()?.ifBlank { null },
                 descripcion = descripcion.ifBlank { "(sin descripcion)" },
-                medio = columnas["medio"]?.let { fila.getOrNull(it) }?.comoTexto()
-                    ?.let(Medio::desdeEtiqueta) ?: Medio.ELECTRONICO,
+                medio = celda("medio")?.comoTexto()?.let(Medio::desdeEtiqueta) ?: Medio.ELECTRONICO,
                 tipo = tipo,
-                contraparteArchivo = columnas["contraparte"]?.let { fila.getOrNull(it) }
-                    ?.let(::leeContraparte),
-                nota = columnas["nota"]?.let { fila.getOrNull(it) }
-                    ?.comoTexto()?.trim()?.ifBlank { null }
+                contraparteArchivo = celda("contraparte")?.let(::leeContraparte),
+                nota = celda("nota")?.comoTexto()?.trim()?.ifBlank { null }
             )
         }
+        return Lectura(crudas, omitidos)
+    }
 
-        if (crudas.isEmpty()) {
-            return ResultadoImportacion(
-                filasLeidas = hoja.filas.size - 1,
-                omitidos = omitidos,
-                diagnosticos = diagnosticos + Diagnostico(
-                    Severidad.ERROR,
-                    "No hubo ningun renglon aprovechable."
-                )
-            )
-        }
+    private class Alineado(val filas: List<FilaCruda>, val corregidos: Int)
 
-        // ---- 1. Alinear Tipo con el signo del importe -----------------------
-        var tiposCorregidos = 0
-        val corregidas = crudas.map { fila ->
-            if (!opciones.corregirTipoSegunSigno) return@map fila
+    /**
+     * El signo del importe manda sobre el Tipo escrito: si se contradicen, se
+     * voltea el tipo y el importe no se toca. Los internos (saldo inicial,
+     * ajuste de valor) aceptan cualquier signo.
+     */
+    private fun alineaTipos(
+        filas: List<FilaCruda>,
+        opciones: OpcionesImportacion,
+        diagnosticos: MutableList<Diagnostico>
+    ): Alineado {
+        if (!opciones.corregirTipoSegunSigno) return Alineado(filas, 0)
+        var corregidos = 0
+        val alineadas = filas.map { fila ->
             val esperado = fila.tipo.signoEsperado
             if (esperado == 0 || fila.importeCentavos == 0L) return@map fila
             val real = if (fila.importeCentavos > 0) 1 else -1
@@ -359,7 +343,7 @@ class ImportadorExcel(private val db: OllinDatabase) {
                 // Los internos aceptan cualquier signo: revaluar sube, depreciar baja.
                 TipoMovimiento.BALANCE_INICIAL, TipoMovimiento.AJUSTE_VALOR -> fila.tipo
             }
-            tiposCorregidos++
+            corregidos++
             diagnosticos += Diagnostico(
                 Severidad.AVISO,
                 "El tipo decia \"${fila.tipo.etiqueta}\" pero el importe es " +
@@ -369,137 +353,206 @@ class ImportadorExcel(private val db: OllinDatabase) {
             )
             fila.copy(tipo = nuevo)
         }
+        return Alineado(alineadas, corregidos)
+    }
 
-        // ---- 2. Emparejar transferencias ------------------------------------
-        val grupos = HashMap<Int, String>() // numeroFila -> uuid
+    private class Emparejado(
+        /** numeroFila -> grupo de transferencia que comparten las dos patas. */
+        val grupos: Map<Int, String>,
+        val emparejadas: Int,
+        val huerfanas: Int
+    )
+
+    /**
+     * Junta cada salida de transferencia con una entrada de la misma fecha e
+     * importe. Primero exige ademas la misma descripcion y despues la afloja,
+     * para que una pareja floja no le gane el lugar a una exacta.
+     */
+    private fun emparejaTransferencias(
+        filas: List<FilaCruda>,
+        opciones: OpcionesImportacion,
+        diagnosticos: MutableList<Diagnostico>
+    ): Emparejado {
+        if (!opciones.emparejarTransferencias) return Emparejado(emptyMap(), 0, 0)
+
+        val grupos = HashMap<Int, String>()
         var emparejadas = 0
-        var huerfanas = 0
-        if (opciones.emparejarTransferencias) {
-            val salidas = corregidas
-                .filter { it.tipo == TipoMovimiento.TRANSFERENCIA_SALIDA }
-                .toMutableList()
-            val entradas = corregidas
-                .filter { it.tipo == TipoMovimiento.TRANSFERENCIA_ENTRADA }
-                .toMutableList()
+        val salidas = filas.filter { it.tipo == TipoMovimiento.TRANSFERENCIA_SALIDA }
+            .toMutableList()
+        val entradas = filas.filter { it.tipo == TipoMovimiento.TRANSFERENCIA_ENTRADA }
+            .toMutableList()
 
-            // Primero la coincidencia estricta, luego se afloja la descripcion.
-            listOf(true, false).forEach { exigeDescripcion ->
-                val iterador = salidas.iterator()
-                while (iterador.hasNext()) {
-                    val salida = iterador.next()
-                    val pareja = entradas.firstOrNull { entrada ->
-                        entrada.fecha == salida.fecha &&
-                            abs(entrada.importeCentavos) == abs(salida.importeCentavos) &&
-                            (!exigeDescripcion || entrada.descripcion == salida.descripcion)
-                    } ?: continue
-                    val uuid = UUID.randomUUID().toString()
-                    grupos[salida.numeroFila] = uuid
-                    grupos[pareja.numeroFila] = uuid
-                    entradas.remove(pareja)
-                    iterador.remove()
-                    emparejadas++
-                }
-            }
-            huerfanas = salidas.size + entradas.size
-            if (huerfanas > 0) {
-                diagnosticos += Diagnostico(
-                    Severidad.AVISO,
-                    "Quedaron $huerfanas patas de transferencia sin pareja. " +
-                        "Suelen ser movimientos que salen de una cuenta que no esta registrada."
-                )
+        listOf(true, false).forEach { exigeDescripcion ->
+            val iterador = salidas.iterator()
+            while (iterador.hasNext()) {
+                val salida = iterador.next()
+                val pareja = entradas.firstOrNull { entrada ->
+                    entrada.fecha == salida.fecha &&
+                        abs(entrada.importeCentavos) == abs(salida.importeCentavos) &&
+                        (!exigeDescripcion || entrada.descripcion == salida.descripcion)
+                } ?: continue
+                val uuid = UUID.randomUUID().toString()
+                grupos[salida.numeroFila] = uuid
+                grupos[pareja.numeroFila] = uuid
+                entradas.remove(pareja)
+                iterador.remove()
+                emparejadas++
             }
         }
 
-        // ---- 3. Resolver cuentas -------------------------------------------
-        val cuentasCreadas = mutableListOf<String>()
-        val indiceCuentas = cuentaDao.todas()
+        val huerfanas = salidas.size + entradas.size
+        if (huerfanas > 0) {
+            diagnosticos += Diagnostico(
+                Severidad.AVISO,
+                "Quedaron $huerfanas patas de transferencia sin pareja. " +
+                    "Suelen ser movimientos que salen de una cuenta que no esta registrada."
+            )
+        }
+        return Emparejado(grupos, emparejadas, huerfanas)
+    }
+
+    private class CuentasResueltas(
+        /** Por nombre normalizado: las que ya habia y las que se crearon. */
+        val indice: Map<String, Cuenta>,
+        val creadas: List<String>
+    )
+
+    /**
+     * Diccionarios va primero: ahi la naturaleza de la cuenta viene declarada,
+     * y crearla desde el nombre del movimiento solo la adivina. Ademas entran
+     * las cuentas que aun no tienen ningun movimiento.
+     */
+    private suspend fun resuelveCuentas(
+        filas: List<FilaCruda>,
+        diccionarios: LectorCatalogos.Diccionarios,
+        opciones: OpcionesImportacion,
+        diagnosticos: MutableList<Diagnostico>,
+        delLibro: ClavesDelLibro
+    ): CuentasResueltas {
+        val creadas = mutableListOf<String>()
+        val indice = cuentaDao.todas()
             .associateBy { it.nombre.normalizaClave() }
             .toMutableMap()
 
-        // Diccionarios va primero: ahi la naturaleza de la cuenta viene
-        // declarada, y crearla desde el nombre del movimiento solo la adivina.
-        // Ademas entran las cuentas que aun no tienen ningun movimiento.
         diccionarios.cuentas.forEach { declarada ->
             delLibro.anotaCuenta(declarada.nombre)
             aseguraCuenta(
                 nombre = declarada.nombre,
                 tipoDeclarado = declarada.tipo,
-                indice = indiceCuentas,
-                creadas = cuentasCreadas,
+                indice = indice,
+                creadas = creadas,
                 diagnosticos = diagnosticos,
                 opciones = opciones,
                 reportaFaltante = false
             )
         }
 
-        corregidas.map { it.cuenta }.distinct().forEach { nombre ->
+        filas.map { it.cuenta }.distinct().forEach { nombre ->
             delLibro.anotaCuenta(nombre)
-            aseguraCuenta(nombre, null, indiceCuentas, cuentasCreadas, diagnosticos, opciones)
+            aseguraCuenta(nombre, null, indice, creadas, diagnosticos, opciones)
         }
+        return CuentasResueltas(indice, creadas)
+    }
 
-        // ---- 4. Resolver categorias ----------------------------------------
-        val categoriasCreadas = mutableListOf<String>()
-        val indiceCategorias = categoriaDao.todas()
-            .associateBy { it.nombre.normalizaClave() }
-            .toMutableMap()
-        corregidas.mapNotNull { it.categoria }.forEach(delLibro::anotaCategoria)
-        aplicaCategoriasDeDiccionario(
-            diccionarios.categorias,
-            corregidas,
-            indiceCategorias,
-            categoriasCreadas,
-            diagnosticos,
-            delLibro
-        )
-        val mapeo = mapeoDao.todos().associate { it.clave to it.categoriaId }
+    /**
+     * Decide la categoria de cada movimiento mientras se inserta. Puede crear
+     * las que nombra la columna Categoria, asi que vive dentro de la
+     * transaccion y lleva la cuenta de lo creado y de lo que quedo sin
+     * clasificar.
+     */
+    private inner class ResolutorCategorias(
+        private val indice: MutableMap<String, Categoria>,
+        private val mapeo: Map<String, Long>,
+        private val opciones: OpcionesImportacion,
+        val creadas: MutableList<String>
+    ) {
         var sinCategoria = 0
+            private set
 
-        suspend fun resuelveCategoria(fila: FilaCruda): Long? {
+        suspend fun resuelve(fila: FilaCruda): Long? {
             if (fila.tipo.esInterno) return null
             val clave = fila.descripcion.normalizaClave()
             if (clave in Semilla.DESCRIPCIONES_SIN_CATEGORIA) return null
 
             // a) la columna Categoria manda si viene
-            fila.categoria?.let { nombre ->
-                indiceCategorias[nombre.normalizaClave()]?.let { return it.id }
-                if (!opciones.autoCategorizar) return null
-                val tipoCat = tipoCategoriaPara(fila.tipo)
-                val id = categoriaDao.inserta(
-                    Categoria(nombre = nombre, tipo = tipoCat, orden = 999)
-                )
-                indiceCategorias[nombre.normalizaClave()] = Categoria(
-                    id = id,
-                    nombre = nombre,
-                    tipo = tipoCat
-                )
-                categoriasCreadas += nombre
-                return id
-            }
+            fila.categoria?.let { nombre -> return deLaColumna(nombre, fila.tipo) }
 
             if (!opciones.autoCategorizar) { sinCategoria++; return null }
 
             // b) mapeo por descripcion, primero la variante especifica por tipo
             mapeo[Semilla.claveAlias(fila.descripcion, fila.tipo)]?.let { return it }
-            mapeo[fila.descripcion.normalizaClave()]?.let { return it }
+            mapeo[clave]?.let { return it }
 
             // c) coincidencia directa con una categoria existente
-            indiceCategorias[fila.descripcion.normalizaClave()]?.let { return it.id }
+            indice[clave]?.let { return it.id }
 
             sinCategoria++
             return null
         }
 
-        // ---- 5. Insertar -----------------------------------------------------
+        private suspend fun deLaColumna(nombre: String, tipo: TipoMovimiento): Long? {
+            indice[nombre.normalizaClave()]?.let { return it.id }
+            if (!opciones.autoCategorizar) return null
+            val tipoCat = tipoCategoriaPara(tipo)
+            val id = categoriaDao.inserta(Categoria(nombre = nombre, tipo = tipoCat, orden = 999))
+            indice[nombre.normalizaClave()] = Categoria(id = id, nombre = nombre, tipo = tipoCat)
+            creadas += nombre
+            return id
+        }
+    }
+
+    private suspend fun preparaCategorias(
+        filas: List<FilaCruda>,
+        diccionarios: LectorCatalogos.Diccionarios,
+        opciones: OpcionesImportacion,
+        diagnosticos: MutableList<Diagnostico>,
+        delLibro: ClavesDelLibro
+    ): ResolutorCategorias {
+        val creadas = mutableListOf<String>()
+        val indice = categoriaDao.todas()
+            .associateBy { it.nombre.normalizaClave() }
+            .toMutableMap()
+        filas.mapNotNull { it.categoria }.forEach(delLibro::anotaCategoria)
+        aplicaCategoriasDeDiccionario(
+            diccionarios.categorias,
+            filas,
+            indice,
+            creadas,
+            diagnosticos,
+            delLibro
+        )
+        val mapeo = mapeoDao.todos().associate { it.clave to it.categoriaId }
+        return ResolutorCategorias(indice, mapeo, opciones, creadas)
+    }
+
+    private class Insercion(
+        val importados: Int,
+        val omitidos: Int,
+        val contrapartesRecalculadas: Int
+    )
+
+    /**
+     * Escribe los movimientos. Al reemplazar vacia primero, todavia dentro de
+     * la transaccion de [importa]: si algo falla de aqui en adelante, los
+     * movimientos de antes siguen donde estaban.
+     */
+    private suspend fun inserta(
+        filas: List<FilaCruda>,
+        cuentas: Map<String, Cuenta>,
+        grupos: Map<Int, String>,
+        categorias: ResolutorCategorias,
+        opciones: OpcionesImportacion
+    ): Insercion {
         if (opciones.reemplazarTodo) movimientoDao.eliminaTodos()
 
+        var omitidos = 0
         var contrapartesRecalculadas = 0
         val aInsertar = mutableListOf<Movimiento>()
 
-        for (fila in corregidas) {
-            val cuenta = indiceCuentas[fila.cuenta.normalizaClave()]
+        for (fila in filas) {
+            val cuenta = cuentas[fila.cuenta.normalizaClave()]
             if (cuenta == null) { omitidos++; continue }
 
-            val grupo = grupos[fila.numeroFila]
             val derivada = derivaContraparte(fila.tipo)
             val contraparte = if (opciones.derivarContraparte) {
                 if (fila.contraparteArchivo != null && fila.contraparteArchivo != derivada) {
@@ -514,46 +567,18 @@ class ImportadorExcel(private val db: OllinDatabase) {
                 fecha = fila.fecha,
                 importeCentavos = fila.importeCentavos,
                 cuentaId = cuenta.id,
-                categoriaId = resuelveCategoria(fila),
+                categoriaId = categorias.resuelve(fila),
                 descripcion = fila.descripcion,
                 medio = fila.medio,
                 tipo = fila.tipo,
                 contraparte = contraparte,
-                grupoTransferencia = grupo,
+                grupoTransferencia = grupos[fila.numeroFila],
                 nota = fila.nota
             )
         }
 
         movimientoDao.insertaTodos(aInsertar)
-
-        if (contrapartesRecalculadas > 0) {
-            diagnosticos += Diagnostico(
-                Severidad.INFO,
-                "Recalcule la contraparte de $contrapartesRecalculadas movimientos: el archivo " +
-                    "los marcaba como si intervinera un tercero, pero son traspasos entre " +
-                    "cuentas tuyas."
-            )
-        }
-        if (sinCategoria > 0) {
-            diagnosticos += Diagnostico(
-                Severidad.AVISO,
-                "$sinCategoria movimientos quedaron sin categoria. Puedes asignarlas en lote desde la lista."
-            )
-        }
-
-        return ResultadoImportacion(
-            filasLeidas = hoja.filas.size - 1,
-            importados = aInsertar.size,
-            omitidos = omitidos,
-            cuentasCreadas = cuentasCreadas,
-            categoriasCreadas = categoriasCreadas,
-            sinCategoria = sinCategoria,
-            tiposCorregidos = tiposCorregidos,
-            contrapartesRecalculadas = contrapartesRecalculadas,
-            transferenciasEmparejadas = emparejadas,
-            transferenciasHuerfanas = huerfanas,
-            diagnosticos = diagnosticos
-        )
+        return Insercion(aInsertar.size, omitidos, contrapartesRecalculadas)
     }
 
     // -------------------------------------------------- catalogos del libro

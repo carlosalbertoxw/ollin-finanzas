@@ -85,9 +85,11 @@ Como contrapartida, el despliegue corre **aparte** y el flujo de publicación no
 
 ```bash
 cd web
-npm install
+npm ci
 npm run dev
 ```
+
+`npm ci` y no `npm install`: instala exactamente lo del `package-lock.json`, igual que CI, en vez de resolver versiones nuevas dentro de los rangos. Pide Node 22.12 o superior (`.nvmrc`).
 
 Queda en `http://localhost:5173/ollin-finanzas/`. **Con la ruta**, no en la raíz: `base` lleva el nombre del repositorio porque Pages no sirve desde la raíz del dominio, y sin esa ruta la página carga sin estilos.
 
@@ -113,6 +115,22 @@ Se toma el primer punto y no la sección aplanada porque aplanarla pega el títu
 La sección *Cómo se instala* enseña la huella SHA-256 del certificado con el que se firman todas las versiones. `genera-version.mjs` la lee del [README](../README.md#comprobar-que-el-apk-es-el-bueno) —la línea `SHA-256 del certificado de firma`— y la hornea en `src/version.js`. No va en `version.json`: la app no la necesita, porque Android ya rechaza una actualización firmada con otra llave.
 
 El original vive en el repositorio y no aquí a propósito. Si alguien alterara este sitio, podría cambiar a la vez el enlace de descarga y la huella; la del README seguiría diciendo la verdad, y es contra la que conviene comparar. El flujo de publicación comprueba contra esa misma línea que el APK va firmado con la llave correcta.
+
+## Seguridad del sitio
+
+Es de donde la gente baja el APK, así que lo que importa es que nadie pueda cambiar el enlace ni la huella que enseña.
+
+- **Política de contenido.** El build inyecta una `Content-Security-Policy` por `<meta>` ([`vite.config.js`](../web/vite.config.js)): solo se ejecuta, se estila y se carga lo que viene del propio sitio, sin `unsafe-inline`. Un script colado en la cadena de build o un CDN que nadie pidió no corre.
+- **Sin referer.** Quien sale de aquí hacia GitHub no lleva de dónde venía.
+- **HTTPS.** Lo da GitHub Pages, siempre que *Enforce HTTPS* esté activado en *Settings → Pages*: sin eso, el dominio propio también responde en claro.
+
+### Riesgo aceptado: se puede enmarcar
+
+GitHub Pages no deja poner cabeceras propias, y las dos que faltan no funcionan desde una `<meta>`: `frame-ancestors` (o `X-Frame-Options`), que impediría que otra página incruste esta en un `<iframe>`, y `Strict-Transport-Security`.
+
+Sin `frame-ancestors`, alguien podría montar una página que enmarque esta y tape o mueva el botón de descarga (*clickjacking*). Se acepta porque lo que se protege no depende de la página: el APK se descarga de las releases de GitHub, la huella del certificado está en el README del repositorio —no solo aquí— y Android rechaza una actualización firmada con otra llave. Engañar a alguien para que pulse el botón le da, en el peor caso, el APK legítimo.
+
+Si algún día hace falta cerrarlo, el camino es poner delante del dominio propio un CDN que permita cabeceras y servir desde ahí `Content-Security-Policy: frame-ancestors 'none'` y HSTS. Un script que saque la página de cualquier `iframe` lo resolvería a medias: el atacante puede enmarcarla con `sandbox` y desactivarlo.
 
 ## Privacidad del sitio
 

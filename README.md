@@ -174,7 +174,9 @@ respaldo es la exportación a `.xlsx`, que tú decides dónde guardar.
 
 La única llamada a internet es preguntarle al sitio del proyecto, una vez al día, si hay
 una versión más nueva: un `GET` a un archivo estático que no manda ningún dato tuyo, ni
-siquiera qué versión traes — la comparación ocurre en el teléfono. Se apaga en *Ajustes*, y
+siquiera qué versión traes ni qué teléfono tienes — la comparación ocurre en el teléfono. El
+sitio lo sirve GitHub Pages, que ve la IP de quien pregunta como con cualquier página web.
+Se apaga en *Ajustes*, y
 apagada la app no toca la red en ningún momento. Nunca descarga ni instala nada por su
 cuenta: cuando hay versión nueva, *Acerca de* enseña un botón que abre el sitio.
 
@@ -201,10 +203,11 @@ La versión sale de `CHANGELOG.md`, no del `build.gradle.kts`: se lee el primer 
 renombrar la sección `[Sin publicar]` y poner el tag `vX.Y.Z`; de ahí en adelante lo hacen
 los flujos de GitHub Actions. Ver [Publicación](docs/publicacion.md).
 
-El sitio es un proyecto aparte y no pasa por Gradle:
+El sitio es un proyecto aparte y no pasa por Gradle. Pide Node 22.12 o superior
+(`web/.nvmrc`):
 
 ```bash
-cd web && npm install && npm run dev
+cd web && npm ci && npm run dev
 ```
 
 - `minSdk` 26 · `targetSdk` 36 · `compileSdk` 37 · Kotlin 2.4.20 · AGP 9.4.1 · Gradle 9.8.0

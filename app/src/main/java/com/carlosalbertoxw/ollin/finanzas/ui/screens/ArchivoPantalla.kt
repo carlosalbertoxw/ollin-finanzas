@@ -113,6 +113,8 @@ fun ArchivoPantalla(
      * fondo y se espera volver. Ver [ControlBloqueo.esperaVueltaDelSistema].
      */
     alSalirAlSistema: () -> Unit,
+    /** Retira ese aviso si el selector no llego a abrirse. */
+    alNoSalirAlSistema: () -> Unit,
     alCerrar: () -> Unit
 ) {
     val vm = recuerdaVm("archivo") { ArchivoVm(repo, ajustes, revisaCalidad) }
@@ -236,7 +238,7 @@ fun ArchivoPantalla(
 
             Button(
                 onClick = {
-                    lanza(vm, "abrir", alSalirAlSistema) {
+                    lanza(vm, "abrir", alSalirAlSistema, alNoSalirAlSistema) {
                         abrir.launch(arrayOf(MIME_XLSX, "application/octet-stream", "*/*"))
                     }
                 },
@@ -248,6 +250,16 @@ fun ArchivoPantalla(
 
             // ----------------------------------------------------------- exportar
             SeccionTitulo("Exportar")
+
+            // La base va cifrada, y es facil suponer que el respaldo tambien.
+            // No lo va: es un .xlsx que se abre en cualquier hoja de calculo, y
+            // el aviso semanal empuja a guardarlo en la nube o en un correo.
+            Text(
+                "El archivo no va cifrado: lleva todo tu libro y lo puede abrir quien lo " +
+                    "tenga. Guardalo donde guardarias un estado de cuenta.",
+                style = MaterialTheme.typography.bodySmall,
+                color = colores.textoTenue
+            )
 
             Text("Columnas de la hoja Registros", style = MaterialTheme.typography.labelLarge)
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -309,7 +321,9 @@ fun ArchivoPantalla(
 
             Button(
                 onClick = {
-                    lanza(vm, "guardar", alSalirAlSistema) { crear.launch(vm.nombreSugerido()) }
+                    lanza(vm, "guardar", alSalirAlSistema, alNoSalirAlSistema) {
+                        crear.launch(vm.nombreSugerido())
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = total > 0
@@ -341,6 +355,7 @@ private inline fun lanza(
     vm: ArchivoVm,
     accion: String,
     alSalirAlSistema: () -> Unit,
+    alNoSalirAlSistema: () -> Unit,
     bloque: () -> Unit
 ) {
     try {
@@ -349,11 +364,15 @@ private inline fun lanza(
         alSalirAlSistema()
         bloque()
     } catch (e: ActivityNotFoundException) {
+        // El selector no se abrio, asi que nadie va a gastar la gracia: si
+        // quedara armada, la siguiente salida de verdad se la llevaria.
+        alNoSalirAlSistema()
         vm.avisa(
             "Este telefono no tiene una aplicacion de archivos con la que $accion el .xlsx. " +
                 "Instala un gestor de archivos o activa el de Android."
         )
     } catch (e: Exception) {
+        alNoSalirAlSistema()
         vm.avisa(
             "No se pudo abrir el selector de archivos para $accion el .xlsx " +
                 "(${e.javaClass.simpleName}). Revisa que tu gestor de archivos este activo."

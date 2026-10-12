@@ -2,7 +2,7 @@
 
 Ollin Finanzas no manda a ningún servidor nada de lo que capturas: no hay cuenta, no hay nube, no hay analítica y no hay publicidad.
 
-Hace **una** llamada a internet, y conviene decirla completa: le pregunta al sitio del proyecto, una vez al día, si existe una versión más nueva. Es un `GET` a un archivo estático que no lleva ningún dato tuyo —ni identificador, ni qué versión traes— y se apaga en *Ajustes*. La app no se instala desde Google Play, así que sin eso nadie se enteraría nunca de una actualización. Los detalles están en [publicación](publicacion.md#cómo-se-entera-la-app).
+Hace **una** llamada a internet, y conviene decirla completa: le pregunta al sitio del proyecto, una vez al día, si existe una versión más nueva. Es un `GET` a un archivo estático que no lleva ningún dato tuyo —ni identificador, ni qué versión traes, ni el modelo del teléfono— y se apaga en *Ajustes*. Lo recibe GitHub Pages, que sirve el sitio y ve la IP de quien pregunta, como con cualquier página web. La app no se instala desde Google Play, así que sin eso nadie se enteraría nunca de una actualización. Los detalles están en [publicación](publicacion.md#cómo-se-entera-la-app).
 
 ## Por dónde podría entrar alguien
 
@@ -12,6 +12,7 @@ Lo que se protege es el libro: importes, cuentas, a quién se paga y cuándo. Y,
 |---|---|---|---|
 | El teléfono en otras manos, desbloqueado | Alguien cercano | Candado con PIN propio o credencial del sistema; se vuelve a cerrar en cuanto la app sale al fondo; `FLAG_SECURE` sin capturas ni miniatura; freno con espera creciente para todo PIN, también el de *Ajustes* | La vuelta del selector de archivos o de la credencial del sistema tiene un minuto de gracia: es lo que permite elegir un archivo sin que te expulse |
 | El teléfono en otras manos, con root o por adb | Alguien con tiempo y herramientas | Base cifrada con una llave del Keystore; huella del PIN sellada con otra; nada de eso entra al respaldo | Con root se puede *usar* el Keystore aunque no copiarlo: dentro de un teléfono comprometido no hay defensa desde la app |
+| El `.xlsx` que se exporta | Quien llegue a donde lo guardaste: la nube, Descargas, un correo | Nada desde la app: es el libro en claro, para que se abra en cualquier hoja de cálculo sin Ollin. La pantalla de exportar lo dice antes de guardarlo | Quien tenga el archivo lee el libro entero. Es el precio de un respaldo que no depende de la app ni del Keystore |
 | Un `.xlsx` ajeno que se importa | Quien te mande un «respaldo» | Sin `DOCTYPE` (bomba de entidades); tope de bytes por parte y de partes (zip bomb); tope de filas, columnas y celdas; la importación entera va en una transacción | Lo que el archivo diga se importa: si alguien te convence de importar datos falsos, quedan en tu libro |
 | El aviso de versión nueva (`version.json`) | Quien controle la red o el dominio | Solo `https`; un salto como mucho, y solo hacia el sitio; el enlace solo puede ir a las releases de este repositorio o al sitio; la app nunca descarga ni instala | Quien tome la cuenta de GitHub controla las releases y el sitio a la vez; ver la fila siguiente |
 | La cadena de publicación | Quien tome la cuenta de GitHub o una acción de terceros | Acciones fijadas por SHA; los secretos de firma van solo en el environment `release`, limitado a tags `v*` (ver [publicación](publicacion.md#los-secretos)); la huella del certificado se comprueba contra el README antes de publicar | La cuenta de GitHub (2FA) y el `.jks` con sus contraseñas son la raíz de todo: con ellos se publica una actualización que Android acepta |
@@ -56,7 +57,7 @@ Detalles del comportamiento:
 
 - **Arranca bloqueada.** Todavía no se sabe si hay candado puesto, y equivocarse hacia el lado cerrado solo cuesta un parpadeo; hacia el lado abierto enseña tus finanzas a quien no debía.
 - **Sin gracia al salir.** Pulsar Inicio, cambiar de app o apagar la pantalla la cierra en cuanto vuelve: es justo el caso que el candado quiere cubrir, el teléfono que pasa a otras manos.
-- **Un minuto de gracia solo para las vueltas esperadas.** Importar y exportar abren el selector de archivos del sistema, y antes de Android 11 confirmar con la credencial abre la pantalla de desbloqueo del sistema; las dos mandan la app al fondo, y sin margen elegir un `.xlsx` te expulsaría a medio camino. La pantalla avisa al candado justo antes de abrirlas (`esperaVueltaDelSistema`), y la gracia se gasta en ese regreso: no se hereda al siguiente.
+- **Un minuto de gracia solo para las vueltas esperadas.** Importar y exportar abren el selector de archivos del sistema, y antes de Android 11 confirmar con la credencial abre la pantalla de desbloqueo del sistema; las dos mandan la app al fondo, y sin margen elegir un `.xlsx` te expulsaría a medio camino. La pantalla avisa al candado justo antes de abrirlas (`esperaVueltaDelSistema`), y la gracia se gasta en ese regreso: no se hereda al siguiente. El aviso además caduca a los cinco segundos si la app no llega a irse al fondo, y la pantalla lo retira en el acto si el selector no se pudo abrir (`cancelaVueltaEsperada`): un aviso que se quedara armado le regalaría el minuto a la siguiente salida de verdad, la de pulsar Inicio.
 - **Girar el teléfono no es salir.** La actividad se detiene y se recrea, pero `isChangingConfigurations` la distingue de una salida de verdad.
 - Se mide con el **reloj monótono** (`elapsedRealtime`): cambiar la hora del teléfono no debe poder alargar la gracia.
 - Con candado configurado la ventana lleva `FLAG_SECURE`: ni capturas de pantalla ni miniatura en la vista de apps recientes. Mientras no se sabe, se asume que sí.
@@ -118,6 +119,8 @@ El respaldo automático y el traspaso a un teléfono nuevo **excluyen** la base,
 La razón es física: una llave del Keystore no se puede restaurar ni transferir, así que la copia llegaría ilegible y el usuario creería tener un respaldo que no sirve.
 
 **El respaldo real es la exportación a `.xlsx`**, que el usuario decide dónde guardar. Ver [Excel](excel.md).
+
+Y ese archivo **no va cifrado**. El cifrado protege la base; el `.xlsx` es el mismo libro en claro, para que se abra en Excel, LibreOffice o Sheets sin la app y sin el teléfono, que es justo lo que se le pide a un respaldo. La pantalla de exportar lo avisa antes de guardar, porque el recordatorio semanal empuja a dejarlo en la nube o adjuntarlo a un correo, y quien vio que la base va cifrada puede suponer que la copia también.
 
 ### El recordatorio
 
