@@ -94,8 +94,11 @@ class MainActivity : FragmentActivity() {
             val protegerVentana =
                 preferencias?.modoBloqueo?.let { it != ModoBloqueo.NINGUNO } ?: true
             LaunchedEffect(protegerVentana) {
-                if (protegerVentana) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-                else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                if (protegerVentana) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                }
             }
 
             TemaOllin(

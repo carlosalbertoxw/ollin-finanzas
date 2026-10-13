@@ -81,8 +81,7 @@ object LectorCatalogos {
         "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
     )
 
-    fun texto(celda: CeldaLeida?): String? =
-        celda?.comoTexto()?.trim()?.ifBlank { null }
+    fun texto(celda: CeldaLeida?): String? = celda?.comoTexto()?.trim()?.ifBlank { null }
 
     fun fecha(celda: CeldaLeida?): LocalDate? {
         if (celda == null) return null

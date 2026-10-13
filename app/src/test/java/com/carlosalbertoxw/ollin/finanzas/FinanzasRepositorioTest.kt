@@ -68,14 +68,22 @@ class FinanzasRepositorioTest : BaseEnMemoria() {
 
         val negativo = runCatching {
             repositorio.guardaTransferencia(
-                LocalDate.now(), -100, banorte, cartera, "Al reves"
+                LocalDate.now(),
+                -100,
+                banorte,
+                cartera,
+                "Al reves"
             )
         }
         assertTrue(negativo.exceptionOrNull() is IllegalArgumentException)
 
         val misma = runCatching {
             repositorio.guardaTransferencia(
-                LocalDate.now(), 100, banorte, banorte, "A si misma"
+                LocalDate.now(),
+                100,
+                banorte,
+                banorte,
+                "A si misma"
             )
         }
         assertTrue(misma.exceptionOrNull() is IllegalArgumentException)
@@ -90,7 +98,11 @@ class FinanzasRepositorioTest : BaseEnMemoria() {
         val cartera = nuevaCuenta("Cartera")
 
         repositorio.guardaTransferencia(
-            LocalDate.of(2026, 3, 10), 50_000, banorte, cartera, "Retiro"
+            LocalDate.of(2026, 3, 10),
+            50_000,
+            banorte,
+            cartera,
+            "Retiro"
         )
         val grupo = movimientoDao.todos().first().grupoTransferencia!!
 
@@ -116,7 +128,10 @@ class FinanzasRepositorioTest : BaseEnMemoria() {
         val banorte = nuevaCuenta("Banorte")
         val cartera = nuevaCuenta("Cartera")
         val suelta = nuevoMovimiento(
-            banorte, -50_000, TipoMovimiento.TRANSFERENCIA_SALIDA, "Sin pareja"
+            banorte,
+            -50_000,
+            TipoMovimiento.TRANSFERENCIA_SALIDA,
+            "Sin pareja"
         )
 
         repositorio.guardaTransferencia(
@@ -138,7 +153,11 @@ class FinanzasRepositorioTest : BaseEnMemoria() {
         val banorte = nuevaCuenta("Banorte")
         val cartera = nuevaCuenta("Cartera")
         repositorio.guardaTransferencia(
-            LocalDate.of(2026, 3, 10), 50_000, banorte, cartera, "Retiro"
+            LocalDate.of(2026, 3, 10),
+            50_000,
+            banorte,
+            cartera,
+            "Retiro"
         )
 
         repositorio.eliminaMovimiento(movimientoDao.todos().first())
@@ -186,20 +205,18 @@ class FinanzasRepositorioTest : BaseEnMemoria() {
 
     // ------------------------------------------------------- compromisos
 
-    private suspend fun nuevoCompromiso(
-        primerPago: LocalDate,
-        totalPagos: Int? = null
-    ): Long = repositorio.guardaCompromiso(
-        Compromiso(
-            nombre = "Suscripcion",
-            cuentaId = null,
-            categoriaId = null,
-            montoCentavos = 29_900,
-            periodicidad = Periodicidad.MENSUAL,
-            fechaPrimerPago = primerPago,
-            totalPagos = totalPagos
+    private suspend fun nuevoCompromiso(primerPago: LocalDate, totalPagos: Int? = null): Long =
+        repositorio.guardaCompromiso(
+            Compromiso(
+                nombre = "Suscripcion",
+                cuentaId = null,
+                categoriaId = null,
+                montoCentavos = 29_900,
+                periodicidad = Periodicidad.MENSUAL,
+                fechaPrimerPago = primerPago,
+                totalPagos = totalPagos
+            )
         )
-    )
 
     @Test
     fun `cumplir avanza el plan y lo apaga al llegar al ultimo pago`() = runTest {
@@ -261,19 +278,18 @@ class FinanzasRepositorioTest : BaseEnMemoria() {
         assertEquals(LocalDate.of(2026, 3, 31), repositorio.compromiso(id)!!.proximoPago)
     }
 
-    private suspend fun nuevoCompromisoUnico(fecha: LocalDate): Long =
-        repositorio.guardaCompromiso(
-            Compromiso(
-                nombre = "Colegiatura de agosto",
-                cuentaId = null,
-                categoriaId = null,
-                montoCentavos = 450_000,
-                periodicidad = Periodicidad.UNICO,
-                fechaPrimerPago = fecha,
-                // Un unico es un plan de un solo pago: asi lo guarda el editor.
-                totalPagos = 1
-            )
+    private suspend fun nuevoCompromisoUnico(fecha: LocalDate): Long = repositorio.guardaCompromiso(
+        Compromiso(
+            nombre = "Colegiatura de agosto",
+            cuentaId = null,
+            categoriaId = null,
+            montoCentavos = 450_000,
+            periodicidad = Periodicidad.UNICO,
+            fechaPrimerPago = fecha,
+            // Un unico es un plan de un solo pago: asi lo guarda el editor.
+            totalPagos = 1
         )
+    )
 
     @Test
     fun `cumplir un compromiso unico lo archiva de inmediato`() = runTest {

@@ -135,8 +135,10 @@ fun CalidadPantalla(
                         colors = CardDefaults.cardColors(
                             containerColor = when (hallazgo.gravedad) {
                                 GravedadHallazgo.ALTA -> MaterialTheme.colorScheme.errorContainer
+
                                 GravedadHallazgo.MEDIA ->
                                     MaterialTheme.colorScheme.tertiaryContainer
+
                                 GravedadHallazgo.BAJA -> MaterialTheme.colorScheme.surfaceContainer
                             }
                         )

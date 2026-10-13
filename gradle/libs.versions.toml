@@ -29,10 +29,12 @@ robolectric = "4.17"
 cyclonedx = "3.4.1"
 # Que licencias viajan en el APK (ver app/build.gradle.kts, bloque licensee).
 licensee = "1.14.1"
-ktlintGradle = "14.2.0"
 # Cobertura de las pruebas unitarias (ver app/build.gradle.kts, bloque kover).
 # Desde la 0.9.5 entiende las variantes de AGP 9.
 kover = "0.9.9"
+spotless = "8.10.3"
+# La version de ktlint va aparte de la de Spotless: es la que decide las
+# reglas, y subirla puede marcar codigo que ayer pasaba.
 ktlint = "1.8.0"
 
 [libraries]
@@ -75,5 +77,5 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 cyclonedx = { id = "org.cyclonedx.bom", version.ref = "cyclonedx" }
 licensee = { id = "app.cash.licensee", version.ref = "licensee" }
-ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

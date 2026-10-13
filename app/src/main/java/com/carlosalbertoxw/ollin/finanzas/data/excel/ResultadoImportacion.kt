@@ -8,11 +8,7 @@ package com.carlosalbertoxw.ollin.finanzas.data.excel
 
 enum class Severidad { INFO, AVISO, ERROR }
 
-data class Diagnostico(
-    val severidad: Severidad,
-    val mensaje: String,
-    val fila: Int? = null
-)
+data class Diagnostico(val severidad: Severidad, val mensaje: String, val fila: Int? = null)
 
 data class OpcionesImportacion(
     /** Alinea el Tipo con el signo del importe cuando se contradicen. */

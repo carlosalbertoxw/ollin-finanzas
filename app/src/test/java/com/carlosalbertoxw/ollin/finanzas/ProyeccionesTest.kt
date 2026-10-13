@@ -12,11 +12,7 @@ import org.junit.Test
  */
 class ProyeccionesTest {
 
-    private fun flujo(
-        ingresos: Long,
-        consumo: Long,
-        patrimonio: Long
-    ) = FlujoMes(
+    private fun flujo(ingresos: Long, consumo: Long, patrimonio: Long) = FlujoMes(
         periodo = "2026-01",
         ingresosCentavos = ingresos,
         gastoConsumoCentavos = consumo,

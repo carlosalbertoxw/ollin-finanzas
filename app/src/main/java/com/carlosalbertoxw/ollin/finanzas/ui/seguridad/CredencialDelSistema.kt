@@ -57,8 +57,11 @@ fun pedirCredencialDelSistema(
     val lanzador = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { resultado ->
-        if (resultado.resultCode == Activity.RESULT_OK) alLograr()
-        else alFallar("No se pudo verificar. Intenta de nuevo.")
+        if (resultado.resultCode == Activity.RESULT_OK) {
+            alLograr()
+        } else {
+            alFallar("No se pudo verificar. Intenta de nuevo.")
+        }
     }
 
     val pantallaDelSistema: () -> Unit = {
@@ -97,7 +100,8 @@ fun pedirCredencialDelSistema(
                         ) {
                             if (LlaveDeDesbloqueo.demuestraAutenticacion(
                                     resultado.cryptoObject?.cipher
-                                )) {
+                                )
+                            ) {
                                 alLograr()
                             } else {
                                 alFallar("No se pudo verificar. Intenta de nuevo.")

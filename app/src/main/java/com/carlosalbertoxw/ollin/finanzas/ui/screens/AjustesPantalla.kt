@@ -298,10 +298,7 @@ fun AjustesPantalla(
  * un ajuste, no una recompilacion.
  */
 @Composable
-private fun SeccionAvisos(
-    ajustes: Ajustes,
-    alCambiarHora: (Int, Int) -> Unit
-) {
+private fun SeccionAvisos(ajustes: Ajustes, alCambiarHora: (Int, Int) -> Unit) {
     val contexto = LocalContext.current
     val colores = LocalColoresOllin.current
     val de24Horas = remember(contexto) { DateFormat.is24HourFormat(contexto) }
@@ -412,8 +409,14 @@ private fun SeccionBloqueo(
     val confirmaConSistema = pedirCredencialDelSistema(
         actividad = actividad ?: return,
         titulo = "Confirma que eres tu",
-        alLograr = { pendiente?.invoke(); pendiente = null },
-        alFallar = { pendiente = null; aviso = it },
+        alLograr = {
+            pendiente?.invoke()
+            pendiente = null
+        },
+        alFallar = {
+            pendiente = null
+            aviso = it
+        },
         alSalirAlSistema = bloqueo::esperaVueltaDelSistema,
         alNoSalirAlSistema = bloqueo::cancelaVueltaEsperada
     )
@@ -427,8 +430,16 @@ private fun SeccionBloqueo(
         aviso = null
         when (modoActual) {
             ModoBloqueo.NINGUNO -> accion()
-            ModoBloqueo.SISTEMA -> { pendiente = accion; confirmaConSistema() }
-            ModoBloqueo.PIN -> { pendiente = accion; pidiendoPinActual = true }
+
+            ModoBloqueo.SISTEMA -> {
+                pendiente = accion
+                confirmaConSistema()
+            }
+
+            ModoBloqueo.PIN -> {
+                pendiente = accion
+                pidiendoPinActual = true
+            }
         }
     }
 
@@ -448,10 +459,15 @@ private fun SeccionBloqueo(
                     aviso = null
                     when (modo) {
                         ModoBloqueo.NINGUNO -> conConfirmacion(alQuitar)
+
                         ModoBloqueo.SISTEMA ->
-                            if (telefonoAsegurado) conConfirmacion(alUsarSistema)
-                            else aviso = "Tu telefono no tiene patron, PIN ni contrasena. " +
-                                "Configuralo en los ajustes de Android y vuelve aqui."
+                            if (telefonoAsegurado) {
+                                conConfirmacion(alUsarSistema)
+                            } else {
+                                aviso = "Tu telefono no tiene patron, PIN ni contrasena. " +
+                                    "Configuralo en los ajustes de Android y vuelve aqui."
+                            }
+
                         ModoBloqueo.PIN -> conConfirmacion { pidiendoPinNuevo = true }
                     }
                 },
@@ -476,9 +492,11 @@ private fun SeccionBloqueo(
         when (modoActual) {
             ModoBloqueo.NINGUNO ->
                 "Cualquiera que tome tu telefono desbloqueado puede abrir Ollin Finanzas."
+
             ModoBloqueo.SISTEMA ->
                 "Se usa el patron, PIN o huella con que desbloqueas el telefono. " +
                     "Ollin Finanzas no guarda ningun secreto."
+
             ModoBloqueo.PIN ->
                 "Se usa un PIN solo de Ollin Finanzas. Si lo olvidas no hay forma de " +
                     "recuperarlo: tendrias que reinstalar la app y perderias los datos."
@@ -510,13 +528,19 @@ private fun SeccionBloqueo(
                 pendiente?.invoke()
                 pendiente = null
             },
-            alCancelar = { pidiendoPinActual = false; pendiente = null }
+            alCancelar = {
+                pidiendoPinActual = false
+                pendiente = null
+            }
         )
     }
 
     if (pidiendoPinNuevo) {
         DialogoNuevoPin(
-            alGuardar = { pin -> alUsarPin(pin); pidiendoPinNuevo = false },
+            alGuardar = { pin ->
+                alUsarPin(pin)
+                pidiendoPinNuevo = false
+            },
             alCancelar = { pidiendoPinNuevo = false }
         )
     }

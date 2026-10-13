@@ -28,8 +28,7 @@ object Dinero {
         valor.setScale(2, RoundingMode.HALF_UP).movePointRight(2).toLong()
 
     /** Devuelve el valor decimal para escribirlo en la hoja. Nunca acumula error. */
-    fun aDecimal(centavos: Long): BigDecimal =
-        BigDecimal.valueOf(centavos).movePointLeft(2)
+    fun aDecimal(centavos: Long): BigDecimal = BigDecimal.valueOf(centavos).movePointLeft(2)
 
     fun aDoubleParaHoja(centavos: Long): Double = aDecimal(centavos).toDouble()
 
@@ -70,12 +69,20 @@ object Dinero {
         nucleo = when {
             // Ambos presentes: el ultimo es el separador decimal.
             ultimaComa >= 0 && ultimoPunto >= 0 ->
-                if (ultimaComa > ultimoPunto) nucleo.replace(".", "").replace(',', '.')
-                else nucleo.replace(",", "")
+                if (ultimaComa > ultimoPunto) {
+                    nucleo.replace(".", "").replace(',', '.')
+                } else {
+                    nucleo.replace(",", "")
+                }
+
             // Solo comas: decimal si deja 1 o 2 digitos a la derecha, si no es de millares.
             ultimaComa >= 0 ->
-                if (nucleo.length - ultimaComa - 1 in 1..2) nucleo.replace(',', '.')
-                else nucleo.replace(",", "")
+                if (nucleo.length - ultimaComa - 1 in 1..2) {
+                    nucleo.replace(',', '.')
+                } else {
+                    nucleo.replace(",", "")
+                }
+
             else -> nucleo
         }
 

@@ -237,7 +237,9 @@ class AjustesRepositorio(
         return when {
             !p.lee(Claves.PIN_HASH).isNullOrBlank() && !p.lee(Claves.PIN_SAL).isNullOrBlank() ->
                 ModoBloqueo.PIN
+
             telefonoAsegurado() -> ModoBloqueo.SISTEMA
+
             else -> ModoBloqueo.NINGUNO
         }
     }
@@ -431,6 +433,5 @@ class AjustesRepositorio(
  * Si el dato cambia de forma se estrena nombre, y el viejo se barre. Esto es la
  * red de abajo, para que el dia que se olvide no cueste una version.
  */
-private inline fun <reified T> Map<Preferences.Key<*>, Any>.lee(
-    clave: Preferences.Key<T>
-): T? = this[clave] as? T
+private inline fun <reified T> Map<Preferences.Key<*>, Any>.lee(clave: Preferences.Key<T>): T? =
+    this[clave] as? T

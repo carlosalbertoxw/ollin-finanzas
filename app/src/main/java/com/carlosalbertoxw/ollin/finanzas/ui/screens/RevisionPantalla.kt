@@ -145,10 +145,7 @@ fun RevisionPantalla(
 
 /** Elegir categoria sin abrir el movimiento: clasificar cien renglones a mano cansa. */
 @Composable
-private fun AsignadorCategoria(
-    opciones: List<Categoria>,
-    alElegir: (Long) -> Unit
-) {
+private fun AsignadorCategoria(opciones: List<Categoria>, alElegir: (Long) -> Unit) {
     if (opciones.isEmpty()) return
     var abierto by remember { mutableStateOf(false) }
     Box {
@@ -157,7 +154,10 @@ private fun AsignadorCategoria(
             opciones.forEach { categoria ->
                 DropdownMenuItem(
                     text = { Text(categoria.nombre) },
-                    onClick = { alElegir(categoria.id); abierto = false }
+                    onClick = {
+                        alElegir(categoria.id)
+                        abierto = false
+                    }
                 )
             }
         }

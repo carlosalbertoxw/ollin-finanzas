@@ -81,8 +81,11 @@ object RegistroDeFallos {
             appendLine()
             append(traza)
         }
-        return if (texto.length <= TOPE_CARACTERES) texto
-        else texto.take(TOPE_CARACTERES) + "\n[recortado]"
+        return if (texto.length <= TOPE_CARACTERES) {
+            texto
+        } else {
+            texto.take(TOPE_CARACTERES) + "\n[recortado]"
+        }
     }
 
     private fun archivo(contexto: Context) = File(contexto.applicationContext.filesDir, ARCHIVO)

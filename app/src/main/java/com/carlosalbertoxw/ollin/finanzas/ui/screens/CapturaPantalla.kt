@@ -225,8 +225,11 @@ fun CapturaPantalla(
                 onValueChange = { vm.importeTexto = it },
                 label = {
                     Text(
-                        if (vm.naturaleza == NaturalezaCaptura.AJUSTE) "Cuanto vale ahora"
-                        else "Importe"
+                        if (vm.naturaleza == NaturalezaCaptura.AJUSTE) {
+                            "Cuanto vale ahora"
+                        } else {
+                            "Importe"
+                        }
                     )
                 },
                 prefix = { Text("$") },
@@ -468,7 +471,10 @@ fun SelectorDesplegable(
             opciones.forEach { (id, texto) ->
                 DropdownMenuItem(
                     text = { Text(texto) },
-                    onClick = { alElegir(id); abierto = false }
+                    onClick = {
+                        alElegir(id)
+                        abierto = false
+                    }
                 )
             }
         }

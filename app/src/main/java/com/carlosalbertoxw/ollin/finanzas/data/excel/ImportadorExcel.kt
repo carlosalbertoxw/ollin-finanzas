@@ -142,8 +142,12 @@ class ImportadorExcel(private val db: OllinDatabase) {
         val cuentas = HashSet<String>()
         val categorias = HashSet<String>()
 
-        fun anotaCuenta(nombre: String) { cuentas += nombre.normalizaClave() }
-        fun anotaCategoria(nombre: String) { categorias += nombre.normalizaClave() }
+        fun anotaCuenta(nombre: String) {
+            cuentas += nombre.normalizaClave()
+        }
+        fun anotaCategoria(nombre: String) {
+            categorias += nombre.normalizaClave()
+        }
     }
 
     /**
@@ -178,10 +182,9 @@ class ImportadorExcel(private val db: OllinDatabase) {
 
     private class MapaColumnas(private val indices: Map<String, Int>) {
         operator fun get(clave: String): Int? = indices[clave]
-        fun esUtilizable(): Boolean =
-            indices.containsKey(
-                "fecha"
-            ) && indices.containsKey("cantidad") && indices.containsKey("cuenta")
+        fun esUtilizable(): Boolean = indices.containsKey(
+            "fecha"
+        ) && indices.containsKey("cantidad") && indices.containsKey("cuenta")
     }
 
     private fun mapaColumnas(hoja: HojaLeida): MapaColumnas {
@@ -337,9 +340,13 @@ class ImportadorExcel(private val db: OllinDatabase) {
 
             val nuevo = when (fila.tipo) {
                 TipoMovimiento.TRANSFERENCIA_ENTRADA -> TipoMovimiento.TRANSFERENCIA_SALIDA
+
                 TipoMovimiento.TRANSFERENCIA_SALIDA -> TipoMovimiento.TRANSFERENCIA_ENTRADA
+
                 TipoMovimiento.ENTRADA -> TipoMovimiento.SALIDA
+
                 TipoMovimiento.SALIDA -> TipoMovimiento.ENTRADA
+
                 // Los internos aceptan cualquier signo: revaluar sube, depreciar baja.
                 TipoMovimiento.BALANCE_INICIAL, TipoMovimiento.AJUSTE_VALOR -> fila.tipo
             }
@@ -477,7 +484,10 @@ class ImportadorExcel(private val db: OllinDatabase) {
             // a) la columna Categoria manda si viene
             fila.categoria?.let { nombre -> return deLaColumna(nombre, fila.tipo) }
 
-            if (!opciones.autoCategorizar) { sinCategoria++; return null }
+            if (!opciones.autoCategorizar) {
+                sinCategoria++
+                return null
+            }
 
             // b) mapeo por descripcion, primero la variante especifica por tipo
             mapeo[Semilla.claveAlias(fila.descripcion, fila.tipo)]?.let { return it }
@@ -551,7 +561,10 @@ class ImportadorExcel(private val db: OllinDatabase) {
 
         for (fila in filas) {
             val cuenta = cuentas[fila.cuenta.normalizaClave()]
-            if (cuenta == null) { omitidos++; continue }
+            if (cuenta == null) {
+                omitidos++
+                continue
+            }
 
             val derivada = derivaContraparte(fila.tipo)
             val contraparte = if (opciones.derivarContraparte) {
@@ -841,9 +854,15 @@ class ImportadorExcel(private val db: OllinDatabase) {
 
         metas.forEach { meta ->
             val categoria = indice[meta.categoria.normalizaClave()]
-            if (categoria == null) { sinCategoria++; return@forEach }
+            if (categoria == null) {
+                sinCategoria++
+                return@forEach
+            }
             val periodo = meta.periodo
-            if (periodo == null) { sinPeriodo++; return@forEach }
+            if (periodo == null) {
+                sinPeriodo++
+                return@forEach
+            }
             // La ultima gana: si la hoja repite categoria y mes, el renglon de
             // mas abajo es el que el usuario dejo al final.
             aGuardar[Triple(categoria.id, periodo.year, periodo.monthValue)] = Presupuesto(
@@ -912,7 +931,10 @@ class ImportadorExcel(private val db: OllinDatabase) {
         val aInsertar = mutableListOf<Compromiso>()
 
         leidos.forEach { leido ->
-            if (!yaExisten.add(leido.nombre.normalizaClave())) { repetidos++; return@forEach }
+            if (!yaExisten.add(leido.nombre.normalizaClave())) {
+                repetidos++
+                return@forEach
+            }
             val cuentaId = leido.cuenta?.let { nombre ->
                 cuentas[nombre.normalizaClave()]?.id.also { if (it == null) sinCuenta++ }
             }
@@ -980,7 +1002,9 @@ class ImportadorExcel(private val db: OllinDatabase) {
             texto.startsWith(
                 "1"
             ) || texto.contains("propia") || texto.contains("mis cuentas") -> Contraparte.PROPIA
+
             texto.startsWith("2") || texto.contains("tercero") -> Contraparte.TERCERO
+
             else -> null
         }
     }
@@ -1026,9 +1050,11 @@ class ImportadorExcel(private val db: OllinDatabase) {
             clave.contains(
                 "cartera"
             ) || clave.contains("efectivo") || clave.contains("caja") -> TipoCuenta.EFECTIVO
+
             clave.contains(
                 "terreno"
             ) || clave.contains("cripto") || clave.contains("inmueble") -> TipoCuenta.ACTIVO
+
             else -> TipoCuenta.DEBITO
         }
     }
@@ -1057,6 +1083,9 @@ class ImportadorExcel(private val db: OllinDatabase) {
     private fun derivaContraparte(tipo: TipoMovimiento): Contraparte =
         // Un traspaso o un saldo de apertura mueve dinero tuyo de un lado a otro.
         // Una entrada o una salida, por definicion, cruza contra alguien mas.
-        if (tipo.esTransferencia || tipo.esInterno) Contraparte.PROPIA
-        else Contraparte.TERCERO
+        if (tipo.esTransferencia || tipo.esInterno) {
+            Contraparte.PROPIA
+        } else {
+            Contraparte.TERCERO
+        }
 }

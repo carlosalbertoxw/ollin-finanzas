@@ -139,21 +139,19 @@ object Recordatorios {
      * sin crearla de paso. Un reinicio las borra, y por eso [ArranqueReceiver]
      * vuelve a programarla.
      */
-    private fun yaProgramada(contexto: Context): Boolean =
-        PendingIntent.getBroadcast(
-            contexto,
-            CODIGO_DIARIO,
-            Intent(contexto, RecordatorioReceiver::class.java),
-            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-        ) != null
+    private fun yaProgramada(contexto: Context): Boolean = PendingIntent.getBroadcast(
+        contexto,
+        CODIGO_DIARIO,
+        Intent(contexto, RecordatorioReceiver::class.java),
+        PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+    ) != null
 
-    private fun intentPendiente(contexto: Context): PendingIntent =
-        PendingIntent.getBroadcast(
-            contexto,
-            CODIGO_DIARIO,
-            Intent(contexto, RecordatorioReceiver::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+    private fun intentPendiente(contexto: Context): PendingIntent = PendingIntent.getBroadcast(
+        contexto,
+        CODIGO_DIARIO,
+        Intent(contexto, RecordatorioReceiver::class.java),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
 
     /** Ids de los avisos que no son de un compromiso. Los de compromiso van del 2000. */
     const val ID_RESPALDO = 3000
@@ -164,17 +162,13 @@ object Recordatorios {
      *   que abre el tablero deja el trabajo a medias: quien lo toca ya decidio
      *   exportar.
      */
-    fun notifica(
-        contexto: Context,
-        id: Int,
-        titulo: String,
-        texto: String,
-        ruta: String? = null
-    ) {
+    fun notifica(contexto: Context, id: Int, titulo: String, texto: String, ruta: String? = null) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(contexto, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED
-        ) return
+        ) {
+            return
+        }
 
         val abrir = PendingIntent.getActivity(
             contexto,
@@ -246,13 +240,12 @@ object Recordatorios {
     fun porVencer(
         compromisos: List<Compromiso>,
         hoy: LocalDate = LocalDate.now()
-    ): List<Pair<Compromiso, LocalDate>> =
-        compromisos.filter { it.activo }.mapNotNull { c ->
-            if ((c.pagosRestantes ?: Int.MAX_VALUE) <= 0) return@mapNotNull null
-            val proximo = c.proximoPago
-            val dias = java.time.temporal.ChronoUnit.DAYS.between(hoy, proximo)
-            if (dias <= c.avisarDiasAntes.toLong()) c to proximo else null
-        }.sortedBy { it.second }
+    ): List<Pair<Compromiso, LocalDate>> = compromisos.filter { it.activo }.mapNotNull { c ->
+        if ((c.pagosRestantes ?: Int.MAX_VALUE) <= 0) return@mapNotNull null
+        val proximo = c.proximoPago
+        val dias = java.time.temporal.ChronoUnit.DAYS.between(hoy, proximo)
+        if (dias <= c.avisarDiasAntes.toLong()) c to proximo else null
+    }.sortedBy { it.second }
 }
 
 class RecordatorioReceiver : BroadcastReceiver() {

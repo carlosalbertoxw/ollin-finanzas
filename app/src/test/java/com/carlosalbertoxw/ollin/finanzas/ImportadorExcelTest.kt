@@ -37,11 +37,17 @@ import java.time.LocalDate
  */
 class ImportadorExcelTest : BaseEnMemoria() {
 
-    private fun importador() =
-        ImportadorExcel(db)
+    private fun importador() = ImportadorExcel(db)
 
     private val encabezadosCompletos = listOf(
-        "Fecha", "Cantidad", "Cuenta", "Categoria", "Descripcion", "Medio", "Contraparte", "Tipo"
+        "Fecha",
+        "Cantidad",
+        "Cuenta",
+        "Categoria",
+        "Descripcion",
+        "Medio",
+        "Contraparte",
+        "Tipo"
     )
 
     private fun celda(valor: Any?): Celda = when (valor) {
@@ -63,8 +69,14 @@ class ImportadorExcelTest : BaseEnMemoria() {
         contraparte: Any? = null,
         tipo: Any? = null
     ): List<Celda> = listOf(
-        celda(fecha), celda(cantidad), celda(cuenta), celda(categoria),
-        celda(descripcion), celda(medio), celda(contraparte), celda(tipo)
+        celda(fecha),
+        celda(cantidad),
+        celda(cuenta),
+        celda(categoria),
+        celda(descripcion),
+        celda(medio),
+        celda(contraparte),
+        celda(tipo)
     )
 
     /** Arma un .xlsx real en memoria con el mismo escritor que usa la app. */
@@ -209,8 +221,11 @@ class ImportadorExcelTest : BaseEnMemoria() {
         val resultado = importa(
             filas = listOf(
                 listOf(
-                    celda(LocalDate.of(2026, 1, 15)), celda(-500.0), celda("Banorte"),
-                    celda("Gasolina"), celda("Carga de gasolina")
+                    celda(LocalDate.of(2026, 1, 15)),
+                    celda(-500.0),
+                    celda("Banorte"),
+                    celda("Gasolina"),
+                    celda("Carga de gasolina")
                 )
             ),
             encabezados = listOf("Fecha", "Importe", "Cuenta", "Categoría", "Concepto")
@@ -302,8 +317,10 @@ class ImportadorExcelTest : BaseEnMemoria() {
         val resultado = importa(
             listOf(
                 fila(
-                    cantidad = -500.0, descripcion = "Traspaso",
-                    contraparte = "2", tipo = "Transferencia Salida"
+                    cantidad = -500.0,
+                    descripcion = "Traspaso",
+                    contraparte = "2",
+                    tipo = "Transferencia Salida"
                 )
             )
         )
@@ -434,8 +451,10 @@ class ImportadorExcelTest : BaseEnMemoria() {
         importa(
             listOf(
                 fila(
-                    cantidad = 1000.0, categoria = "Ahorros",
-                    descripcion = "Balance Inicial", tipo = "Balance Inicial"
+                    cantidad = 1000.0,
+                    categoria = "Ahorros",
+                    descripcion = "Balance Inicial",
+                    tipo = "Balance Inicial"
                 )
             )
         )

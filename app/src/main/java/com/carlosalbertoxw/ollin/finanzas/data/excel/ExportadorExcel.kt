@@ -122,10 +122,16 @@ class ExportadorExcel(
             AnchoColumna(7, 12.0), AnchoColumna(8, 20.0), AnchoColumna(9, 10.0),
             AnchoColumna(10, 8.0), AnchoColumna(11, 30.0), AnchoColumna(12, 20.0)
         )
+
         EsquemaExportacion.COMPACTO -> listOf(
-            AnchoColumna(1, 12.0), AnchoColumna(2, 14.0), AnchoColumna(3, 22.0),
-            AnchoColumna(4, 28.0), AnchoColumna(5, 12.0), AnchoColumna(6, 12.0),
-            AnchoColumna(7, 20.0), AnchoColumna(8, 7.0)
+            AnchoColumna(1, 12.0),
+            AnchoColumna(2, 14.0),
+            AnchoColumna(3, 22.0),
+            AnchoColumna(4, 28.0),
+            AnchoColumna(5, 12.0),
+            AnchoColumna(6, 12.0),
+            AnchoColumna(7, 20.0),
+            AnchoColumna(8, 7.0)
         )
     }
 
@@ -182,9 +188,11 @@ class ExportadorExcel(
                 Celda.Texto(cuentas.getOrNull(i)?.nombre.orEmpty()),
                 Celda.Texto(cuentas.getOrNull(i)?.tipo?.etiqueta.orEmpty()),
                 Celda.Texto(categorias.getOrNull(i)?.nombre.orEmpty()),
-                Celda.Texto(categorias.getOrNull(i)?.let { hija ->
-                    datos.categoriaPorId[hija.padreId]?.nombre.orEmpty()
-                }.orEmpty()),
+                Celda.Texto(
+                    categorias.getOrNull(i)?.let { hija ->
+                        datos.categoriaPorId[hija.padreId]?.nombre.orEmpty()
+                    }.orEmpty()
+                ),
                 Celda.Texto(medios.getOrNull(i)?.etiqueta.orEmpty()),
                 Celda.Texto(
                     contrapartes.getOrNull(i)?.let { "${it.codigo} - ${it.etiqueta}" }.orEmpty()
@@ -308,10 +316,11 @@ class ExportadorExcel(
         filas += fila(Celda.Texto("Ingresos y egresos por mes", Estilo.TITULO))
         filas += fila(
             Celda.Texto(
-                if (esquema == EsquemaExportacion.EXTENDIDO)
+                if (esquema == EsquemaExportacion.EXTENDIDO) {
                     "Agrupado por categoria. Las compras de patrimonio van aparte: no son gasto."
-                else
-                    "Agrupado por descripcion: el modo compacto no exporta categoria.",
+                } else {
+                    "Agrupado por descripcion: el modo compacto no exporta categoria."
+                },
                 Estilo.TENUE
             )
         )
@@ -487,8 +496,11 @@ class ExportadorExcel(
         )
 
         val tasas = ingresos.indices.map {
-            if (ingresos[it] <= 0L) 0.0
-            else (ingresos[it] + consumo[it]).toDouble() / ingresos[it]
+            if (ingresos[it] <= 0L) {
+                0.0
+            } else {
+                (ingresos[it] + consumo[it]).toDouble() / ingresos[it]
+            }
         }
         val filaTasa = mutableListOf<Celda>(Celda.Texto("Tasa de ahorro", Estilo.NEGRITA))
         tasas.forEach { filaTasa += Celda.Numero(it, Estilo.PORCENTAJE) }
@@ -543,8 +555,11 @@ class ExportadorExcel(
             )
             lista.sortedByDescending { it.montoCentavos }.forEach { p ->
                 val categoria = datos.categoriaPorId[p.categoriaId] ?: return@forEach
-                val tipoMov = if (categoria.tipo == TipoCategoria.INGRESO)
-                    TipoMovimiento.ENTRADA else TipoMovimiento.SALIDA
+                val tipoMov = if (categoria.tipo == TipoCategoria.INGRESO) {
+                    TipoMovimiento.ENTRADA
+                } else {
+                    TipoMovimiento.SALIDA
+                }
                 val real = abs(totalCategoriaMes(p.categoriaId, tipoMov, ym))
                 val n = filas.size + 1
                 filas += listOf(
@@ -582,8 +597,11 @@ class ExportadorExcel(
             nombre = "Presupuesto",
             filas = filas,
             anchos = listOf(
-                AnchoColumna(1, 32.0), AnchoColumna(2, 14.0),
-                AnchoColumna(3, 14.0), AnchoColumna(4, 14.0), AnchoColumna(5, 10.0)
+                AnchoColumna(1, 32.0),
+                AnchoColumna(2, 14.0),
+                AnchoColumna(3, 14.0),
+                AnchoColumna(4, 14.0),
+                AnchoColumna(5, 10.0)
             )
         )
     }
@@ -708,17 +726,27 @@ class ExportadorExcel(
                 Celda.Numero(centavosADouble(c.montoCentavos), Estilo.DINERO),
                 Celda.Texto(c.periodicidad.etiqueta),
                 Celda.Fecha(proximo),
-                if (restantes != null) Celda.Numero(restantes.toDouble(), Estilo.ENTERO)
-                else Celda.Texto("indefinido", Estilo.TENUE),
-                if (restantes != null)
+                if (restantes != null) {
+                    Celda.Numero(restantes.toDouble(), Estilo.ENTERO)
+                } else {
+                    Celda.Texto("indefinido", Estilo.TENUE)
+                },
+                if (restantes != null) {
                     Celda.Numero(centavosADouble(c.montoCentavos * restantes), Estilo.DINERO)
-                else Celda.Texto("-", Estilo.TENUE)
+                } else {
+                    Celda.Texto("-", Estilo.TENUE)
+                }
             )
         }
         val ultima = filas.size
         filas += listOf(
             Celda.Texto("Total comprometido", Estilo.NEGRITA),
-            Celda.Vacia, Celda.Vacia, Celda.Vacia, Celda.Vacia, Celda.Vacia, Celda.Vacia,
+            Celda.Vacia,
+            Celda.Vacia,
+            Celda.Vacia,
+            Celda.Vacia,
+            Celda.Vacia,
+            Celda.Vacia,
             Celda.Formula(
                 "SUM(H$primera:H$ultima)",
                 cache = centavosADouble(
@@ -732,9 +760,14 @@ class ExportadorExcel(
             nombre = "Compromisos",
             filas = filas,
             anchos = listOf(
-                AnchoColumna(1, 28.0), AnchoColumna(2, 22.0), AnchoColumna(3, 22.0),
-                AnchoColumna(4, 14.0), AnchoColumna(5, 14.0), AnchoColumna(6, 14.0),
-                AnchoColumna(7, 14.0), AnchoColumna(8, 16.0)
+                AnchoColumna(1, 28.0),
+                AnchoColumna(2, 22.0),
+                AnchoColumna(3, 22.0),
+                AnchoColumna(4, 14.0),
+                AnchoColumna(5, 14.0),
+                AnchoColumna(6, 14.0),
+                AnchoColumna(7, 14.0),
+                AnchoColumna(8, 16.0)
             )
         )
     }
@@ -779,19 +812,17 @@ class ExportadorExcel(
         datos.movimientos.filter { it.tipo == tipo && YearMonth.from(it.fecha) == ym }
             .sumOf { it.importeCentavos }
 
-    private fun gastoConsumoMes(ym: YearMonth): Long =
-        datos.movimientos.filter {
-            it.tipo == TipoMovimiento.SALIDA &&
-                YearMonth.from(it.fecha) == ym &&
-                datos.categoriaPorId[it.categoriaId]?.tipo != TipoCategoria.PATRIMONIO
-        }.sumOf { it.importeCentavos }
+    private fun gastoConsumoMes(ym: YearMonth): Long = datos.movimientos.filter {
+        it.tipo == TipoMovimiento.SALIDA &&
+            YearMonth.from(it.fecha) == ym &&
+            datos.categoriaPorId[it.categoriaId]?.tipo != TipoCategoria.PATRIMONIO
+    }.sumOf { it.importeCentavos }
 
-    private fun compraPatrimonioMes(ym: YearMonth): Long =
-        datos.movimientos.filter {
-            it.tipo == TipoMovimiento.SALIDA &&
-                YearMonth.from(it.fecha) == ym &&
-                datos.categoriaPorId[it.categoriaId]?.tipo == TipoCategoria.PATRIMONIO
-        }.sumOf { it.importeCentavos }
+    private fun compraPatrimonioMes(ym: YearMonth): Long = datos.movimientos.filter {
+        it.tipo == TipoMovimiento.SALIDA &&
+            YearMonth.from(it.fecha) == ym &&
+            datos.categoriaPorId[it.categoriaId]?.tipo == TipoCategoria.PATRIMONIO
+    }.sumOf { it.importeCentavos }
 
     private fun gastoConsumoMensualPromedio(): Long {
         if (meses.isEmpty()) return 0L

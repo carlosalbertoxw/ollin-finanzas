@@ -233,10 +233,14 @@ class CapturaVm(
      */
     private suspend fun naturalezaDe(m: Movimiento): NaturalezaCaptura = when {
         m.tipo == TipoMovimiento.BALANCE_INICIAL -> NaturalezaCaptura.SALDO_INICIAL
+
         m.tipo == TipoMovimiento.AJUSTE_VALOR -> NaturalezaCaptura.AJUSTE
+
         m.tipo == TipoMovimiento.ENTRADA -> NaturalezaCaptura.INGRESO
+
         m.categoriaId?.let { repo.categoria(it) }?.tipo == TipoCategoria.PATRIMONIO ->
             NaturalezaCaptura.PATRIMONIO
+
         else -> NaturalezaCaptura.GASTO
     }
 
@@ -250,13 +254,16 @@ class CapturaVm(
                 if (descripcion.isBlank()) descripcion = "Balance Inicial"
                 revisaSaldoInicialPrevio()
             }
+
             NaturalezaCaptura.AJUSTE -> {
                 if (descripcion.isBlank()) descripcion = "Ajuste de valor"
                 // Se empieza desde lo que vale hoy: casi siempre solo cambia un poco.
                 importeTexto = Dinero.aTextoHoja(kotlin.math.abs(valorBase()))
             }
+
             NaturalezaCaptura.PATRIMONIO ->
                 if (cuentaActivoId == null) cuentaActivoId = cuentasActivo.firstOrNull()?.id
+
             else -> Unit
         }
     }
@@ -281,16 +288,21 @@ class CapturaVm(
                 saldoEnContra = cuenta.tipo.esDeuda
                 revisaSaldoInicialPrevio()
             }
+
             // Al cambiar de bien, el valor de partida es el de ese bien.
             NaturalezaCaptura.AJUSTE ->
                 importeTexto = Dinero.aTextoHoja(kotlin.math.abs(valorBase()))
+
             else -> Unit
         }
     }
 
     private fun revisaSaldoInicialPrevio() {
         val id = cuentaId
-        if (id == null) { saldoInicialPrevio = null; return }
+        if (id == null) {
+            saldoInicialPrevio = null
+            return
+        }
         viewModelScope.launch {
             saldoInicialPrevio = repo.balanceInicialDe(id)?.takeIf { it.id != movimientoId }
         }
@@ -301,17 +313,34 @@ class CapturaVm(
         val cuenta = cuentaId
         val activo = cuentaActivoId
         when {
-            centavos == null || centavos == 0L -> { error = "Escribe un importe valido"; return }
-            cuenta == null -> { error = "Elige la cuenta"; return }
-            descripcion.isBlank() -> { error = "Ponle una descripcion"; return }
+            centavos == null || centavos == 0L -> {
+                error = "Escribe un importe valido"
+                return
+            }
+
+            cuenta == null -> {
+                error = "Elige la cuenta"
+                return
+            }
+
+            descripcion.isBlank() -> {
+                error = "Ponle una descripcion"
+                return
+            }
+
             naturaleza == NaturalezaCaptura.PATRIMONIO && activo == null -> {
-                error = "Elige la cuenta de Activo a la que entra"; return
+                error = "Elige la cuenta de Activo a la que entra"
+                return
             }
+
             naturaleza == NaturalezaCaptura.PATRIMONIO && activo == cuenta -> {
-                error = "El dinero tiene que entrar a una cuenta distinta de la que sale"; return
+                error = "El dinero tiene que entrar a una cuenta distinta de la que sale"
+                return
             }
+
             naturaleza == NaturalezaCaptura.AJUSTE && diferenciaDelAjuste() == 0L -> {
-                error = "Ya vale eso: no hay nada que ajustar"; return
+                error = "Ya vale eso: no hay nada que ajustar"
+                return
             }
         }
         error = null
@@ -379,9 +408,11 @@ class CapturaVm(
         }
     }
 
-    private fun saleDinero(): Boolean =
-        if (naturaleza == NaturalezaCaptura.SALDO_INICIAL) saldoEnContra
-        else naturaleza.esSalidaDeDinero
+    private fun saleDinero(): Boolean = if (naturaleza == NaturalezaCaptura.SALDO_INICIAL) {
+        saldoEnContra
+    } else {
+        naturaleza.esSalidaDeDinero
+    }
 
     fun elimina() {
         val id = movimientoId ?: return

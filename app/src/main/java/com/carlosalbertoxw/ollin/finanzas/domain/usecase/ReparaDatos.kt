@@ -37,9 +37,13 @@ class ReparaDatos(private val repo: FinanzasRepositorio) {
 
             val nuevo = when (m.tipo) {
                 TipoMovimiento.TRANSFERENCIA_ENTRADA -> TipoMovimiento.TRANSFERENCIA_SALIDA
+
                 TipoMovimiento.TRANSFERENCIA_SALIDA -> TipoMovimiento.TRANSFERENCIA_ENTRADA
+
                 TipoMovimiento.ENTRADA -> TipoMovimiento.SALIDA
+
                 TipoMovimiento.SALIDA -> TipoMovimiento.ENTRADA
+
                 // Los internos admiten cualquier signo: no hay nada que alinear.
                 TipoMovimiento.BALANCE_INICIAL,
                 TipoMovimiento.AJUSTE_VALOR -> return@mapNotNull null
@@ -77,7 +81,9 @@ class ReparaDatos(private val repo: FinanzasRepositorio) {
             val cuenta = cuentas[m.cuentaId] ?: return@mapNotNull null
             val correcto = when {
                 cuenta.tipo == TipoCuenta.EFECTIVO -> Medio.EFECTIVO
+
                 cuenta.soloElectronico -> Medio.ELECTRONICO
+
                 // Sin regla declarada no se toca: lo que capturaste manda.
                 else -> return@mapNotNull null
             }

@@ -59,18 +59,28 @@ class RevisaCalidadTest : BaseEnMemoria() {
 
         nuevoMovimiento(banorte, 1_000_000, TipoMovimiento.BALANCE_INICIAL, "Balance Inicial")
         nuevoMovimiento(
-            cartera, 500_000, TipoMovimiento.BALANCE_INICIAL, "Balance Inicial",
+            cartera,
+            500_000,
+            TipoMovimiento.BALANCE_INICIAL,
+            "Balance Inicial",
             medio = Medio.EFECTIVO
         )
         nuevoMovimiento(banorte, 800_000, TipoMovimiento.ENTRADA, "Sueldo", sueldo)
         nuevoMovimiento(banorte, -300_000, TipoMovimiento.SALIDA, "Gasolina", gasolina)
         nuevoMovimiento(
-            banorte, -200_000, TipoMovimiento.TRANSFERENCIA_SALIDA, "Traspaso a cartera",
+            banorte,
+            -200_000,
+            TipoMovimiento.TRANSFERENCIA_SALIDA,
+            "Traspaso a cartera",
             grupoTransferencia = "g1"
         )
         nuevoMovimiento(
-            cartera, 200_000, TipoMovimiento.TRANSFERENCIA_ENTRADA, "Traspaso a cartera",
-            medio = Medio.EFECTIVO, grupoTransferencia = "g1"
+            cartera,
+            200_000,
+            TipoMovimiento.TRANSFERENCIA_ENTRADA,
+            "Traspaso a cartera",
+            medio = Medio.EFECTIVO,
+            grupoTransferencia = "g1"
         )
 
         assertEquals(emptyList<Hallazgo>(), revisa())
@@ -101,7 +111,10 @@ class RevisaCalidadTest : BaseEnMemoria() {
 
         nuevoMovimiento(banorte, -20_000, TipoMovimiento.TRANSFERENCIA_SALIDA, "Traspaso suelto")
         nuevoMovimiento(
-            banorte, -30_000, TipoMovimiento.TRANSFERENCIA_SALIDA, "Traspaso incompleto",
+            banorte,
+            -30_000,
+            TipoMovimiento.TRANSFERENCIA_SALIDA,
+            "Traspaso incompleto",
             grupoTransferencia = "g1"
         )
 
@@ -150,17 +163,28 @@ class RevisaCalidadTest : BaseEnMemoria() {
         val gasto = nuevaCategoria("Gasolina")
 
         nuevoMovimiento(
-            cartera, 500_000, TipoMovimiento.BALANCE_INICIAL, "Saldo de cartera",
+            cartera,
+            500_000,
+            TipoMovimiento.BALANCE_INICIAL,
+            "Saldo de cartera",
             medio = Medio.EFECTIVO
         )
         // Una salida de la cartera no puede ser electronica.
         nuevoMovimiento(
-            cartera, -10_000, TipoMovimiento.SALIDA, "Tortilleria", gasto,
+            cartera,
+            -10_000,
+            TipoMovimiento.SALIDA,
+            "Tortilleria",
+            gasto,
             medio = Medio.ELECTRONICO
         )
         // Ni una tarjeta puede cobrarse en mano.
         nuevoMovimiento(
-            tarjeta, -20_000, TipoMovimiento.SALIDA, "Restaurante", gasto,
+            tarjeta,
+            -20_000,
+            TipoMovimiento.SALIDA,
+            "Restaurante",
+            gasto,
             medio = Medio.EFECTIVO
         )
 
@@ -218,7 +242,11 @@ class RevisaCalidadTest : BaseEnMemoria() {
         val banorte = banorteConSaldo()
         val gasto = nuevaCategoria("Gasolina")
         nuevoMovimiento(
-            banorte, -10_000, TipoMovimiento.SALIDA, "Gasolina", gasto,
+            banorte,
+            -10_000,
+            TipoMovimiento.SALIDA,
+            "Gasolina",
+            gasto,
             fecha = LocalDate.of(2026, 4, 10)
         )
 
@@ -249,22 +277,36 @@ class RevisaCalidadTest : BaseEnMemoria() {
         val gasto = nuevaCategoria("Gasolina")
 
         nuevoMovimiento(
-            cartera, 500_000, TipoMovimiento.BALANCE_INICIAL, "Saldo de cartera",
+            cartera,
+            500_000,
+            TipoMovimiento.BALANCE_INICIAL,
+            "Saldo de cartera",
             medio = Medio.EFECTIVO
         )
         // BAJA
         nuevoMovimiento(
-            cartera, -10_000, TipoMovimiento.SALIDA, "Tortilleria", gasto,
+            cartera,
+            -10_000,
+            TipoMovimiento.SALIDA,
+            "Tortilleria",
+            gasto,
             medio = Medio.ELECTRONICO
         )
         // MEDIA
         nuevoMovimiento(
-            cartera, -20_000, TipoMovimiento.SALIDA, "Sin clasificar",
+            cartera,
+            -20_000,
+            TipoMovimiento.SALIDA,
+            "Sin clasificar",
             medio = Medio.EFECTIVO
         )
         // ALTA
         nuevoMovimiento(
-            cartera, -30_000, TipoMovimiento.ENTRADA, "Reembolso", gasto,
+            cartera,
+            -30_000,
+            TipoMovimiento.ENTRADA,
+            "Reembolso",
+            gasto,
             medio = Medio.EFECTIVO
         )
 

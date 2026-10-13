@@ -194,7 +194,9 @@ enum class Periodicidad(val etiqueta: String, val meses: Int = 0, val dias: Int 
         // Sin repeticion no hay a donde avanzar: el unico pago es el del ancla,
         // y ahi se queda hasta que alguien lo cumpla o lo descarte.
         esUnico -> ancla
+
         dias > 0 -> ancla.plusDays(pasos * dias)
+
         else -> ancla.plusMonths(pasos * meses)
     }
 

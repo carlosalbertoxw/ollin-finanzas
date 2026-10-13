@@ -50,11 +50,7 @@ import kotlinx.coroutines.launch
  * recientes.
  */
 @Composable
-fun BloqueoPantalla(
-    actividad: FragmentActivity,
-    ajustes: Ajustes,
-    bloqueo: ControlBloqueo
-) {
+fun BloqueoPantalla(actividad: FragmentActivity, ajustes: Ajustes, bloqueo: ControlBloqueo) {
     val alDesbloquear: () -> Unit = bloqueo::desbloquea
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
@@ -74,7 +70,9 @@ fun BloqueoPantalla(
 
             when (ajustes.modoBloqueo) {
                 ModoBloqueo.SISTEMA -> DesbloqueoSistema(actividad, alDesbloquear)
+
                 ModoBloqueo.PIN -> DesbloqueoPin(ajustes, bloqueo)
+
                 // Transitorio: aun no se leen las preferencias del disco.
                 ModoBloqueo.NINGUNO -> Unit
             }
@@ -93,7 +91,10 @@ private fun DesbloqueoSistema(actividad: FragmentActivity, alDesbloquear: () -> 
         alLograr = alDesbloquear,
         alFallar = { mensaje = it }
     )
-    val pide: () -> Unit = { mensaje = null; pedir() }
+    val pide: () -> Unit = {
+        mensaje = null
+        pedir()
+    }
 
     // Se pide sola al entrar: un boton de mas antes del candado no aporta nada.
     LaunchedEffect(Unit) { pide() }

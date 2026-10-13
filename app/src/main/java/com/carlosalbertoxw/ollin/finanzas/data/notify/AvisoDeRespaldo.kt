@@ -30,9 +30,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * sobrevivir a que se gire el telefono o se cambie de pestaña: si no, quitarlo
  * duraria hasta el siguiente giro.
  */
-class AvisoDeRespaldo(
-    private val reloj: () -> Long = { SystemClock.elapsedRealtime() }
-) {
+class AvisoDeRespaldo(private val reloj: () -> Long = { SystemClock.elapsedRealtime() }) {
 
     private val _descartado = MutableStateFlow(false)
     val descartado: StateFlow<Boolean> = _descartado.asStateFlow()

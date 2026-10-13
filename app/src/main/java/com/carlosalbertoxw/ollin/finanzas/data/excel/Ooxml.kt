@@ -59,14 +59,22 @@ object Ooxml {
         for (c in texto) {
             when (c) {
                 '&' -> sb.append("&amp;")
+
                 '<' -> sb.append("&lt;")
+
                 '>' -> sb.append("&gt;")
+
                 '"' -> sb.append("&quot;")
+
                 '\'' -> sb.append("&apos;")
+
                 else ->
                     // XML 1.0 no admite estos caracteres de control ni siquiera escapados.
-                    if (c.code < 0x20 && c != '\n' && c != '\t' && c != '\r') sb.append(' ')
-                    else sb.append(c)
+                    if (c.code < 0x20 && c != '\n' && c != '\t' && c != '\r') {
+                        sb.append(' ')
+                    } else {
+                        sb.append(c)
+                    }
             }
         }
         return sb.toString()

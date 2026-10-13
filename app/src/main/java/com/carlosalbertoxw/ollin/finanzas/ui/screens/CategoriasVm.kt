@@ -53,11 +53,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** Una categoria con lo que la pantalla necesita saber para decidir que se puede hacer con ella. */
-data class RenglonCategoria(
-    val categoria: Categoria,
-    val movimientos: Int,
-    val hijas: Int
-) {
+data class RenglonCategoria(val categoria: Categoria, val movimientos: Int, val hijas: Int) {
     val esRaiz: Boolean get() = categoria.padreId == null
 
     /**
@@ -95,8 +91,11 @@ class CategoriasVm(private val repo: FinanzasRepositorio) : ViewModel() {
 
     fun elimina(renglon: RenglonCategoria) {
         viewModelScope.launch {
-            if (renglon.sePuedeBorrar) repo.eliminaCategoria(renglon.categoria)
-            else repo.guardaCategoria(renglon.categoria.copy(archivada = true))
+            if (renglon.sePuedeBorrar) {
+                repo.eliminaCategoria(renglon.categoria)
+            } else {
+                repo.guardaCategoria(renglon.categoria.copy(archivada = true))
+            }
         }
     }
 }

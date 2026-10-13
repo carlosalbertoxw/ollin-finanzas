@@ -172,8 +172,7 @@ class ControlBloqueo(
     // ------------------------------------------------------- intentos de PIN
 
     /** Segundos que faltan para poder volver a intentar. Cero si ya se puede. */
-    fun segundosDeEspera(): Int =
-        ((_esperaHasta.value - reloj()) / 1000L).coerceAtLeast(0L).toInt()
+    fun segundosDeEspera(): Int = ((_esperaHasta.value - reloj()) / 1000L).coerceAtLeast(0L).toInt()
 
     /**
      * Un PIN de cuatro digitos son diez mil combinaciones. PBKDF2 ya hace que
@@ -195,28 +194,27 @@ class ControlBloqueo(
      * sellada con [sello]: se migra sola, sin pedirle nada a nadie. Si guardarla
      * falla se deja como estaba; volvera a intentarse en el siguiente acierto.
      */
-    suspend fun intentaPin(
-        pin: String,
-        hash: String?,
-        sal: String?
-    ): IntentoDePin = turno.withLock {
-        val espera = segundosDeEspera()
-        if (espera > 0) return@withLock IntentoDePin.EnEspera(espera)
+    suspend fun intentaPin(pin: String, hash: String?, sal: String?): IntentoDePin =
+        turno.withLock {
+            val espera = segundosDeEspera()
+            if (espera > 0) return@withLock IntentoDePin.EnEspera(espera)
 
-        when (ClavePin.verifica(pin, hash, sal, sello)) {
-            ClavePin.Verificacion.INCORRECTO -> {
-                registraFalloDePin()
-                return@withLock IntentoDePin.Incorrecto
+            when (ClavePin.verifica(pin, hash, sal, sello)) {
+                ClavePin.Verificacion.INCORRECTO -> {
+                    registraFalloDePin()
+                    return@withLock IntentoDePin.Incorrecto
+                }
+
+                ClavePin.Verificacion.CORRECTO_SIN_SELLAR -> runCatching {
+                    // hash y sal no son nulos: con cualquiera de los dos nulo no se acierta.
+                    guardaHuella(ClavePin.huella(pin, sal!!, sello), sal)
+                }
+
+                ClavePin.Verificacion.CORRECTO -> Unit
             }
-            ClavePin.Verificacion.CORRECTO_SIN_SELLAR -> runCatching {
-                // hash y sal no son nulos: con cualquiera de los dos nulo no se acierta.
-                guardaHuella(ClavePin.huella(pin, sal!!, sello), sal)
-            }
-            ClavePin.Verificacion.CORRECTO -> Unit
+            registraAciertoDePin()
+            IntentoDePin.Correcto
         }
-        registraAciertoDePin()
-        IntentoDePin.Correcto
-    }
 
     /** La huella y la sal de un PIN nuevo, ya selladas, listas para guardar. */
     suspend fun huellaNueva(pin: String): Pair<String, String> {

@@ -221,10 +221,7 @@ val TUTORIALES: List<Tutorial> = listOf(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TutorialesPantalla(
-    alCerrar: () -> Unit,
-    alAbrirAcercaDe: (() -> Unit)? = null
-) {
+fun TutorialesPantalla(alCerrar: () -> Unit, alAbrirAcercaDe: (() -> Unit)? = null) {
     val colores = LocalColoresOllin.current
     var abierto by rememberSaveable { mutableStateOf<String?>(TUTORIALES.first().clave) }
 
@@ -278,11 +275,7 @@ fun TutorialesPantalla(
 }
 
 @Composable
-private fun TarjetaTutorial(
-    tutorial: Tutorial,
-    expandido: Boolean,
-    alTocar: () -> Unit
-) {
+private fun TarjetaTutorial(tutorial: Tutorial, expandido: Boolean, alTocar: () -> Unit) {
     val colores = LocalColoresOllin.current
 
     Card(

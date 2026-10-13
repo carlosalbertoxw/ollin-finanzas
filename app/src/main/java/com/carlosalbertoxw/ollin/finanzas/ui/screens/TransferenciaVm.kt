@@ -57,10 +57,8 @@ import java.time.ZoneOffset
  * reescribe entero, que es lo que permite reparar tambien las que quedaron a
  * medias.
  */
-class TransferenciaVm(
-    private val repo: FinanzasRepositorio,
-    private val movimientoId: Long?
-) : ViewModel() {
+class TransferenciaVm(private val repo: FinanzasRepositorio, private val movimientoId: Long?) :
+    ViewModel() {
 
     var fecha by mutableStateOf(LocalDate.now())
     var importeTexto by mutableStateOf("")
@@ -98,7 +96,10 @@ class TransferenciaVm(
 
     private suspend fun carga(id: Long) {
         val pata = repo.movimiento(id)
-        if (pata == null) { cargado = true; return }
+        if (pata == null) {
+            cargado = true
+            return
+        }
 
         grupo = pata.grupoTransferencia
         val patas = grupo?.let { repo.movimientosDeGrupo(it) }?.takeIf { it.isNotEmpty() }
@@ -125,9 +126,21 @@ class TransferenciaVm(
         val origen = origenId
         val destino = destinoId
         when {
-            centavos == null || centavos == 0L -> { error = "Escribe un importe valido"; return }
-            origen == null -> { error = "Elige la cuenta de origen"; return }
-            destino == null -> { error = "Elige la cuenta de destino"; return }
+            centavos == null || centavos == 0L -> {
+                error = "Escribe un importe valido"
+                return
+            }
+
+            origen == null -> {
+                error = "Elige la cuenta de origen"
+                return
+            }
+
+            destino == null -> {
+                error = "Elige la cuenta de destino"
+                return
+            }
+
             origen == destino -> {
                 error = "El origen y el destino no pueden ser la misma cuenta"
                 return

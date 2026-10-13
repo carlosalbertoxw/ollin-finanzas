@@ -92,12 +92,17 @@ fun TransferenciaPantalla(
         ) {
             Text(
                 when {
-                    vm.aMedias -> "Esta transferencia quedo a medias. Completa la cuenta que " +
-                        "falta y al guardar se rehacen sus dos renglones."
-                    vm.esEdicion -> "Se reescriben los dos renglones a la vez: la salida del " +
-                        "origen y la entrada al destino."
-                    else -> "Se generan los dos renglones automaticamente: la salida del origen " +
-                        "y la entrada al destino, ligados entre si."
+                    vm.aMedias ->
+                        "Esta transferencia quedo a medias. Completa la cuenta que " +
+                            "falta y al guardar se rehacen sus dos renglones."
+
+                    vm.esEdicion ->
+                        "Se reescriben los dos renglones a la vez: la salida del " +
+                            "origen y la entrada al destino."
+
+                    else ->
+                        "Se generan los dos renglones automaticamente: la salida del origen " +
+                            "y la entrada al destino, ligados entre si."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = if (vm.aMedias) colores.alerta else colores.textoTenue

@@ -19,10 +19,8 @@ class AvisoDeRespaldoTest {
     private val dia = 24L * 60 * 60 * 1000
     private val ancla = 1_000_000_000_000L
 
-    private fun ajustes(
-        recuerda: Boolean = true,
-        ultimo: Long = 0L
-    ) = Ajustes(recuerdaRespaldo = recuerda, ultimoRespaldo = ultimo, anclaDeRespaldo = ancla)
+    private fun ajustes(recuerda: Boolean = true, ultimo: Long = 0L) =
+        Ajustes(recuerdaRespaldo = recuerda, ultimoRespaldo = ultimo, anclaDeRespaldo = ancla)
 
     // ------------------------------------------------------ si toca enseñarlo
 

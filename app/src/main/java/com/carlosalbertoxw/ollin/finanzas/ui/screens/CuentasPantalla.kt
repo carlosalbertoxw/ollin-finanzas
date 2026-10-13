@@ -159,7 +159,10 @@ fun CuentasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
                     alFallar = { aviso = it }
                 )
             },
-            alEliminar = { vm.elimina(cuenta); editando = null },
+            alEliminar = {
+                vm.elimina(cuenta)
+                editando = null
+            },
             alCancelar = { editando = null }
         )
     }
