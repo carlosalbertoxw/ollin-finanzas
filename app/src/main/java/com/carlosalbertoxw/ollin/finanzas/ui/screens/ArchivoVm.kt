@@ -199,11 +199,11 @@ class ArchivoVm(
 
         is java.io.IOException ->
             "No se pudo leer o escribir el archivo. Revisa que haya " +
-                "espacio libre y que la ubicacion siga disponible."
+                "espacio libre y que la ubicación siga disponible."
 
         is OutOfMemoryError ->
-            "El libro es demasiado grande para la memoria del telefono. " +
-                "Exporta menos pestanas desde \"Solo datos\"."
+            "El libro es demasiado grande para la memoria del teléfono. " +
+                "Exporta menos pestañas desde \"Solo datos\"."
 
         else -> "No se pudo $accion. Intenta de nuevo."
     }

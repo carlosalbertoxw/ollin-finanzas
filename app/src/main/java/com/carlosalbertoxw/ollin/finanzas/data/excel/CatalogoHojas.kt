@@ -14,7 +14,7 @@ enum class EsquemaExportacion(val etiqueta: String, val descripcion: String) {
     ),
     COMPACTO(
         "Compacto",
-        "Solo las 8 columnas indispensables, sin categoria, nota ni compromiso."
+        "Solo las 8 columnas indispensables, sin categoría, nota ni compromiso."
     );
 
     val columnas: List<String>
@@ -66,7 +66,7 @@ enum class HojaExportable(
 ) {
     REGISTROS(
         "Registros",
-        "Todos los movimientos, uno por renglon. Es la fuente de las demas hojas.",
+        "Todos los movimientos, uno por renglón. Es la fuente de las demás hojas.",
         obligatoria = true
     ),
     BALANCE(
@@ -75,7 +75,7 @@ enum class HojaExportable(
     ),
     INGRESOS_EGRESOS(
         "Ingresos - Egresos",
-        "Categorias contra meses. Separa el consumo real de la compra de patrimonio."
+        "Categorías contra meses. Separa el consumo real de la compra de patrimonio."
     ),
     TRANSFERENCIAS(
         "Transferencias",
@@ -83,7 +83,7 @@ enum class HojaExportable(
     ),
     PRESUPUESTO(
         "Presupuesto",
-        "Meta contra realidad por categoria, con la desviacion del mes."
+        "Meta contra realidad por categoría, con la desviación del mes."
     ),
     COMPROMISOS(
         "Compromisos",
@@ -91,7 +91,7 @@ enum class HojaExportable(
     ),
     DICCIONARIOS(
         "Diccionarios",
-        "Catalogos de cuentas, categorias y tipos. Alimenta las listas desplegables de Registros."
+        "Catálogos de cuentas, categorías y tipos. Alimenta las listas desplegables de Registros."
     );
 
     companion object {

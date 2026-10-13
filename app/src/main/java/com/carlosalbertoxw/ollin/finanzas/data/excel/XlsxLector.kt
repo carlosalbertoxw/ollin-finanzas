@@ -94,7 +94,7 @@ object XlsxLector {
 
         if (!partes.containsKey("xl/workbook.xml")) {
             throw ArchivoInvalido(
-                "El archivo no parece un libro de Excel (.xlsx). Si es .xls antiguo, guardalo primero como .xlsx."
+                "El archivo no parece un libro de Excel (.xlsx). Si es .xls antiguo, guárdalo primero como .xlsx."
             )
         }
 
@@ -146,7 +146,7 @@ object XlsxLector {
             // La causa se conserva para el diagnostico, pero no viaja en el
             // texto: el mensaje crudo habla de rutas y clases internas.
             throw ArchivoInvalido(
-                "No se pudo abrir el archivo. Puede estar danado o protegido con contrasena.",
+                "No se pudo abrir el archivo. Puede estar dañado o protegido con contraseña.",
                 e
             )
         }
@@ -177,10 +177,10 @@ object XlsxLector {
     }
 
     private fun demasiadoGrande() =
-        ArchivoInvalido("El archivo es demasiado grande para procesarse en el telefono.")
+        ArchivoInvalido("El archivo es demasiado grande para procesarse en el teléfono.")
 
     private fun fueraDeLaHoja() = ArchivoInvalido(
-        "El archivo tiene celdas fuera de los limites de una hoja de calculo. " +
+        "El archivo tiene celdas fuera de los límites de una hoja de cálculo. " +
             "Vuelve a guardarlo como .xlsx desde tu hoja de calculo."
     )
 

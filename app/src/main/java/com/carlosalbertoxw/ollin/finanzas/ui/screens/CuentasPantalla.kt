@@ -122,7 +122,7 @@ fun CuentasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
                                     if (cuenta?.archivada == true) append("  ·  archivada")
                                     saldo.limiteCentavos?.let {
                                         val uso = kotlin.math.abs(saldo.saldoCentavos) * 100.0 / it
-                                        append("  ·  %.0f%% del limite".format(uso))
+                                        append("  ·  %.0f%% del límite".format(uso))
                                     }
                                 },
                                 style = MaterialTheme.typography.bodySmall,
@@ -252,7 +252,7 @@ private fun DialogoCuenta(
                     OutlinedTextField(
                         value = limite,
                         onValueChange = { limite = it },
-                        label = { Text("Limite de credito (opcional)") },
+                        label = { Text("Límite de crédito (opcional)") },
                         prefix = { Text("$") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true
@@ -262,10 +262,10 @@ private fun DialogoCuenta(
                 if (!medioEfectivo) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Solo electronica", style = MaterialTheme.typography.bodyMedium)
+                            Text("Solo electrónica", style = MaterialTheme.typography.bodyMedium)
                             Text(
-                                "Enciendelo para una tarjeta, por la que nunca pasa dinero en " +
-                                    "mano. Apagalo para un prestamo o una cuenta por la que si " +
+                                "Enciéndelo para una tarjeta, por la que nunca pasa dinero en " +
+                                    "mano. Apágalo para un préstamo o una cuenta por la que sí " +
                                     "recibes efectivo.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = LocalColoresOllin.current.textoTenue
@@ -295,7 +295,7 @@ private fun DialogoCuenta(
                     Column(Modifier.weight(1f)) {
                         Text("Cuenta a mi nombre", style = MaterialTheme.typography.bodyMedium)
                         Text(
-                            "Apagalo para el dinero que administras pero no es tuyo. Sigue " +
+                            "Apágalo para el dinero que administras pero no es tuyo. Sigue " +
                                 "registrando sus movimientos, pero deja de sumar a tu " +
                                 "patrimonio, tu liquidez y tu fondo de emergencia.",
                             style = MaterialTheme.typography.bodySmall,

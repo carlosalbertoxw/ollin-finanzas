@@ -192,7 +192,7 @@ fun TableroPantalla(
                             Icon(Icons.Filled.School, contentDescription = null)
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    "Empieza por aqui",
+                                    "Empieza por aquí",
                                     style = MaterialTheme.typography.titleSmall
                                 )
                                 Text(
@@ -282,7 +282,7 @@ fun TableroPantalla(
                     TarjetaValor(
                         etiqueta = "Tasa de ahorro",
                         valor = if (tasa == null) "Sin datos" else "%.0f%%".format(tasa * 100),
-                        nota = if (tasa == null) "Sin ingresos aun" else "sobre consumo real",
+                        nota = if (tasa == null) "Sin ingresos aún" else "sobre consumo real",
                         modifier = Modifier.weight(1f),
                         color = if (tasa == null) colores.textoTenue else colores.entrada
                     )
@@ -292,7 +292,7 @@ fun TableroPantalla(
                         etiqueta = "Fondo de emergencia",
                         valor = if (meses == null) "Sin datos" else "%.1f meses".format(meses),
                         nota = if (meses == null) {
-                            "Sin gastos aun"
+                            "Sin gastos aún"
                         } else {
                             Dinero.formateaCompacto(estado.gastoMensualPromedio) + "/mes"
                         },

@@ -30,6 +30,7 @@ object ClavePin {
     private const val ALGORITMO = "PBKDF2WithHmacSHA256"
 
     const val LARGO_MINIMO = 4
+    const val LARGO_MAXIMO = 12
 
     /**
      * Marca de las huellas selladas. Las que no la llevan son las de la 1.2.0 y

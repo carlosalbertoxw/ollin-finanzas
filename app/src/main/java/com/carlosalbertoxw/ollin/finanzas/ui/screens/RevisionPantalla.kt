@@ -95,8 +95,8 @@ fun RevisionPantalla(
 
             hallazgo == null -> EstadoVacio(
                 icono = Icons.Filled.CheckCircle,
-                titulo = "Ya quedo",
-                detalle = "No queda ningun movimiento con este problema.",
+                titulo = "Ya quedó",
+                detalle = "No queda ningún movimiento con este problema.",
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -149,7 +149,7 @@ private fun AsignadorCategoria(opciones: List<Categoria>, alElegir: (Long) -> Un
     if (opciones.isEmpty()) return
     var abierto by remember { mutableStateOf(false) }
     Box {
-        TextButton(onClick = { abierto = true }) { Text("Asignar categoria") }
+        TextButton(onClick = { abierto = true }) { Text("Asignar categoría") }
         DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
             opciones.forEach { categoria ->
                 DropdownMenuItem(

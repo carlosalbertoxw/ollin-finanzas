@@ -314,7 +314,7 @@ class CapturaVm(
         val activo = cuentaActivoId
         when {
             centavos == null || centavos == 0L -> {
-                error = "Escribe un importe valido"
+                error = "Escribe un importe válido"
                 return
             }
 
@@ -324,7 +324,7 @@ class CapturaVm(
             }
 
             descripcion.isBlank() -> {
-                error = "Ponle una descripcion"
+                error = "Ponle una descripción"
                 return
             }
 

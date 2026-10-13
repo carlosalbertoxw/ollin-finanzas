@@ -167,7 +167,7 @@ class ImportadorExcel(private val db: OllinDatabase) {
         } else {
             Diagnostico(
                 Severidad.ERROR,
-                "No encontre ninguna hoja con columnas de Fecha, Cantidad y Cuenta."
+                "No encontré ninguna hoja con columnas de Fecha, Cantidad y Cuenta."
             )
         }
         return copy(diagnosticos = diagnosticos + aviso)
@@ -221,7 +221,7 @@ class ImportadorExcel(private val db: OllinDatabase) {
                 omitidos = lectura.omitidos,
                 diagnosticos = diagnosticos + Diagnostico(
                     Severidad.ERROR,
-                    "No hubo ningun renglon aprovechable."
+                    "No hubo ningún renglón aprovechable."
                 )
             )
         }
@@ -237,14 +237,14 @@ class ImportadorExcel(private val db: OllinDatabase) {
             diagnosticos += Diagnostico(
                 Severidad.INFO,
                 "Recalcule la contraparte de ${insercion.contrapartesRecalculadas} movimientos: " +
-                    "el archivo los marcaba como si intervinera un tercero, pero son traspasos " +
+                    "el archivo los marcaba como si interviniera un tercero, pero son traspasos " +
                     "entre cuentas tuyas."
             )
         }
         if (categorias.sinCategoria > 0) {
             diagnosticos += Diagnostico(
                 Severidad.AVISO,
-                "${categorias.sinCategoria} movimientos quedaron sin categoria. " +
+                "${categorias.sinCategoria} movimientos quedaron sin categoría. " +
                     "Puedes asignarlas en lote desde la lista."
             )
         }
@@ -355,7 +355,7 @@ class ImportadorExcel(private val db: OllinDatabase) {
                 Severidad.AVISO,
                 "El tipo decia \"${fila.tipo.etiqueta}\" pero el importe es " +
                     "${if (real > 0) "positivo" else "negativo"}. " +
-                    "Se corrigio a \"${nuevo.etiqueta}\"; el importe no se toco.",
+                    "Se corrigio a \"${nuevo.etiqueta}\"; el importe no se tocó.",
                 fila.numeroFila
             )
             fila.copy(tipo = nuevo)
@@ -412,7 +412,7 @@ class ImportadorExcel(private val db: OllinDatabase) {
             diagnosticos += Diagnostico(
                 Severidad.AVISO,
                 "Quedaron $huerfanas patas de transferencia sin pareja. " +
-                    "Suelen ser movimientos que salen de una cuenta que no esta registrada."
+                    "Suelen ser movimientos que salen de una cuenta que no está registrada."
             )
         }
         return Emparejado(grupos, emparejadas, huerfanas)
@@ -667,9 +667,9 @@ class ImportadorExcel(private val db: OllinDatabase) {
         if (creadas.size > antes) {
             diagnosticos += Diagnostico(
                 Severidad.INFO,
-                "Cree ${creadas.size - antes} categorias que venian en la pestaña Diccionarios. " +
-                    "La hoja no guarda si una categoria es de patrimonio, asi que entraron como " +
-                    "gasto o ingreso segun su uso; revisalas si alguna era compra de patrimonio."
+                "Creé ${creadas.size - antes} categorías que venían en la pestaña Diccionarios. " +
+                    "La hoja no guarda si una categoría es de patrimonio, así que entraron como " +
+                    "gasto o ingreso según su uso; revísalas si alguna era compra de patrimonio."
             )
         }
     }
@@ -806,7 +806,7 @@ class ImportadorExcel(private val db: OllinDatabase) {
             diagnosticos += Diagnostico(
                 Severidad.INFO,
                 "Al reemplazar quite ${cuentasSobran.size} cuentas y " +
-                    "$categoriasEliminadas categorias que quedaron sin un solo movimiento y " +
+                    "$categoriasEliminadas categorías que quedaron sin un solo movimiento y " +
                     "que el libro no nombra" +
                     if (cuentasSobran.isEmpty()) {
                         "."
@@ -818,8 +818,8 @@ class ImportadorExcel(private val db: OllinDatabase) {
         if (loBorraTodo) {
             diagnosticos += Diagnostico(
                 Severidad.INFO,
-                "El libro no trae categorias, asi que las tuyas se quedaron como estaban: " +
-                    "borrarlas dejaria la captura sin donde clasificar."
+                "El libro no trae categorías, así que las tuyas se quedaron como estaban: " +
+                    "borrarlas dejaría la captura sin dónde clasificar."
             )
         }
 
@@ -887,8 +887,8 @@ class ImportadorExcel(private val db: OllinDatabase) {
         if (sinCategoria > 0) {
             diagnosticos += Diagnostico(
                 Severidad.AVISO,
-                "$sinCategoria metas de presupuesto apuntan a categorias que no existen en " +
-                    "Ollin Finanzas. Crea la categoria y vuelve a importar, o captura la meta a mano."
+                "$sinCategoria metas de presupuesto apuntan a categorías que no existen en " +
+                    "Ollin Finanzas. Crea la categoría y vuelve a importar, o captura la meta a mano."
             )
         }
         if (sinPeriodo > 0) {
@@ -981,8 +981,8 @@ class ImportadorExcel(private val db: OllinDatabase) {
         if (sinCategoria > 0) {
             diagnosticos += Diagnostico(
                 Severidad.AVISO,
-                "$sinCategoria compromisos nombran una categoria que no existe; quedaron sin " +
-                    "categoria. Crea la categoria y vuelve a importar, o asignala a mano."
+                "$sinCategoria compromisos nombran una categoría que no existe; quedaron sin " +
+                    "categoría. Crea la categoría y vuelve a importar, o asígnala a mano."
             )
         }
 

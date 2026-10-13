@@ -81,7 +81,7 @@ class AnaliticaVm(private val repo: FinanzasRepositorio) : ViewModel() {
         val agrupado = salidas.groupBy { detalle ->
             val categoria = detalle.movimiento.categoriaId?.let { porId[it] }
             val padre = categoria?.padreId?.let { porId[it] } ?: categoria
-            (padre?.nombre ?: "Sin categoria") to (padre?.tipo == TipoCategoria.PATRIMONIO)
+            (padre?.nombre ?: "Sin categoría") to (padre?.tipo == TipoCategoria.PATRIMONIO)
         }.mapValues { (_, lista) -> lista.sumOf { it.movimiento.importeCentavos } }
 
         // El porcentaje se mide contra el consumo real, no contra el total que

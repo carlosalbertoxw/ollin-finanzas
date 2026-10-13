@@ -281,10 +281,12 @@ class ControlBloqueoTest {
     }
 
     @Test
-    fun `la espera duplica a partir del quinto fallo y topa`() {
-        assertEquals(1_000L, ControlBloqueo.esperaMillis(5))
-        assertEquals(2_000L, ControlBloqueo.esperaMillis(6))
-        assertEquals(4_000L, ControlBloqueo.esperaMillis(7))
+    fun `la espera crece por escalones pasada la gracia y topa`() {
+        val primero = ControlBloqueo.FALLOS_DE_GRACIA + 1
+        assertEquals(5_000L, ControlBloqueo.esperaMillis(primero))
+        assertEquals(15_000L, ControlBloqueo.esperaMillis(primero + 1))
+        assertEquals(30_000L, ControlBloqueo.esperaMillis(primero + 2))
+        assertEquals(ControlBloqueo.ESPERA_MAXIMA_MILLIS, ControlBloqueo.esperaMillis(primero + 5))
         assertEquals(ControlBloqueo.ESPERA_MAXIMA_MILLIS, ControlBloqueo.esperaMillis(50))
         assertEquals(
             "No se desborda con un numero absurdo",
@@ -294,14 +296,21 @@ class ControlBloqueoTest {
     }
 
     @Test
-    fun `fallar cinco veces obliga a esperar y el reloj la va consumiendo`() = runTest {
+    fun `pasada la gracia hay que esperar y el reloj la va consumiendo`() = runTest {
         conPin()
         val bloqueo = control()
 
-        repeat(5) { bloqueo.registraFalloDePin() }
-        assertEquals(1, bloqueo.segundosDeEspera())
+        repeat(ControlBloqueo.FALLOS_DE_GRACIA + 1) { bloqueo.registraFalloDePin() }
+        assertEquals(5, bloqueo.segundosDeEspera())
 
-        ahora += 1_000
+        ahora += 4_500
+        assertEquals(
+            "Medio segundo pendiente se ensena como uno, no como cero",
+            1,
+            bloqueo.segundosDeEspera()
+        )
+
+        ahora += 500
         assertEquals(
             "Cumplida la espera, se puede volver a intentar",
             0,
@@ -464,7 +473,8 @@ class ControlBloqueoTest {
         val bloqueo = control()
         val (hash, sal) = bloqueo.huellaNueva("2468")
 
-        repeat(5) {
+        val fallos = ControlBloqueo.FALLOS_DE_GRACIA + 1
+        repeat(fallos) {
             assertEquals(
                 ControlBloqueo.IntentoDePin.Incorrecto,
                 bloqueo.intentaPin("0000", hash, sal)
@@ -473,11 +483,31 @@ class ControlBloqueoTest {
 
         val enEspera = bloqueo.intentaPin("2468", hash, sal)
         assertTrue("Salio $enEspera", enEspera is ControlBloqueo.IntentoDePin.EnEspera)
-        assertEquals("Esperar no cuenta como otro fallo", 5, fallosGuardados)
+        assertEquals("Esperar no cuenta como otro fallo", fallos, fallosGuardados)
 
-        ahora += ControlBloqueo.esperaMillis(5)
+        ahora += ControlBloqueo.esperaMillis(fallos)
         assertEquals(ControlBloqueo.IntentoDePin.Correcto, bloqueo.intentaPin("2468", hash, sal))
         assertEquals(0, fallosGuardados)
+    }
+
+    /**
+     * La huella se lee al intentar, no de lo que la pantalla tenga a mano: con
+     * una copia de antes de cambiar el PIN, el viejo seguiria abriendo.
+     */
+    @Test
+    fun `el PIN se compara con la huella guardada en ese momento`() = runTest {
+        val bloqueo = control()
+        val (vieja, salVieja) = bloqueo.huellaNueva("2468")
+        val (nueva, salNueva) = bloqueo.huellaNueva("1357")
+
+        preferencias.value =
+            Ajustes(modoBloqueo = ModoBloqueo.PIN, pinHash = vieja, pinSal = salVieja)
+        assertEquals(ControlBloqueo.IntentoDePin.Correcto, bloqueo.intentaPin("2468"))
+
+        preferencias.value =
+            Ajustes(modoBloqueo = ModoBloqueo.PIN, pinHash = nueva, pinSal = salNueva)
+        assertEquals(ControlBloqueo.IntentoDePin.Incorrecto, bloqueo.intentaPin("2468"))
+        assertEquals(ControlBloqueo.IntentoDePin.Correcto, bloqueo.intentaPin("1357"))
     }
 
     private companion object {

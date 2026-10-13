@@ -77,7 +77,7 @@ fun CategoriasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
                         tipo = TipoCategoria.GASTO,
                         orden = renglones.size
                     )
-                }) { Icon(Icons.Filled.Add, contentDescription = "Nueva categoria") }
+                }) { Icon(Icons.Filled.Add, contentDescription = "Nueva categoría") }
             }
         )
 
@@ -112,16 +112,16 @@ fun CategoriasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
             item {
                 Spacer(Modifier.height(24.dp))
                 Text(
-                    "Un rubro agrupa; sus hijas son las que capturas. La descripcion del " +
-                        "movimiento es el detalle, no la categoria: por eso el analisis puede " +
+                    "Un rubro agrupa; sus hijas son las que capturas. La descripción del " +
+                        "movimiento es el detalle, no la categoría: por eso el análisis puede " +
                         "sumar todo un rubro aunque cada gasto se llame distinto.",
                     style = MaterialTheme.typography.bodySmall,
                     color = colores.textoTenue
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "Al borrar una categoria con movimientos se archiva en vez de eliminarse: " +
-                        "asi el historial no se queda sin clasificar.",
+                    "Al borrar una categoría con movimientos se archiva en vez de eliminarse: " +
+                        "así el historial no se queda sin clasificar.",
                     style = MaterialTheme.typography.bodySmall,
                     color = colores.textoTenue
                 )
@@ -179,7 +179,7 @@ private fun RenglonCategoriaVista(renglon: RenglonCategoria, alTocar: () -> Unit
             Text(
                 buildString {
                     if (renglon.esRaiz) {
-                        append("${renglon.hijas} subcategorias")
+                        append("${renglon.hijas} subcategorías")
                     } else {
                         append("${renglon.movimientos} movimientos")
                     }
@@ -225,7 +225,7 @@ private fun DialogoCategoria(
 
     AlertDialog(
         onDismissRequest = alCancelar,
-        title = { Text(if (categoria.id == 0L) "Nueva categoria" else "Editar categoria") },
+        title = { Text(if (categoria.id == 0L) "Nueva categoría" else "Editar categoría") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(

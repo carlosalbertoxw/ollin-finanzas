@@ -127,7 +127,7 @@ class TransferenciaVm(private val repo: FinanzasRepositorio, private val movimie
         val destino = destinoId
         when {
             centavos == null || centavos == 0L -> {
-                error = "Escribe un importe valido"
+                error = "Escribe un importe válido"
                 return
             }
 

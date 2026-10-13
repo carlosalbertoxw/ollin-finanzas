@@ -149,7 +149,7 @@ class XlsxLectorSeguridadTest {
             libro(filas = """<row r="2000000000"><c r="A2000000000"><v>1</v></c></row>"""),
             "Una fila fuera de la hoja no debe leerse"
         )
-        assertTrue(e.message!!.contains("fuera de los limites"))
+        assertTrue(e.message!!.contains("fuera de los límites"))
     }
 
     /** XFD es la ultima columna de Excel; una mas alla ya no es una hoja real. */
@@ -159,7 +159,7 @@ class XlsxLectorSeguridadTest {
             libro(filas = """<row r="1"><c r="XFE1"><v>1</v></c></row>"""),
             "Una columna fuera de la hoja no debe leerse"
         )
-        assertTrue(e.message!!.contains("fuera de los limites"))
+        assertTrue(e.message!!.contains("fuera de los límites"))
     }
 
     /** Con letras de mas, el indice desbordaba el Int y podia salir negativo. */

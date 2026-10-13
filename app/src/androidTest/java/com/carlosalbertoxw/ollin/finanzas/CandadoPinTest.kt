@@ -153,15 +153,16 @@ class CandadoPinTest {
         val (control, ajustes) = preparaControl(fallos = 6)
         muestra { BloqueoPantalla(compose.activity, ajustes, control) }
 
-        teclea(PIN)
+        // Mientras corre la espera el campo esta apagado y el boton cuenta atras.
         aparece("Demasiados intentos")
-        compose.onNodeWithText("Entrar").assertIsNotEnabled()
+        compose.onNode(hasText("Espera", substring = true)).assertIsNotEnabled()
 
         ahora += ControlBloqueo.ESPERA_MAXIMA_MILLIS
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText("Demasiados intentos", substring = true)
                 .fetchSemanticsNodes().isEmpty()
         }
+        teclea(PIN)
         compose.onNodeWithText("Entrar").assertIsEnabled().performClick()
 
         compose.waitUntil(timeoutMillis = 10_000) { !control.bloqueado.value }
@@ -174,26 +175,25 @@ class CandadoPinTest {
      */
     @Test
     fun elDialogoDeAjustesRespetaLaMismaEspera() {
-        val (control, ajustes) = preparaControl(fallos = 6)
+        val (control, _) = preparaControl(fallos = 6)
         var confirmado = false
         muestra {
             DialogoPinActual(
-                ajustes = ajustes,
                 bloqueo = control,
                 alConfirmar = { confirmado = true },
                 alCancelar = {}
             )
         }
 
-        teclea(PIN)
         aparece("Demasiados intentos")
-        compose.onNode(hasText("Confirmar")).assertIsNotEnabled()
+        compose.onNode(hasText("Espera", substring = true)).assertIsNotEnabled()
 
         ahora += ControlBloqueo.ESPERA_MAXIMA_MILLIS
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText("Demasiados intentos", substring = true)
                 .fetchSemanticsNodes().isEmpty()
         }
+        teclea(PIN)
         compose.onNode(hasText("Confirmar")).assertIsEnabled().performClick()
 
         compose.waitUntil(timeoutMillis = 10_000) { confirmado }
@@ -201,10 +201,9 @@ class CandadoPinTest {
 
     @Test
     fun elDialogoDeAjustesCuentaLosFallos() {
-        val (control, ajustes) = preparaControl()
+        val (control, _) = preparaControl()
         muestra {
             DialogoPinActual(
-                ajustes = ajustes,
                 bloqueo = control,
                 alConfirmar = {},
                 alCancelar = {}

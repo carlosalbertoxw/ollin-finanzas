@@ -22,7 +22,7 @@ enum class ModoBloqueo(val etiqueta: String) {
     NINGUNO("Sin bloqueo"),
 
     /** El patron, PIN, contrasena o huella del propio telefono. */
-    SISTEMA("Del telefono"),
+    SISTEMA("Del teléfono"),
 
     /** Un PIN exclusivo de Ollin Finanzas, distinto al del telefono. */
     PIN("PIN propio")
@@ -260,6 +260,7 @@ class AjustesRepositorio(
             it[Claves.BLOQUEO] = ModoBloqueo.SISTEMA.name
             it.remove(Claves.PIN_HASH)
             it.remove(Claves.PIN_SAL)
+            it.remove(Claves.PIN_FALLOS)
         }
     }
 
@@ -268,6 +269,9 @@ class AjustesRepositorio(
             it[Claves.BLOQUEO] = ModoBloqueo.PIN.name
             it[Claves.PIN_HASH] = hash
             it[Claves.PIN_SAL] = sal
+            // Un PIN nuevo estrena contador: la espera que dejo el anterior no
+            // tiene por que heredarla quien acaba de demostrar que es el dueno.
+            it.remove(Claves.PIN_FALLOS)
         }
     }
 
@@ -288,6 +292,7 @@ class AjustesRepositorio(
             it.remove(Claves.BLOQUEO)
             it.remove(Claves.PIN_HASH)
             it.remove(Claves.PIN_SAL)
+            it.remove(Claves.PIN_FALLOS)
         }
     }
 

@@ -133,7 +133,7 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
                 TextButton(onClick = {
                     vm.copiaDelMesAnterior { n ->
                         aviso = if (n == 0) {
-                            "El mes anterior no tenia metas capturadas."
+                            "El mes anterior no tenía metas capturadas."
                         } else {
                             "Se copiaron $n metas de ${mes.minusMonths(1)}."
                         }
@@ -147,11 +147,11 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
             item {
                 EstadoVacio(
                     icono = Icons.Filled.AccountBalanceWallet,
-                    titulo = "Sin categorias de gasto",
+                    titulo = "Sin categorías de gasto",
                     detalle = "Crea las tuyas para empezar a presupuestar.",
                     modifier = Modifier.fillMaxWidth(),
                     accion = {
-                        TextButton(onClick = alAbrirCategorias) { Text("Administrar categorias") }
+                        TextButton(onClick = alAbrirCategorias) { Text("Administrar categorías") }
                     }
                 )
             }
@@ -221,7 +221,7 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
                         singleLine = true
                     )
                     Text(
-                        "Deja el campo vacio para quitar la meta.",
+                        "Deja el campo vacío para quitar la meta.",
                         style = MaterialTheme.typography.bodySmall,
                         color = colores.textoTenue
                     )

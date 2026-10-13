@@ -19,7 +19,7 @@ enum class Destino(val ruta: String, val titulo: String, val icono: ImageVector)
     TABLERO("tablero", "Tablero", Icons.Filled.PieChart),
     MOVIMIENTOS("movimientos", "Movimientos", Icons.AutoMirrored.Filled.ReceiptLong),
     PRESUPUESTO("presupuesto", "Presupuesto", Icons.Filled.AccountBalanceWallet),
-    ANALITICA("analitica", "Analitica", Icons.Filled.Insights)
+    ANALITICA("analitica", "Analítica", Icons.Filled.Insights)
 }
 
 object Rutas {

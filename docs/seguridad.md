@@ -14,7 +14,7 @@ Lo que se protege es el libro: importes, cuentas, a quién se paga y cuándo. Y,
 | El teléfono en otras manos, con root o por adb | Alguien con tiempo y herramientas | Base cifrada con una llave del Keystore; huella del PIN sellada con otra; nada de eso entra al respaldo | Con root se puede *usar* el Keystore aunque no copiarlo: dentro de un teléfono comprometido no hay defensa desde la app |
 | El `.xlsx` que se exporta | Quien llegue a donde lo guardaste: la nube, Descargas, un correo | Nada desde la app: es el libro en claro, para que se abra en cualquier hoja de cálculo sin Ollin. La pantalla de exportar lo dice antes de guardarlo | Quien tenga el archivo lee el libro entero. Es el precio de un respaldo que no depende de la app ni del Keystore |
 | Un `.xlsx` ajeno que se importa | Quien te mande un «respaldo» | Sin `DOCTYPE` (bomba de entidades); tope de bytes por parte y de partes (zip bomb); tope de filas, columnas y celdas; la importación entera va en una transacción | Lo que el archivo diga se importa: si alguien te convence de importar datos falsos, quedan en tu libro |
-| El aviso de versión nueva (`version.json`) | Quien controle la red o el dominio | Solo `https`; un salto como mucho, y solo hacia el sitio; el enlace solo puede ir a las releases de este repositorio o al sitio; la app nunca descarga ni instala | Quien tome la cuenta de GitHub controla las releases y el sitio a la vez; ver la fila siguiente |
+| El aviso de versión nueva (`version.json`) | Quien controle la red o el dominio | Solo `https`; un salto como mucho, y solo hacia el sitio; el enlace solo puede ir a una descarga de las releases de este repositorio; la app nunca descarga ni instala | Quien tome la cuenta de GitHub controla las releases y el sitio a la vez; ver la fila siguiente |
 | La cadena de publicación | Quien tome la cuenta de GitHub o una acción de terceros | Acciones fijadas por SHA; los secretos de firma van solo en el environment `release`, limitado a tags `v*` (ver [publicación](publicacion.md#los-secretos)); la huella del certificado se comprueba contra el README antes de publicar | La cuenta de GitHub (2FA) y el `.jks` con sus contraseñas son la raíz de todo: con ellos se publica una actualización que Android acepta |
 | Las dependencias | Un mantenedor comprometido | Pocas y justificadas; Dependabot; CodeQL; `npm audit` en CI; versiones mínimas forzadas en el build; SBOM de cada release | Lo que llegue firmado por un mantenedor legítimo se compila |
 
@@ -86,9 +86,11 @@ Las de la 1.2.0 y anteriores son PBKDF2 a secas. Siguen abriendo, y en cuanto su
 
 PBKDF2 encarece cada intento, pero por sí solo no impide que alguien con el teléfono en la mano siga probando. [`ControlBloqueo`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/seguridad/ControlBloqueo.kt) lleva la cuenta de fallos seguidos, y **todo PIN que se teclea en la app pasa por su `intentaPin`**: el de la pantalla de bloqueo y también el que pide *Ajustes* antes de cambiarlo o quitarlo. Hasta la 1.2.0 ese segundo diálogo lo comprobaba por su cuenta y sin espera, así que quien encontrara la app abierta podía probar los diez mil ahí:
 
-- Los primeros cuatro salen gratis: teclear mal el PIN es normal.
-- A partir del quinto la espera **duplica** —1 s, 2 s, 4 s…— hasta un tope de 5 minutos. Más allá, castigar más solo estorbaría al dueño.
-- Acertar limpia la cuenta: el freno es contra quien adivina, no contra ti.
+- Se perdonan **3 fallos seguidos**: teclear mal el PIN es normal.
+- A partir del cuarto, la espera escala 5 s → 15 → 30 → 60 → 120 → 300 y se queda ahí. Más allá de cinco minutos, castigar más solo estorbaría al dueño. Es la misma escala que en Ollin Actividades.
+- Acertar limpia la cuenta: el freno es contra quien adivina, no contra ti. Poner un PIN nuevo, pasar al bloqueo del sistema o quitar el candado también la estrenan.
+- La huella se lee de las preferencias en el momento del intento, no de lo que la pantalla tenga a mano: con una copia de antes de cambiar el PIN, el anterior seguiría abriendo.
+- La pantalla y el diálogo de *Ajustes* enseñan la cuenta atrás en el botón y apagan el campo mientras corre; el número sale redondeado hacia arriba, así que nunca dice «0 s» con el botón todavía apagado.
 
 **El contador vive en DataStore, no en memoria.** Si viviera en el proceso, cerrar la app de un manotazo lo reiniciaría y probar diez mil PIN volvería a ser gratis.
 

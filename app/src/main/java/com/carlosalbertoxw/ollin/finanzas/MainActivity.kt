@@ -25,7 +25,6 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
 import com.carlosalbertoxw.ollin.finanzas.ui.OllinRaiz
-import com.carlosalbertoxw.ollin.finanzas.ui.PideAvisos
 import com.carlosalbertoxw.ollin.finanzas.ui.nav.Rutas
 import com.carlosalbertoxw.ollin.finanzas.ui.screens.BloqueoPantalla
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.TemaOllin
@@ -130,12 +129,9 @@ class MainActivity : FragmentActivity() {
                     // proceso, antes de esta pantalla.
                     !baseAbierta -> Telon()
 
-                    else -> {
-                        // Aqui y no en onCreate: el permiso se pide con la app
-                        // ya abierta, no sobre la pantalla del candado.
-                        PideAvisos()
-                        OllinRaiz(contenedor, rutaInicial)
-                    }
+                    // El permiso de avisos no se pide aqui: se pide en contexto,
+                    // al guardar algo que va a avisar. Ver ui/PermisoAvisos.kt.
+                    else -> OllinRaiz(contenedor, rutaInicial)
                 }
             }
         }
@@ -176,7 +172,7 @@ private fun ArranqueFallido(fallo: Throwable) {
                 textAlign = TextAlign.Center
             )
             Text(
-                "La base de datos no se pudo abrir, asi que la app se detuvo antes de " +
+                "La base de datos no se pudo abrir, así que la app se detuvo antes de " +
                     "tocar nada. Tus datos siguen donde estaban: no se ha borrado ni " +
                     "modificado nada.",
                 Modifier.padding(top = 16.dp),
@@ -184,10 +180,10 @@ private fun ArranqueFallido(fallo: Throwable) {
                 textAlign = TextAlign.Center
             )
             Text(
-                "Si acabas de instalar una version encima de otra, lo mas probable es " +
+                "Si acabas de instalar una versión encima de otra, lo más probable es " +
                     "que vengan de compilaciones distintas. Reinstalar desde el sitio " +
-                    "suele resolverlo; desinstalar borra el libro, asi que exporta " +
-                    "antes a Excel si puedes abrir la version anterior.",
+                    "suele resolverlo; desinstalar borra el libro, así que exporta " +
+                    "antes a Excel si puedes abrir la versión anterior.",
                 Modifier.padding(top = 12.dp),
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center

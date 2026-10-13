@@ -297,7 +297,7 @@ class ExportadorExcel(
         )
         filas += fila(
             Celda.Texto(
-                "Solo cuenta la liquidez; el patrimonio no liquido no paga la despensa.",
+                "Solo cuenta la liquidez; el patrimonio no líquido no paga la despensa.",
                 Estilo.TENUE
             )
         )
@@ -317,9 +317,9 @@ class ExportadorExcel(
         filas += fila(
             Celda.Texto(
                 if (esquema == EsquemaExportacion.EXTENDIDO) {
-                    "Agrupado por categoria. Las compras de patrimonio van aparte: no son gasto."
+                    "Agrupado por categoría. Las compras de patrimonio van aparte: no son gasto."
                 } else {
-                    "Agrupado por descripcion: el modo compacto no exporta categoria."
+                    "Agrupado por descripción: el modo compacto no exporta categoría."
                 },
                 Estilo.TENUE
             )
@@ -532,10 +532,10 @@ class ExportadorExcel(
         filas += fila()
 
         if (datos.presupuestos.isEmpty()) {
-            filas += fila(Celda.Texto("Todavia no hay metas capturadas.", Estilo.TENUE))
+            filas += fila(Celda.Texto("Todavía no hay metas capturadas.", Estilo.TENUE))
             filas += fila(
                 Celda.Texto(
-                    "Definelas en Ollin Finanzas, pestaña Presupuesto, y vuelve a exportar.",
+                    "Defínelas en Ollin Finanzas, pestaña Presupuesto, y vuelve a exportar.",
                     Estilo.TENUE
                 )
             )
@@ -692,7 +692,7 @@ class ExportadorExcel(
         val filas = mutableListOf<List<Celda>>()
         filas += fila(Celda.Texto("Compromisos por venir", Estilo.TITULO))
         filas += fila(
-            Celda.Texto("Lo que ya esta comprometido y todavia no se ha pagado.", Estilo.TENUE)
+            Celda.Texto("Lo que ya está comprometido y todavía no se ha pagado.", Estilo.TENUE)
         )
         filas += fila()
 

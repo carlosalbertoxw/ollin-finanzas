@@ -437,7 +437,7 @@ class ImportadorHojasTest : BaseEnMemoria() {
         assertEquals(0, categoriaDao.todas().count { it.nombre == "Seguros" })
         assertTrue(
             resultado.diagnosticos.any {
-                it.severidad == Severidad.AVISO && it.mensaje.contains("categoria que no existe")
+                it.severidad == Severidad.AVISO && it.mensaje.contains("categoría que no existe")
             }
         )
     }

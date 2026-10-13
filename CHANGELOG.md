@@ -27,6 +27,9 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 - **Un selector de archivos que no llega a abrirse ya no deja la app abierta al salir.** Si el teléfono no tenía con qué elegir el `.xlsx`, el minuto de gracia del selector se quedaba guardado y se lo llevaba la siguiente salida de verdad, la de pulsar Inicio. Ahora se retira en cuanto el selector falla, y además caduca si la app no sale al fondo en unos segundos.
 - **La consulta de versión nueva ya no dice qué teléfono tienes.** Sin un nombre propio, Android la mandaba con el suyo, que incluye el modelo del teléfono, la versión de Android y la compilación. Ahora solo dice «OllinFinanzas». El aviso de privacidad dice además quién la recibe: GitHub Pages, que ve la IP como con cualquier página web.
 - **Un `.xlsx` manipulado tampoco puede agotar la memoria con números de fila.** Una fila marcada como la dos mil millones, o una celda más allá de la última columna de Excel, son unos pocos bytes que obligaban a rellenar millones de celdas vacías. Ahora se rechazan, y el libro entero tiene un tope de celdas.
+- **El aviso de versión nueva ya no manda al sitio cuando falta la descarga.** Si el `version.json` no traía un enlace válido a las releases, el botón llevaba al sitio, que vive en el dominio propio: quien se quedara con el dominio podía mandar ahí a todas las instalaciones. Ahora, sin una descarga de las releases de este repositorio, no hay aviso. Es la misma regla que en Ollin Actividades.
+- **El PIN se compara con la huella guardada en ese momento.** La pantalla del candado y el diálogo de *Ajustes* comprobaban contra la copia de las preferencias que tenían a mano; con una de antes de cambiar el PIN, el anterior podía seguir abriendo.
+- **Cambiar el PIN o el modo de bloqueo estrena la cuenta de fallos.** Quien acaba de demostrar que es el dueño ya no hereda la espera que dejó el PIN anterior.
 
 ### Añadido
 
@@ -45,6 +48,11 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 - **La salud de los datos se revisa unas nueve veces más rápido en libros grandes.** Buscar descripciones casi idénticas comparaba cada una contra todas las demás con la tabla completa de distancias; ahora se detiene en cuanto dos textos ya se alejan más de lo que importa, con el mismo resultado. Se nota al abrir el tablero con miles de descripciones distintas.
 - Los flujos de CI ya no dejan el token de GitHub guardado en el disco del runner mientras compilan.
 - CI mide la cobertura de las pruebas, y hay una prueba de rendimiento, que se corre a mano, con un libro de cincuenta mil movimientos.
+- **El permiso de notificaciones se pide cuando hace falta, no al abrir la app.** Se pide al guardar un compromiso o al encender el recordatorio de respaldo, y *Ajustes* avisa si las notificaciones están apagadas, con un botón para permitirlas. Así lo hace también Ollin Actividades.
+- **La espera tras fallar el PIN es la misma que en Ollin Actividades.** Tres fallos de gracia y luego 5 s, 15 s, 30 s, 1 min, 2 min y 5 min. La cuenta atrás sale en el botón y el campo se apaga mientras corre; ya no dice «0 s» con el botón todavía apagado.
+- **Los textos de la app llevan acentos.** Mensajes, avisos, tutoriales y pantallas se escribían sin tildes. Los encabezados y los nombres de hoja del `.xlsx` no cambian, así que los libros ya exportados se siguen importando igual.
+- **La pantalla del candado dice qué app está bloqueada** y los mensajes de error usan el rojo de error del tema, igual que en Ollin Actividades.
+- El formato del código lo vigila Spotless con las reglas completas de ktlint, como en Ollin Actividades; la prueba de actualizar sobre la versión anterior instala el APK de **release**, como el que se descarga; el despliegue del sitio se niega a publicar un `version.json` que la app descartaría, y los PR traen una plantilla con lo que hay que comprobar.
 
 ## [1.2.0] - 2026-10-03
 

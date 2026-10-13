@@ -158,6 +158,18 @@ object Recordatorios {
     const val ID_VERSION = 3001
 
     /**
+     * Cierto si el sistema deja que Ollin avise: el permiso de Android 13 y las
+     * notificaciones de la app encendidas en los ajustes del telefono. Con
+     * cualquiera de las dos en contra, el aviso se descarta en silencio.
+     */
+    fun sePuedeAvisar(contexto: Context): Boolean {
+        val permitido = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(contexto, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        return permitido && NotificationManagerCompat.from(contexto).areNotificationsEnabled()
+    }
+
+    /**
      * @param ruta a que pantalla llevar al tocarlo. Un recordatorio de respaldo
      *   que abre el tablero deja el trabajo a medias: quien lo toca ya decidio
      *   exportar.
@@ -227,7 +239,7 @@ object Recordatorios {
                 "Abre Ollin Finanzas para verlo."
         }
         val texto = formateaFecha(fecha)
-        val cuando = if (vencido) "vencio el $texto" else "el $texto"
+        val cuando = if (vencido) "venció el $texto" else "el $texto"
         return compromiso.nombre to "${Dinero.formatea(compromiso.montoCentavos)} $cuando"
     }
 

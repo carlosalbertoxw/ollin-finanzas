@@ -114,7 +114,7 @@ class CalidadVm(private val revisaCalidad: RevisaCalidad, private val reparaDato
                 n > 0 -> "Se corrigieron $n movimientos."
 
                 hallazgo.idsMovimiento.isNotEmpty() ->
-                    "Ninguno se podia corregir solo. Abrelos uno por uno para resolverlos a mano."
+                    "Ninguno se podía corregir solo. Ábrelos uno por uno para resolverlos a mano."
 
                 else -> "No hubo nada que corregir."
             }

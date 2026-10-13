@@ -84,7 +84,7 @@ class CuentasVm(private val repo: FinanzasRepositorio) : ViewModel() {
             runCatching { repo.guardaCuenta(cuenta) }
                 .onSuccess { alLograr() }
                 .onFailure {
-                    alFallar("No se pudo guardar la cuenta: revisa que el nombre no este repetido.")
+                    alFallar("No se pudo guardar la cuenta: revisa que el nombre no esté repetido.")
                 }
         }
     }

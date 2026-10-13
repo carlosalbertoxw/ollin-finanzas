@@ -87,7 +87,7 @@ fun MovimientosPantalla(
                 value = filtro.texto,
                 onValueChange = { texto -> vm.actualiza { it.copy(texto = texto) } },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Buscar descripcion o nota") },
+                placeholder = { Text("Buscar descripción o nota") },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 singleLine = true
             )
@@ -140,7 +140,7 @@ fun MovimientosPantalla(
         if (movimientos.isEmpty()) {
             EstadoVacio(
                 icono = Icons.AutoMirrored.Filled.ReceiptLong,
-                titulo = "Nada por aqui",
+                titulo = "Nada por aquí",
                 detalle = "Ajusta el filtro, captura un movimiento o importa tu Excel desde " +
                     "Ajustes > Importar y exportar.",
                 modifier = Modifier.fillMaxWidth()
@@ -183,7 +183,7 @@ fun MovimientosPantalla(
                         onClick = vm::cargaMas,
                         modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
                     ) {
-                        Text("Ver mas (${totalDelFiltro - movimientos.size} restantes)")
+                        Text("Ver más (${totalDelFiltro - movimientos.size} restantes)")
                     }
                 }
             }

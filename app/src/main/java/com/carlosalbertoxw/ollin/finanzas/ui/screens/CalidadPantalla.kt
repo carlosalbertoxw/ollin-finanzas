@@ -100,7 +100,7 @@ fun CalidadPantalla(
                 titulo = "Todo cuadra",
                 // El aviso manda cuando lo hay: si acabas de corregir el ultimo
                 // hallazgo, lo que quieres leer es que se corrigio.
-                detalle = aviso ?: "No encontre contradicciones entre tipos e importes, " +
+                detalle = aviso ?: "No encontré contradicciones entre tipos e importes, " +
                     "transferencias a medias ni movimientos sin clasificar.",
                 modifier = Modifier.fillMaxSize()
             )
@@ -162,7 +162,7 @@ fun CalidadPantalla(
                                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     if (hallazgo.reparable) {
                                         TextButton(onClick = { vm.repara(hallazgo) }) {
-                                            Text("Corregir automaticamente")
+                                            Text("Corregir automáticamente")
                                         }
                                     }
                                     if (hallazgo.idsMovimiento.isNotEmpty()) {

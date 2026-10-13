@@ -85,7 +85,7 @@ class CategoriasVm(private val repo: FinanzasRepositorio) : ViewModel() {
             // El indice unico (nombre, padreId) rebota los duplicados. Vale mas
             // explicarlo que dejar que la excepcion se lleve la pantalla.
             runCatching { repo.guardaCategoria(categoria) }
-                .onFailure { alFallar("Ya existe una categoria con ese nombre en el mismo nivel.") }
+                .onFailure { alFallar("Ya existe una categoría con ese nombre en el mismo nivel.") }
         }
     }
 

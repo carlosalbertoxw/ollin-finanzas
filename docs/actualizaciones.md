@@ -77,9 +77,9 @@ Lo publica el sitio en `https://carlosalbertoxw.com/ollin-finanzas/version.json`
 | Campo | Obligatorio | Qué pasa si falta |
 |---|---|---|
 | `version` | Sí | El archivo entero se descarta |
-| `apk` | Sí, o `sitio` | Se usa `sitio`; sin ninguno de los dos, se descarta |
+| `apk` | Sí | Sin un `apk` válido el archivo se descarta. `sitio` no lo sustituye (ver abajo) |
 | `notas` | No | La tarjeta enseña solo el número de versión |
-| `publicada`, `tamanoBytes`, `sha256`, `release` | No | Solo los usa la página web |
+| `sitio`, `publicada`, `tamanoBytes`, `sha256`, `release` | No | Solo los usa la página web |
 
 **Los nombres de los campos no se renombran, se agregan.** Los lee `ComprobadorActualizaciones.lee()`, y cambiar uno rompe el aviso de todas las versiones que ya están instaladas, que por definición no se pueden actualizar para arreglarlo.
 
@@ -91,10 +91,10 @@ Por eso [`DestinosPermitidos`](../app/src/main/java/com/carlosalbertoxw/ollin/fi
 
 | Campo | Destino |
 |---|---|
-| `apk` | `https://github.com/carlosalbertoxw/ollin-finanzas/releases/…` |
-| `sitio` y las redirecciones | `https://carlosalbertoxw.github.io/ollin-finanzas/…` o `https://carlosalbertoxw.com/ollin-finanzas/…` |
+| `apk` | `https://github.com/carlosalbertoxw/ollin-finanzas/releases/download/…` |
+| Las redirecciones | `https://carlosalbertoxw.github.io/ollin-finanzas/…` o `https://carlosalbertoxw.com/ollin-finanzas/…` |
 
-Se compara la dirección desarmada —esquema, host exacto, sin usuario ni puerto, sin consulta ni fragmento, ruta bajo el prefijo y hecha solo de letras, cifras, `.`, `_`, `-` y `/`— y no el texto: un `startsWith` dejaría pasar un `../../` o un `%2e%2e` que el navegador resuelve hacia otro repositorio de GitHub. Si `apk` no cabe, se cae a `sitio`; si tampoco, el archivo se descarta entero. Lo que guardó una versión anterior, que aceptaba cualquier `https`, pasa por la misma lista antes de enseñarse.
+Se compara la dirección desarmada —esquema, host exacto, sin usuario ni puerto, sin consulta ni fragmento, ruta bajo el prefijo y hecha solo de letras, cifras, `.`, `_`, `-` y `/`— y no el texto: un `startsWith` dejaría pasar un `../../` o un `%2e%2e` que el navegador resuelve hacia otro repositorio de GitHub. Si `apk` no cabe, el archivo se descarta entero: `sitio` dejó de servir de respaldo porque vive en el dominio propio, que es justo lo que se quiere dejar fuera. Lo que guardó una versión anterior, que aceptaba cualquier `https` o el sitio, pasa por la misma regla antes de enseñarse. Es la misma regla que en Ollin Actividades.
 
 **Mudar el sitio o las releases exige una versión nueva antes de la mudanza**, con el destino nuevo en la lista: las instalaciones que no la tengan dejarán de ver el aviso. La propiedad `ollin.urlActualizaciones` sigue cambiando a dónde se pregunta, pero no a dónde puede mandar la respuesta.
 
