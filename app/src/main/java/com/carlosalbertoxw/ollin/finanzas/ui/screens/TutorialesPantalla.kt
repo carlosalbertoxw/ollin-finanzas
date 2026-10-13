@@ -136,9 +136,10 @@ val TUTORIALES: List<Tutorial> = listOf(
         pasos = listOf(
             "Entra a la pestaña Presupuesto y pon un monto meta por categoría.",
             "La barra se pone ámbar cuando te acercas y roja cuando te pasas.",
-            "En la pestaña Analítica ves la tendencia mensual y en que se te fue el dinero."
+            "En la pestaña Analítica ves la tendencia mensual y en qué se te fue el dinero."
         ),
-        truco = "El tablero calcula tu fondo de emergencia con el gasto promedio, sin contar " +
+        truco =
+        "El tablero calcula tu colchón (fondo de emergencia) con el gasto promedio, sin contar " +
             "el mes en curso: un mes a medias jalaría el promedio hacia abajo."
     ),
     Tutorial(

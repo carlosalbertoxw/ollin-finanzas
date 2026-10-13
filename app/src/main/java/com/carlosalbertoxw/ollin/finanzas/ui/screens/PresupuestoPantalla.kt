@@ -54,6 +54,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.math.abs
 
 @Composable
@@ -88,7 +90,10 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
                 IconButton(onClick = { vm.cambiaMes(-1) }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Mes anterior")
                 }
-                Text(mes.toString(), style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "${nombreDelMes(mes).replaceFirstChar { it.uppercase() }} ${mes.year}",
+                    style = MaterialTheme.typography.titleLarge
+                )
                 IconButton(onClick = { vm.cambiaMes(1) }) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowForward,
@@ -135,11 +140,16 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
                         aviso = if (n == 0) {
                             "El mes anterior no tenía metas capturadas."
                         } else {
-                            "Se copiaron $n metas de ${mes.minusMonths(1)}."
+                            val deMes = nombreDelMes(mes.minusMonths(1))
+                            if (n == 1) {
+                                "Se copió 1 meta de $deMes."
+                            } else {
+                                "Se copiaron $n metas de $deMes."
+                            }
                         }
                     }
                 }) { Text("Copiar metas del mes anterior") }
-                TextButton(onClick = alAbrirCategorias) { Text("Categorias") }
+                TextButton(onClick = alAbrirCategorias) { Text("Categorías") }
             }
         }
 
@@ -247,3 +257,7 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
         )
     }
 }
+
+/** "septiembre": el mes como se dice, no como lo imprime [YearMonth] ("2026-09"). */
+private fun nombreDelMes(mes: YearMonth): String =
+    mes.format(DateTimeFormatter.ofPattern("MMMM", Locale("es", "MX")))

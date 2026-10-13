@@ -42,6 +42,10 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ### Cambiado
 
+- **Las fechas de la captura se leen como fecha.** Movimiento, transferencia y compromiso dicen «Martes 13 de octubre» en vez de «2026-10-13», igual que Ollin Actividades. El año solo aparece cuando no es este.
+- **El tablero dice «Colchón».** «Fondo de emergencia» no cabía en la tarjeta y se cortaba; el tutorial explica que es lo mismo.
+- **Los textos llevan sus acentos.** *Categoría*, *Descripción*, «Qué hace» y otros; los reintentos dicen «Inténtalo de nuevo», como en Ollin Actividades.
+- **Las cuentas y categorías de una instalación nueva llevan acento:** Inversión, Créditos, Transporte público, Teléfono, Educación y las demás. Las que ya tienes no cambian, y un respaldo viejo las reconoce igual.
 - El código Kotlin pasa por ktlint en cada cambio, sin excepciones heredadas, y las dependencias del sitio por `npm audit`.
 - Cada biblioteca que descarga el build se compara contra su huella registrada, y CI rechaza cualquier dependencia con una licencia que no admita la del proyecto.
 - Las migraciones de la base se prueban en un emulador antes de cada publicación, y el análisis de seguridad cubre también el sitio y los flujos de CI.
@@ -58,6 +62,10 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ### Corregido
 
+- **Presupuesto dice el mes con su nombre.** El encabezado decía «2026-10» y ahora «Octubre 2026», y copiar las metas avisa «Se copiaron 3 metas de septiembre» en vez de «de 2026-09».
+- **El colchón ya no marca meses negativos.** Con la liquidez en rojo decía «-1.0 meses»; ahora dice 0, y lo que se debe se sigue viendo en *Liquidez*.
+- **El botón *Capturar* se anuncia con su nombre.** Con lector de pantalla se oía solo «botón».
+- **Los conteos concuerdan en singular:** «1 movimiento», «1 rubro», «Se corrigió 1 movimiento», «Se copió 1 meta».
 - **El sitio se despliega bien con la última release.** El flujo pedía la descarga por un campo que `gh release view` no tiene y salía nulo; ahora usa el enlace público y, si una release no lo trae, falla con un mensaje claro en vez de publicar un `version.json` roto.
 - Las pruebas que corren en emulador descargan la imagen con reintentos: una descarga corrupta dejaba el job en rojo sin haber corrido ninguna prueba.
 - La prueba de interfaz que vuelve atrás desde la captura ya no depende de que la ventana tenga el foco, que el emulador de API 34 a veces no le devolvía.

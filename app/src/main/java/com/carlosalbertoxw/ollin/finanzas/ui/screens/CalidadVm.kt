@@ -111,6 +111,8 @@ class CalidadVm(private val revisaCalidad: RevisaCalidad, private val reparaDato
         viewModelScope.launch {
             val n = runCatching { reparaDatos.repara(hallazgo.clave) }.getOrDefault(0)
             _aviso.value = when {
+                n == 1 -> "Se corrigió 1 movimiento."
+
                 n > 0 -> "Se corrigieron $n movimientos."
 
                 hallazgo.idsMovimiento.isNotEmpty() ->

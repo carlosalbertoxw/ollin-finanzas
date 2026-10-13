@@ -60,7 +60,7 @@ fun pedirCredencialDelSistema(
         if (resultado.resultCode == Activity.RESULT_OK) {
             alLograr()
         } else {
-            alFallar("No se pudo verificar. Intenta de nuevo.")
+            alFallar("No se pudo verificar. Inténtalo de nuevo.")
         }
     }
 
@@ -104,7 +104,7 @@ fun pedirCredencialDelSistema(
                             ) {
                                 alLograr()
                             } else {
-                                alFallar("No se pudo verificar. Intenta de nuevo.")
+                                alFallar("No se pudo verificar. Inténtalo de nuevo.")
                             }
                         }
 

@@ -44,6 +44,7 @@ import com.carlosalbertoxw.ollin.finanzas.data.db.Categoria
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCategoria
 import com.carlosalbertoxw.ollin.finanzas.ui.components.SeccionTitulo
+import com.carlosalbertoxw.ollin.finanzas.ui.components.movimientos
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
 import kotlinx.coroutines.flow.SharingStarted
@@ -64,7 +65,7 @@ fun CategoriasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("Categorias") },
+            title = { Text("Categorías") },
             navigationIcon = {
                 IconButton(onClick = alCerrar) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
@@ -89,7 +90,15 @@ fun CategoriasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
                 item(key = "cab-${tipo.name}") {
                     SeccionTitulo(tipo.etiqueta, Modifier.padding(vertical = 10.dp)) {
                         Text(
-                            "${delTipo.count { it.esRaiz }} rubros",
+                            delTipo.count { it.esRaiz }.let {
+                                if (it ==
+                                    1
+                                ) {
+                                    "1 rubro"
+                                } else {
+                                    "$it rubros"
+                                }
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = colores.textoTenue
                         )
@@ -181,7 +190,7 @@ private fun RenglonCategoriaVista(renglon: RenglonCategoria, alTocar: () -> Unit
                     if (renglon.esRaiz) {
                         append("${renglon.hijas} subcategorías")
                     } else {
-                        append("${renglon.movimientos} movimientos")
+                        append(movimientos(renglon.movimientos))
                     }
                     if (categoria.esencial) append("  ·  esencial")
                     if (categoria.archivada) append("  ·  archivada")
