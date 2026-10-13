@@ -1,6 +1,6 @@
 [versions]
 agp = "9.4.1"
-kotlin = "2.4.20"
+kotlin = "2.4.21"
 ksp = "2.3.12"
 coreKtx = "1.19.1"
 lifecycle = "2.9.0"
@@ -32,7 +32,7 @@ licensee = "1.14.1"
 ktlintGradle = "14.2.0"
 # Cobertura de las pruebas unitarias (ver app/build.gradle.kts, bloque kover).
 # Desde la 0.9.5 entiende las variantes de AGP 9.
-kover = "0.9.9"
+kover = "0.9.11"
 ktlint = "1.8.0"
 
 [libraries]
