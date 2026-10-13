@@ -1,3 +1,22 @@
+/*
+ * Versiones corregidas de lo que los plugins arrastran al classpath del build.
+ *
+ * CycloneDX trae jackson 2.22.2 y Kover trae freemarker 2.3.32, las dos con
+ * vulnerabilidades conocidas (Dependabot las marca contra settings.gradle.kts).
+ * No viajan en el APK, pero corren en la maquina que compila y firma las
+ * releases. Dependabot no puede subirlas porque no son dependencias directas,
+ * asi que se fijan aqui; cuando los plugins traigan unas iguales o mas nuevas,
+ * esto se puede quitar.
+ */
+buildscript {
+    dependencies {
+        classpath(platform(libs.jackson.bom))
+        constraints {
+            classpath(libs.freemarker)
+        }
+    }
+}
+
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.compose) apply false

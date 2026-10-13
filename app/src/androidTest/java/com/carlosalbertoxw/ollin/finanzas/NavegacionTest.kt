@@ -12,7 +12,6 @@ import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
-import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.carlosalbertoxw.ollin.finanzas.ui.nav.Destino
@@ -140,7 +139,12 @@ class NavegacionTest {
         compose.waitForIdle()
         nodo(pestana(Destino.TABLERO)).assertDoesNotExist()
 
-        Espresso.pressBack()
+        // El gesto atras, despachado por la propia actividad. `Espresso.pressBack`
+        // espera a que la ventana tenga el foco, y en el emulador de API 34 a
+        // veces no lo recupera tras abrir la captura --el teclado, una animacion
+        // del sistema--: la prueba caia con RootViewWithoutFocusException sin
+        // que la navegacion tuviera nada que ver.
+        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitForIdle()
         nodo(pestana(Destino.TABLERO)).assertIsSelected()
     }

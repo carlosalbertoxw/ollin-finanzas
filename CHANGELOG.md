@@ -30,6 +30,7 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 - **El aviso de versión nueva ya no manda al sitio cuando falta la descarga.** Si el `version.json` no traía un enlace válido a las releases, el botón llevaba al sitio, que vive en el dominio propio: quien se quedara con el dominio podía mandar ahí a todas las instalaciones. Ahora, sin una descarga de las releases de este repositorio, no hay aviso. Es la misma regla que en Ollin Actividades.
 - **El PIN se compara con la huella guardada en ese momento.** La pantalla del candado y el diálogo de *Ajustes* comprobaban contra la copia de las preferencias que tenían a mano; con una de antes de cambiar el PIN, el anterior podía seguir abriendo.
 - **Cambiar el PIN o el modo de bloqueo estrena la cuenta de fallos.** Quien acaba de demostrar que es el dueño ya no hereda la espera que dejó el PIN anterior.
+- **Las herramientas de compilación ya no arrastran bibliotecas con vulnerabilidades conocidas.** El plugin del SBOM traía jackson 2.22.1 y el de cobertura, freemarker 2.3.32; aun en sus versiones nuevas siguen sin traer las corregidas, así que el build fija jackson 2.22.3 y freemarker 2.3.35. No viajaban en el APK, pero corrían en la máquina que firma las releases. Al dejar el plugin de ktlint para Gradle se va también el logback vulnerable que traía.
 
 ### Añadido
 
@@ -53,6 +54,13 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 - **Los textos de la app llevan acentos.** Mensajes, avisos, tutoriales y pantallas se escribían sin tildes. Los encabezados y los nombres de hoja del `.xlsx` no cambian, así que los libros ya exportados se siguen importando igual.
 - **La pantalla del candado dice qué app está bloqueada** y los mensajes de error usan el rojo de error del tema, igual que en Ollin Actividades.
 - El formato del código lo vigila Spotless con las reglas completas de ktlint, como en Ollin Actividades; la prueba de actualizar sobre la versión anterior instala el APK de **release**, como el que se descarga; el despliegue del sitio se niega a publicar un `version.json` que la app descartaría, y los PR traen una plantilla con lo que hay que comprobar.
+- Herramientas al día, iguales en las dos apps: Gradle 9.8.1, Kotlin 2.4.21, SQLCipher 4.19.1, Vite 8.3.4 y las acciones de GitHub en sus últimas versiones.
+
+### Corregido
+
+- **El sitio se despliega bien con la última release.** El flujo pedía la descarga por un campo que `gh release view` no tiene y salía nulo; ahora usa el enlace público y, si una release no lo trae, falla con un mensaje claro en vez de publicar un `version.json` roto.
+- Las pruebas que corren en emulador descargan la imagen con reintentos: una descarga corrupta dejaba el job en rojo sin haber corrido ninguna prueba.
+- La prueba de interfaz que vuelve atrás desde la captura ya no depende de que la ventana tenga el foco, que el emulador de API 34 a veces no le devolvía.
 
 ## [1.2.0] - 2026-10-03
 

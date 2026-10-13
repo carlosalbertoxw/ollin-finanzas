@@ -53,6 +53,29 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # La imagen del emulador se descarga con reintentos antes de arrancarlo.
+      # Una descarga corrupta ("Error on ZipFile unknown archive") dejaba el
+      # emulador sin arrancar y el job en rojo sin haber corrido una prueba:
+      # paso el 12 de octubre de 2026 en Pruebas de interfaz de Finanzas, API 26.
+      # Con la imagen ya instalada, el sdkmanager del action no vuelve a bajarla.
+      - name: Descargar la imagen del emulador
+        env:
+          IMAGEN: system-images;android-${{ matrix.api-level }};google_apis;x86_64
+        run: |
+          set -uo pipefail
+          sdk="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          for intento in 1 2 3; do
+            if yes | "$sdk" --install "$IMAGEN" --channel=0 > /dev/null; then
+              echo "Imagen lista en el intento $intento."
+              exit 0
+            fi
+            echo "::warning::La descarga de $IMAGEN fallo (intento $intento); se reintenta."
+            rm -rf "$ANDROID_HOME/system-images/android-${{ matrix.api-level }}" "$HOME/.android/cache"
+            sleep 15
+          done
+          echo "::error::No se pudo descargar $IMAGEN tras tres intentos."
+          exit 1
+
       - name: Correr la suite
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
@@ -73,7 +96,7 @@ jobs:
 
       - name: Guardar el informe
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: informe-interfaz-api${{ matrix.api-level }}
           path: app/build/reports/androidTests/
