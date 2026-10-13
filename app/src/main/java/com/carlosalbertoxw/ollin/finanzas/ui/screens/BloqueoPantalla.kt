@@ -19,9 +19,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -38,8 +36,9 @@ import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ClavePin
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ControlBloqueo
 import com.carlosalbertoxw.ollin.finanzas.ui.seguridad.pedirCredencialDelSistema
+import com.carlosalbertoxw.ollin.finanzas.ui.seguridad.segundosDeEsperaPin
+import com.carlosalbertoxw.ollin.finanzas.ui.seguridad.textoDeEspera
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -50,15 +49,12 @@ import kotlinx.coroutines.launch
  * recientes.
  */
 @Composable
-fun BloqueoPantalla(
-    actividad: FragmentActivity,
-    ajustes: Ajustes,
-    bloqueo: ControlBloqueo
-) {
-    val alDesbloquear: () -> Unit = bloqueo::desbloquea
+fun BloqueoPantalla(actividad: FragmentActivity, ajustes: Ajustes, bloqueo: ControlBloqueo) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
-            Modifier.fillMaxSize().padding(32.dp),
+            Modifier
+                .fillMaxSize()
+                .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -69,12 +65,14 @@ fun BloqueoPantalla(
                 tint = LocalColoresOllin.current.textoTenue
             )
             Spacer(Modifier.height(16.dp))
-            Text("Ollin Finanzas esta bloqueada", style = MaterialTheme.typography.titleMedium)
+            Text("Ollin Finanzas está bloqueada", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(24.dp))
 
             when (ajustes.modoBloqueo) {
-                ModoBloqueo.SISTEMA -> DesbloqueoSistema(actividad, alDesbloquear)
-                ModoBloqueo.PIN -> DesbloqueoPin(ajustes, bloqueo)
+                ModoBloqueo.SISTEMA -> DesbloqueoSistema(actividad, bloqueo::desbloquea)
+
+                ModoBloqueo.PIN -> DesbloqueoPin(bloqueo)
+
                 // Transitorio: aun no se leen las preferencias del disco.
                 ModoBloqueo.NINGUNO -> Unit
             }
@@ -85,7 +83,6 @@ fun BloqueoPantalla(
 @Composable
 private fun DesbloqueoSistema(actividad: FragmentActivity, alDesbloquear: () -> Unit) {
     var mensaje by remember { mutableStateOf<String?>(null) }
-    val colores = LocalColoresOllin.current
 
     val pedir = pedirCredencialDelSistema(
         actividad = actividad,
@@ -93,7 +90,10 @@ private fun DesbloqueoSistema(actividad: FragmentActivity, alDesbloquear: () -> 
         alLograr = alDesbloquear,
         alFallar = { mensaje = it }
     )
-    val pide: () -> Unit = { mensaje = null; pedir() }
+    val pide: () -> Unit = {
+        mensaje = null
+        pedir()
+    }
 
     // Se pide sola al entrar: un boton de mas antes del candado no aporta nada.
     LaunchedEffect(Unit) { pide() }
@@ -102,7 +102,7 @@ private fun DesbloqueoSistema(actividad: FragmentActivity, alDesbloquear: () -> 
         Text(
             it,
             style = MaterialTheme.typography.bodyMedium,
-            color = colores.alerta,
+            color = MaterialTheme.colorScheme.error,
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(12.dp))
@@ -112,39 +112,29 @@ private fun DesbloqueoSistema(actividad: FragmentActivity, alDesbloquear: () -> 
 }
 
 @Composable
-private fun DesbloqueoPin(ajustes: Ajustes, bloqueo: ControlBloqueo) {
+private fun DesbloqueoPin(bloqueo: ControlBloqueo) {
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var verificando by remember { mutableStateOf(false) }
-    var espera by remember { mutableIntStateOf(bloqueo.segundosDeEspera()) }
-    val esperaHasta by bloqueo.esperaHasta.collectAsState()
     val ambito = rememberCoroutineScope()
-    val colores = LocalColoresOllin.current
 
-    // Cuenta regresiva del castigo. Se relee del control en vez de restar aqui,
-    // para que salir y volver a la pantalla no reinicie la espera. Va atada a
-    // [ControlBloqueo.esperaHasta] y no solo al valor inicial: al abrir la app,
-    // la espera que traen los fallos guardados puede llegar despues de que esta
-    // pantalla ya se dibujo.
-    LaunchedEffect(esperaHasta) {
-        espera = bloqueo.segundosDeEspera()
-        while (espera > 0) {
-            delay(1_000)
-            espera = bloqueo.segundosDeEspera()
-        }
-    }
+    val espera = segundosDeEsperaPin(bloqueo)
 
     val verifica: () -> Unit = {
-        if (!verificando && pin.isNotEmpty() && bloqueo.segundosDeEspera() == 0) {
+        if (!verificando && espera == 0 && pin.isNotEmpty()) {
             verificando = true
             error = null
             ambito.launch {
-                val intento = bloqueo.intentaPin(pin, ajustes.pinHash, ajustes.pinSal)
-                verificando = false
-                if (intento != ControlBloqueo.IntentoDePin.Correcto) {
-                    espera = bloqueo.segundosDeEspera()
-                    error = "PIN incorrecto"
-                    pin = ""
+                // `verificando` se suelta al final, con el intento ya resuelto:
+                // el control apunta el fallo y fija la espera antes de contestar.
+                // Acertar abre la app desde el propio control.
+                try {
+                    if (bloqueo.intentaPin(pin) == ControlBloqueo.IntentoDePin.Incorrecto) {
+                        error = "PIN incorrecto"
+                        pin = ""
+                    }
+                } finally {
+                    verificando = false
                 }
             }
         }
@@ -152,26 +142,32 @@ private fun DesbloqueoPin(ajustes: Ajustes, bloqueo: ControlBloqueo) {
 
     OutlinedTextField(
         value = pin,
-        onValueChange = { nuevo -> pin = nuevo.filter(Char::isDigit).take(12) },
+        onValueChange = { nuevo -> pin = nuevo.filter(Char::isDigit).take(ClavePin.LARGO_MAXIMO) },
         label = { Text("PIN de Ollin Finanzas") },
         singleLine = true,
         visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
         isError = error != null,
+        enabled = espera == 0,
         modifier = Modifier.fillMaxWidth()
     )
 
     error?.let {
         Spacer(Modifier.height(8.dp))
-        Text(it, style = MaterialTheme.typography.bodyMedium, color = colores.salida)
+        Text(
+            it,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error
+        )
     }
 
     if (espera > 0) {
         Spacer(Modifier.height(8.dp))
         Text(
-            "Demasiados intentos. Espera $espera s.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = colores.textoTenue
+            "Demasiados intentos fallidos. Vuelve a probar en un momento.",
+            style = MaterialTheme.typography.bodySmall,
+            color = LocalColoresOllin.current.textoTenue,
+            textAlign = TextAlign.Center
         )
     }
 
@@ -181,6 +177,12 @@ private fun DesbloqueoPin(ajustes: Ajustes, bloqueo: ControlBloqueo) {
         enabled = pin.length >= ClavePin.LARGO_MINIMO && !verificando && espera == 0,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Text(if (verificando) "Comprobando..." else "Entrar")
+        Text(
+            when {
+                espera > 0 -> textoDeEspera(espera)
+                verificando -> "Comprobando…"
+                else -> "Entrar"
+            }
+        )
     }
 }

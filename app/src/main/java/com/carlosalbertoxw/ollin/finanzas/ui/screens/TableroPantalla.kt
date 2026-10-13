@@ -192,7 +192,7 @@ fun TableroPantalla(
                             Icon(Icons.Filled.School, contentDescription = null)
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    "Empieza por aqui",
+                                    "Empieza por aquí",
                                     style = MaterialTheme.typography.titleSmall
                                 )
                                 Text(
@@ -239,8 +239,11 @@ fun TableroPantalla(
                             Icon(Icons.Filled.HealthAndSafety, contentDescription = null)
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    if (estado.hallazgos.size == 1) "1 cosa que revisar"
-                                    else "${estado.hallazgos.size} cosas que revisar",
+                                    if (estado.hallazgos.size == 1) {
+                                        "1 cosa que revisar"
+                                    } else {
+                                        "${estado.hallazgos.size} cosas que revisar"
+                                    },
                                     style = MaterialTheme.typography.titleSmall
                                 )
                                 Text(
@@ -279,7 +282,7 @@ fun TableroPantalla(
                     TarjetaValor(
                         etiqueta = "Tasa de ahorro",
                         valor = if (tasa == null) "Sin datos" else "%.0f%%".format(tasa * 100),
-                        nota = if (tasa == null) "Sin ingresos aun" else "sobre consumo real",
+                        nota = if (tasa == null) "Sin ingresos aún" else "sobre consumo real",
                         modifier = Modifier.weight(1f),
                         color = if (tasa == null) colores.textoTenue else colores.entrada
                     )
@@ -288,8 +291,11 @@ fun TableroPantalla(
                     TarjetaValor(
                         etiqueta = "Fondo de emergencia",
                         valor = if (meses == null) "Sin datos" else "%.1f meses".format(meses),
-                        nota = if (meses == null) "Sin gastos aun"
-                        else Dinero.formateaCompacto(estado.gastoMensualPromedio) + "/mes",
+                        nota = if (meses == null) {
+                            "Sin gastos aún"
+                        } else {
+                            Dinero.formateaCompacto(estado.gastoMensualPromedio) + "/mes"
+                        },
                         modifier = Modifier.weight(1f),
                         // Gris y no ambar: que no se pueda medir no es una mala noticia.
                         color = when {
@@ -378,8 +384,13 @@ fun TableroPantalla(
                             Column(Modifier.weight(1f)) {
                                 Text(compromiso.nombre, style = MaterialTheme.typography.bodyLarge)
                                 Text(
-                                    (if (vencido) "Vencido el ${Recordatorios.formateaFecha(fecha)}"
-                                    else Recordatorios.formateaFecha(fecha)) +
+                                    (
+                                        if (vencido) {
+                                            "Vencido el ${Recordatorios.formateaFecha(fecha)}"
+                                        } else {
+                                            Recordatorios.formateaFecha(fecha)
+                                        }
+                                        ) +
                                         "  ·  ${compromiso.periodicidad.etiqueta}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = if (vencido) colores.alerta else colores.textoTenue
@@ -467,10 +478,7 @@ private fun AvisoRespaldo(texto: String, alExportar: () -> Unit, alQuitar: () ->
 
 /** Renglon compartido por el tablero y la lista de movimientos. */
 @Composable
-fun RenglonMovimiento(
-    detalle: MovimientoDetallado,
-    alTocar: () -> Unit
-) {
+fun RenglonMovimiento(detalle: MovimientoDetallado, alTocar: () -> Unit) {
     val colores = LocalColoresOllin.current
     val m = detalle.movimiento
     Row(

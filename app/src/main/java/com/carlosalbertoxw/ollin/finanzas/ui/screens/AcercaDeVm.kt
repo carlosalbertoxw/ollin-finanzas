@@ -89,10 +89,8 @@ class AcercaDeVm(
     private fun loGuardado(preferencias: Ajustes): Resultado? {
         val publicada = Version.de(preferencias.versionPublicada) ?: return null
         // Lo guardado pudo escribirlo una version anterior, que aceptaba
-        // cualquier https: se vuelve a pasar por la misma lista.
-        val url = preferencias.urlDeDescarga
-            ?.let { DestinosPermitidos.apk(it) ?: DestinosPermitidos.sitio(it) }
-            ?: return null
+        // cualquier https o el sitio: se vuelve a pasar por la misma regla.
+        val url = preferencias.urlDeDescarga?.let(DestinosPermitidos::apk) ?: return null
 
         return if (instalada != null && publicada <= instalada) {
             Resultado.AlDia

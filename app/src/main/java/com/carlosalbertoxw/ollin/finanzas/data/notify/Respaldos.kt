@@ -60,11 +60,11 @@ object Respaldos {
      */
     fun textoDelAviso(ultimoRespaldo: Long, ancla: Long, ahora: Long): String {
         if (ultimoRespaldo <= 0L) {
-            return "Todavia no has exportado tu libro. Si pierdes el telefono, no hay de " +
+            return "Todavía no has exportado tu libro. Si pierdes el teléfono, no hay de " +
                 "donde recuperarlo."
         }
         val dias = diasDesde(ultimoRespaldo, ahora)
-        return "Tu ultimo respaldo es de hace $dias dias. Exportalo a Excel y guardalo " +
+        return "Tu último respaldo es de hace $dias días. Expórtalo a Excel y guárdalo " +
             "donde tu decidas."
     }
 }

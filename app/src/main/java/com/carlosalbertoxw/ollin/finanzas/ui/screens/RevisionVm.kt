@@ -93,8 +93,11 @@ class RevisionVm(
 
     /** Solo se ofrecen las categorias que corresponden al signo del importe. */
     fun categoriasAplicables(todas: List<Categoria>, importeCentavos: Long): List<Categoria> {
-        val tipos = if (importeCentavos < 0) listOf(TipoCategoria.GASTO, TipoCategoria.PATRIMONIO)
-        else listOf(TipoCategoria.INGRESO)
+        val tipos = if (importeCentavos < 0) {
+            listOf(TipoCategoria.GASTO, TipoCategoria.PATRIMONIO)
+        } else {
+            listOf(TipoCategoria.INGRESO)
+        }
         return todas.filter { it.padreId != null && it.tipo in tipos }
     }
 

@@ -96,8 +96,10 @@ class PresupuestoVm(private val repo: FinanzasRepositorio) : ViewModel() {
                     )
                 }
                 // Primero lo que tiene meta, luego lo que gastaste sin tenerla.
-                .sortedWith(compareByDescending<RenglonMeta> { it.metaCentavos > 0L }
-                    .thenByDescending { abs(it.realCentavos) })
+                .sortedWith(
+                    compareByDescending<RenglonMeta> { it.metaCentavos > 0L }
+                        .thenByDescending { abs(it.realCentavos) }
+                )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun cambiaMes(delta: Long) {
@@ -108,15 +110,18 @@ class PresupuestoVm(private val repo: FinanzasRepositorio) : ViewModel() {
         val centavos = Dinero.parsea(texto)?.let { abs(it) } ?: 0L
         val mes = _mes.value
         viewModelScope.launch {
-            if (centavos == 0L) repo.eliminaPresupuesto(categoriaId, mes.year, mes.monthValue)
-            else repo.guardaPresupuesto(
-                Presupuesto(
-                    categoriaId = categoriaId,
-                    anio = mes.year,
-                    mes = mes.monthValue,
-                    montoCentavos = centavos
+            if (centavos == 0L) {
+                repo.eliminaPresupuesto(categoriaId, mes.year, mes.monthValue)
+            } else {
+                repo.guardaPresupuesto(
+                    Presupuesto(
+                        categoriaId = categoriaId,
+                        anio = mes.year,
+                        mes = mes.monthValue,
+                        montoCentavos = centavos
+                    )
                 )
-            )
+            }
             recalcula.value++
         }
     }

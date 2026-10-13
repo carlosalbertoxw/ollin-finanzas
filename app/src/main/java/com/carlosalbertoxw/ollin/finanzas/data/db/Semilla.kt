@@ -48,97 +48,145 @@ object Semilla {
 
     val CATEGORIAS = listOf(
         PlantillaCategoria(
-            "Alimentos", TipoCategoria.GASTO, esencial = true,
+            "Alimentos",
+            TipoCategoria.GASTO,
+            esencial = true,
             hijas = listOf("Despensa")
         ),
         PlantillaCategoria(
-            "Vivienda", TipoCategoria.GASTO, esencial = true,
+            "Vivienda",
+            TipoCategoria.GASTO,
+            esencial = true,
             hijas = listOf("Mantenimiento hogar")
         ),
         PlantillaCategoria(
-            "Transporte", TipoCategoria.GASTO, esencial = true,
+            "Transporte",
+            TipoCategoria.GASTO,
+            esencial = true,
             hijas = listOf(
-                "Gasolina", "Transporte publico", "Transporte privado", "Mantenimiento vehiculo",
-                "Estacionamiento", "Seguro de auto"
+                "Gasolina",
+                "Transporte publico",
+                "Transporte privado",
+                "Mantenimiento vehiculo",
+                "Estacionamiento",
+                "Seguro de auto"
             )
         ),
         PlantillaCategoria(
-            "Salud", TipoCategoria.GASTO, esencial = true,
+            "Salud",
+            TipoCategoria.GASTO,
+            esencial = true,
             hijas = listOf("Consulta medica", "Medicamentos", "Estudios laboratorio")
         ),
         PlantillaCategoria(
-            "Comunicaciones", TipoCategoria.GASTO, esencial = true,
+            "Comunicaciones",
+            TipoCategoria.GASTO,
+            esencial = true,
             hijas = listOf("Telefono", "Internet")
         ),
         PlantillaCategoria(
-            "Impuestos y tramites", TipoCategoria.GASTO, esencial = true,
+            "Impuestos y tramites",
+            TipoCategoria.GASTO,
+            esencial = true,
             hijas = listOf("Impuestos", "Tramites", "Comisiones bancarias")
         ),
         PlantillaCategoria(
-            "Compras", TipoCategoria.GASTO, esencial = false,
+            "Compras",
+            TipoCategoria.GASTO,
+            esencial = false,
             hijas = listOf("Ropa", "Articulos para el hogar", "Articulos personales")
         ),
         PlantillaCategoria(
-            "Suscripciones", TipoCategoria.GASTO, esencial = false,
+            "Suscripciones",
+            TipoCategoria.GASTO,
+            esencial = false,
             hijas = listOf("Streaming", "Software", "Membresias")
         ),
         PlantillaCategoria(
-            "Entretenimiento", TipoCategoria.GASTO, esencial = false,
+            "Entretenimiento",
+            TipoCategoria.GASTO,
+            esencial = false,
             hijas = listOf("Salidas", "Eventos")
         ),
         PlantillaCategoria(
-            "Viajes", TipoCategoria.GASTO, esencial = false,
+            "Viajes",
+            TipoCategoria.GASTO,
+            esencial = false,
             hijas = listOf("Hospedaje", "Vuelos")
         ),
         PlantillaCategoria(
-            "Cuidado personal", TipoCategoria.GASTO, esencial = false,
+            "Cuidado personal",
+            TipoCategoria.GASTO,
+            esencial = false,
             hijas = listOf("Peluqueria")
         ),
         PlantillaCategoria(
-            "Educacion", TipoCategoria.GASTO, esencial = false,
+            "Educacion",
+            TipoCategoria.GASTO,
+            esencial = false,
             hijas = listOf("Cursos")
         ),
         PlantillaCategoria(
-            "Mascotas", TipoCategoria.GASTO, esencial = false,
+            "Mascotas",
+            TipoCategoria.GASTO,
+            esencial = false,
             hijas = listOf("Alimento para mascota", "Veterinario")
         ),
         PlantillaCategoria(
-            "Otros gastos", TipoCategoria.GASTO, esencial = false,
+            "Otros gastos",
+            TipoCategoria.GASTO,
+            esencial = false,
             hijas = listOf("Regalos", "Donativos", "Gastos varios")
         ),
 
         PlantillaCategoria(
-            "Sueldo", TipoCategoria.INGRESO, esencial = false,
+            "Sueldo",
+            TipoCategoria.INGRESO,
+            esencial = false,
             hijas = listOf("Salario", "Aguinaldo", "Bonos")
         ),
         PlantillaCategoria(
-            "Negocio", TipoCategoria.INGRESO, esencial = false,
+            "Negocio",
+            TipoCategoria.INGRESO,
+            esencial = false,
             hijas = listOf("Ventas", "Honorarios")
         ),
         PlantillaCategoria(
-            "Rendimientos", TipoCategoria.INGRESO, esencial = false,
+            "Rendimientos",
+            TipoCategoria.INGRESO,
+            esencial = false,
             hijas = listOf("Intereses", "Dividendos", "Cashback")
         ),
         PlantillaCategoria(
-            "Otros ingresos", TipoCategoria.INGRESO, esencial = false,
+            "Otros ingresos",
+            TipoCategoria.INGRESO,
+            esencial = false,
             hijas = listOf("Reembolsos", "Apoyo recibido")
         ),
 
         PlantillaCategoria(
-            "Inmuebles", TipoCategoria.PATRIMONIO, esencial = false,
+            "Inmuebles",
+            TipoCategoria.PATRIMONIO,
+            esencial = false,
             hijas = listOf("Construccion")
         ),
         PlantillaCategoria(
-            "Inversion variable", TipoCategoria.PATRIMONIO, esencial = false,
+            "Inversion variable",
+            TipoCategoria.PATRIMONIO,
+            esencial = false,
             hijas = listOf("Criptomonedas", "Metales")
         ),
         PlantillaCategoria(
-            "Bienes duraderos", TipoCategoria.PATRIMONIO, esencial = false,
+            "Bienes duraderos",
+            TipoCategoria.PATRIMONIO,
+            esencial = false,
             hijas = listOf("Vehiculo", "Equipo de computo")
         ),
 
         PlantillaCategoria(
-            "Movimientos internos", TipoCategoria.TRASPASO, esencial = false,
+            "Movimientos internos",
+            TipoCategoria.TRASPASO,
+            esencial = false,
             hijas = listOf("Transferencia entre cuentas", "Pago de tarjeta", "Retiro de efectivo")
         )
     )

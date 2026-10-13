@@ -113,7 +113,9 @@ fun TemaOllin(
     val esquema = when {
         colorDinamico && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
             if (oscuro) dynamicDarkColorScheme(contexto) else dynamicLightColorScheme(contexto)
+
         oscuro -> EsquemaOscuro
+
         else -> EsquemaClaro
     }
     val semanticos = if (oscuro) ColoresOscuros else ColoresClaros

@@ -15,15 +15,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
  * cuatro que quedan se miran a diario. Una barra reservada a lo cotidiano es
  * una barra que se lee de un vistazo.
  */
-enum class Destino(
-    val ruta: String,
-    val titulo: String,
-    val icono: ImageVector
-) {
+enum class Destino(val ruta: String, val titulo: String, val icono: ImageVector) {
     TABLERO("tablero", "Tablero", Icons.Filled.PieChart),
     MOVIMIENTOS("movimientos", "Movimientos", Icons.AutoMirrored.Filled.ReceiptLong),
     PRESUPUESTO("presupuesto", "Presupuesto", Icons.Filled.AccountBalanceWallet),
-    ANALITICA("analitica", "Analitica", Icons.Filled.Insights)
+    ANALITICA("analitica", "Analítica", Icons.Filled.Insights)
 }
 
 object Rutas {

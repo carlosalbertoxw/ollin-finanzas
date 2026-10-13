@@ -50,6 +50,8 @@ import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ControlBloqueo
+import com.carlosalbertoxw.ollin.finanzas.ui.AvisosEnRiesgo
+import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaPidePermisoDeAvisos
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.seguridad.DialogoNuevoPin
 import com.carlosalbertoxw.ollin.finanzas.ui.seguridad.DialogoPinActual
@@ -79,6 +81,10 @@ fun AjustesPantalla(
     val ajustes by vm.ajustes.collectAsStateWithLifecycle()
     val movimientos by vm.movimientos.collectAsStateWithLifecycle()
     val colores = LocalColoresOllin.current
+    // Encender un aviso y conceder el permiso son la misma intencion, asi que
+    // van en el mismo gesto: si el sistema lo niega, el interruptor no se
+    // enciende, porque quedaria prometiendo algo que no puede cumplir.
+    val pideAvisos = recuerdaPidePermisoDeAvisos()
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
@@ -139,8 +145,8 @@ fun AjustesPantalla(
                 Column(Modifier.weight(1f)) {
                     Text("Mostrar \"Saldo inicial\"", style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        "El saldo inicial solo se ocupa al dar de alta una cuenta. Apagalo " +
-                            "cuando ya hayas capturado los tuyos y la captura queda mas corta. " +
+                        "El saldo inicial solo se ocupa al dar de alta una cuenta. Apágalo " +
+                            "cuando ya hayas capturado los tuyos y la captura queda más corta. " +
                             "Los que ya guardaste se siguen pudiendo abrir y editar.",
                         style = MaterialTheme.typography.bodySmall,
                         color = colores.textoTenue
@@ -156,7 +162,8 @@ fun AjustesPantalla(
 
             SeccionAvisos(
                 ajustes = ajustes,
-                alCambiarHora = vm::cambiaHoraDeAviso
+                alCambiarHora = vm::cambiaHoraDeAviso,
+                pideAvisos = pideAvisos
             )
 
             HorizontalDivider()
@@ -171,10 +178,10 @@ fun AjustesPantalla(
 
             HorizontalDivider()
 
-            Text("Catalogo", style = MaterialTheme.typography.titleMedium)
+            Text("Catálogo", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Las cuentas y las categorias con las que capturas. Renombralas a lo tuyo: " +
-                    "las que trae Ollin Finanzas de fabrica son solo un punto de partida.",
+                "Las cuentas y las categorías con las que capturas. Renómbralas a lo tuyo: " +
+                    "las que trae Ollin Finanzas de fábrica son solo un punto de partida.",
                 style = MaterialTheme.typography.bodySmall,
                 color = colores.textoTenue
             )
@@ -182,7 +189,7 @@ fun AjustesPantalla(
                 Text("Administrar cuentas")
             }
             TextButton(onClick = alAbrirCategorias, modifier = Modifier.fillMaxWidth()) {
-                Text("Administrar categorias")
+                Text("Administrar categorías")
             }
             // Entrada fija a compromisos. La del tablero solo aparece cuando ya
             // hay alguno por vencer, asi que sin esta no habria forma de dar de
@@ -201,10 +208,10 @@ fun AjustesPantalla(
 
             Text("Tus datos", style = MaterialTheme.typography.titleMedium)
             Text(
-                "$movimientos movimientos guardados en este telefono. Ollin Finanzas no manda " +
-                    "nada a ningun servidor y el respaldo automatico del sistema esta " +
-                    "desactivado para la base: tu respaldo es la exportacion a .xlsx, que " +
-                    "decides tu donde guardar.",
+                "$movimientos movimientos guardados en este teléfono. Ollin Finanzas no manda " +
+                    "nada a ningún servidor y el respaldo automático del sistema está " +
+                    "desactivado para la base: tu respaldo es la exportación a .xlsx, que " +
+                    "decides tú dónde guardar.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = colores.textoTenue
             )
@@ -217,9 +224,9 @@ fun AjustesPantalla(
                 Column(Modifier.weight(1f)) {
                     Text("Mostrar tutoriales", style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        "Apagalo cuando ya te sepas la app y desaparecen sus atajos del " +
+                        "Apágalo cuando ya te sepas la app y desaparecen sus atajos del " +
                             "tablero y de las pantallas. Los tutoriales se siguen abriendo " +
-                            "desde aqui.",
+                            "desde aquí.",
                         style = MaterialTheme.typography.bodySmall,
                         color = colores.textoTenue
                     )
@@ -243,8 +250,8 @@ fun AjustesPantalla(
                     Text("Recordarme respaldar", style = MaterialTheme.typography.bodyLarge)
                     Text(
                         "Un aviso cada semana si no has exportado, y otro cuando salga una " +
-                            "version nueva. La base va cifrada con una llave que no se respalda " +
-                            "ni viaja a otro telefono: el .xlsx que tu exportas es lo unico que " +
+                            "versión nueva. La base va cifrada con una llave que no se respalda " +
+                            "ni viaja a otro teléfono: el .xlsx que tú exportas es lo único que " +
                             "sobrevive a perder este.",
                         style = MaterialTheme.typography.bodySmall,
                         color = colores.textoTenue
@@ -252,7 +259,15 @@ fun AjustesPantalla(
                 }
                 Switch(
                     checked = ajustes.recuerdaRespaldo,
-                    onCheckedChange = vm::cambiaRecuerdaRespaldo
+                    onCheckedChange = { quiere ->
+                        // El permiso se pide solo al encenderlo: preguntarlo al
+                        // abrir Ajustes seria pedir algo que quiza nadie quiere.
+                        if (quiere) {
+                            pideAvisos(vm::cambiaRecuerdaRespaldo)
+                        } else {
+                            vm.cambiaRecuerdaRespaldo(false)
+                        }
+                    }
                 )
             }
 
@@ -264,13 +279,13 @@ fun AjustesPantalla(
                 Column(Modifier.weight(1f)) {
                     Text("Avisarme de versiones nuevas", style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        "Ollin Finanzas no se instala desde Play, asi que nadie mas avisa de " +
-                            "una version nueva. Una vez al dia le pregunta al sitio del " +
-                            "proyecto si salio alguna, y lo enseña en Acerca de. Es una " +
-                            "peticion a un archivo fijo que no manda ningun dato tuyo: la " +
-                            "comparacion pasa en el telefono, y GitHub Pages, que sirve el " +
+                        "Ollin Finanzas no se instala desde Play, así que nadie más avisa de " +
+                            "una versión nueva. Una vez al día le pregunta al sitio del " +
+                            "proyecto si salió alguna, y lo enseña en Acerca de. Es una " +
+                            "petición a un archivo fijo que no manda ningún dato tuyo: la " +
+                            "comparación pasa en el teléfono, y GitHub Pages, que sirve el " +
                             "sitio, solo ve tu IP. Apagado, la app no toca internet " +
-                            "en ningun momento.",
+                            "en ningún momento.",
                         style = MaterialTheme.typography.bodySmall,
                         color = colores.textoTenue
                     )
@@ -300,7 +315,8 @@ fun AjustesPantalla(
 @Composable
 private fun SeccionAvisos(
     ajustes: Ajustes,
-    alCambiarHora: (Int, Int) -> Unit
+    alCambiarHora: (Int, Int) -> Unit,
+    pideAvisos: ((Boolean) -> Unit) -> Unit
 ) {
     val contexto = LocalContext.current
     val colores = LocalColoresOllin.current
@@ -309,10 +325,10 @@ private fun SeccionAvisos(
 
     Text("Avisos", style = MaterialTheme.typography.titleMedium)
     Text(
-        "Una vez al dia Ollin Finanzas revisa tus compromisos y te avisa de los que " +
+        "Una vez al día Ollin Finanzas revisa tus compromisos y te avisa de los que " +
             "entraron en su ventana de aviso o ya se pasaron de fecha. Cada compromiso " +
-            "decide con cuantos dias de anticipacion quiere sonar; aqui se elige a que " +
-            "hora se hace esa revision.",
+            "decide con cuántos días de anticipación quiere sonar; aquí se elige a qué " +
+            "hora se hace esa revisión.",
         style = MaterialTheme.typography.bodySmall,
         color = colores.textoTenue
     )
@@ -329,8 +345,10 @@ private fun SeccionAvisos(
         TextButton(onClick = { eligiendoHora = true }) { Text("Cambiar") }
     }
 
+    AvisosEnRiesgo(pideAvisos)
+
     Text(
-        "El sistema puede correrlo unos minutos para ahorrar bateria: es una hora " +
+        "El sistema puede correrlo unos minutos para ahorrar batería: es una hora " +
             "aproximada, no una alarma de despertador.",
         style = MaterialTheme.typography.bodySmall,
         color = colores.textoTenue
@@ -411,9 +429,15 @@ private fun SeccionBloqueo(
 
     val confirmaConSistema = pedirCredencialDelSistema(
         actividad = actividad ?: return,
-        titulo = "Confirma que eres tu",
-        alLograr = { pendiente?.invoke(); pendiente = null },
-        alFallar = { pendiente = null; aviso = it },
+        titulo = "Confirma que eres tú",
+        alLograr = {
+            pendiente?.invoke()
+            pendiente = null
+        },
+        alFallar = {
+            pendiente = null
+            aviso = it
+        },
         alSalirAlSistema = bloqueo::esperaVueltaDelSistema,
         alNoSalirAlSistema = bloqueo::cancelaVueltaEsperada
     )
@@ -427,14 +451,22 @@ private fun SeccionBloqueo(
         aviso = null
         when (modoActual) {
             ModoBloqueo.NINGUNO -> accion()
-            ModoBloqueo.SISTEMA -> { pendiente = accion; confirmaConSistema() }
-            ModoBloqueo.PIN -> { pendiente = accion; pidiendoPinActual = true }
+
+            ModoBloqueo.SISTEMA -> {
+                pendiente = accion
+                confirmaConSistema()
+            }
+
+            ModoBloqueo.PIN -> {
+                pendiente = accion
+                pidiendoPinActual = true
+            }
         }
     }
 
     Text("Bloqueo", style = MaterialTheme.typography.titleMedium)
     Text(
-        "Ollin Finanzas pide la llave al abrirse y al volver despues de un minuto fuera. " +
+        "Ollin Finanzas pide la llave al abrirse y al volver después de un minuto fuera. " +
             "Ese minuto es lo que evita que elegir un archivo de Excel te expulse.",
         style = MaterialTheme.typography.bodySmall,
         color = colores.textoTenue
@@ -448,10 +480,15 @@ private fun SeccionBloqueo(
                     aviso = null
                     when (modo) {
                         ModoBloqueo.NINGUNO -> conConfirmacion(alQuitar)
+
                         ModoBloqueo.SISTEMA ->
-                            if (telefonoAsegurado) conConfirmacion(alUsarSistema)
-                            else aviso = "Tu telefono no tiene patron, PIN ni contrasena. " +
-                                "Configuralo en los ajustes de Android y vuelve aqui."
+                            if (telefonoAsegurado) {
+                                conConfirmacion(alUsarSistema)
+                            } else {
+                                aviso = "Tu teléfono no tiene patrón, PIN ni contraseña. " +
+                                    "Configúralo en los ajustes de Android y vuelve aquí."
+                            }
+
                         ModoBloqueo.PIN -> conConfirmacion { pidiendoPinNuevo = true }
                     }
                 },
@@ -469,27 +506,33 @@ private fun SeccionBloqueo(
     }
 
     aviso?.let {
-        Text(it, style = MaterialTheme.typography.bodySmall, color = colores.alerta)
+        Text(
+            it,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
+        )
     }
 
     Text(
         when (modoActual) {
             ModoBloqueo.NINGUNO ->
-                "Cualquiera que tome tu telefono desbloqueado puede abrir Ollin Finanzas."
+                "Cualquiera que tome tu teléfono desbloqueado puede abrir Ollin Finanzas."
+
             ModoBloqueo.SISTEMA ->
-                "Se usa el patron, PIN o huella con que desbloqueas el telefono. " +
-                    "Ollin Finanzas no guarda ningun secreto."
+                "Se usa el patrón, PIN o huella con que desbloqueas el teléfono. " +
+                    "Ollin Finanzas no guarda ningún secreto."
+
             ModoBloqueo.PIN ->
                 "Se usa un PIN solo de Ollin Finanzas. Si lo olvidas no hay forma de " +
-                    "recuperarlo: tendrias que reinstalar la app y perderias los datos."
+                    "recuperarlo: tendrías que reinstalar la app y perderías los datos."
         },
         style = MaterialTheme.typography.bodySmall,
         color = colores.textoTenue
     )
 
     Text(
-        "La base de datos esta cifrada con AES-256 y su llave vive en el Keystore del " +
-            "telefono. El archivo no dice nada aunque alguien lo saque por USB.",
+        "La base de datos está cifrada con AES-256 y su llave vive en el Keystore del " +
+            "teléfono. El archivo no dice nada aunque alguien lo saque por USB.",
         style = MaterialTheme.typography.bodySmall,
         color = colores.textoTenue
     )
@@ -503,20 +546,25 @@ private fun SeccionBloqueo(
 
     if (pidiendoPinActual) {
         DialogoPinActual(
-            ajustes = ajustes,
             bloqueo = bloqueo,
             alConfirmar = {
                 pidiendoPinActual = false
                 pendiente?.invoke()
                 pendiente = null
             },
-            alCancelar = { pidiendoPinActual = false; pendiente = null }
+            alCancelar = {
+                pidiendoPinActual = false
+                pendiente = null
+            }
         )
     }
 
     if (pidiendoPinNuevo) {
         DialogoNuevoPin(
-            alGuardar = { pin -> alUsarPin(pin); pidiendoPinNuevo = false },
+            alGuardar = { pin ->
+                alUsarPin(pin)
+                pidiendoPinNuevo = false
+            },
             alCancelar = { pidiendoPinNuevo = false }
         )
     }

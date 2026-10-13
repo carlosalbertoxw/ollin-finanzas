@@ -283,10 +283,7 @@ fun LineaEvolucion(
 
 /** Barra de avance de presupuesto, con semaforo. */
 @Composable
-fun BarraAvance(
-    avance: Double,
-    modifier: Modifier = Modifier
-) {
+fun BarraAvance(avance: Double, modifier: Modifier = Modifier) {
     val colores = LocalColoresOllin.current
     val color = when {
         avance > 1.0 -> colores.salida
@@ -367,10 +364,7 @@ fun SeccionTitulo(
 
 /** Contenedor con borde suave, para agrupar sin recurrir a otra tarjeta. */
 @Composable
-fun Marco(
-    modifier: Modifier = Modifier,
-    contenido: @Composable () -> Unit
-) {
+fun Marco(modifier: Modifier = Modifier, contenido: @Composable () -> Unit) {
     Box(
         modifier
             .clip(RoundedCornerShape(16.dp))
@@ -446,10 +440,12 @@ fun FilaDeslizable(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AccionDeslizada(Icons.Filled.Check, "Cumplir", colores.entrada) {
-                    cierra(); alCumplir()
+                    cierra()
+                    alCumplir()
                 }
                 AccionDeslizada(Icons.Filled.Close, "Descartar", colores.salida) {
-                    cierra(); alDescartar()
+                    cierra()
+                    alDescartar()
                 }
             }
         }
@@ -471,8 +467,11 @@ fun FilaDeslizable(
                         // Medio panel o un empujon claro bastan: pedir el recorrido
                         // completo obliga a un gesto incomodo en pantallas angostas.
                         val destino =
-                            if (desplazamiento.value > apertura / 2f || velocidad > 700f) apertura
-                            else 0f
+                            if (desplazamiento.value > apertura / 2f || velocidad > 700f) {
+                                apertura
+                            } else {
+                                0f
+                            }
                         desplazamiento.animateTo(destino)
                     }
                 )

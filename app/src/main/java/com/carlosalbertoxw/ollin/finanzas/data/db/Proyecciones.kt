@@ -26,15 +26,15 @@ data class FlujoMes(
 
     /** Tasa de ahorro sobre consumo real, que es la que refleja tu tren de vida. */
     val tasaAhorro: Double
-        get() = if (ingresosCentavos <= 0L) 0.0
-        else (ingresosCentavos + gastoConsumoCentavos).toDouble() / ingresosCentavos
+        get() = if (ingresosCentavos <= 0L) {
+            0.0
+        } else {
+            (ingresosCentavos + gastoConsumoCentavos).toDouble() / ingresosCentavos
+        }
 }
 
 /** Cuantos movimientos cuelgan de cada categoria. Decide si se puede borrar o solo archivar. */
-data class UsoCategoria(
-    val categoriaId: Long,
-    val movimientos: Int
-)
+data class UsoCategoria(val categoriaId: Long, val movimientos: Int)
 
 /** Movimiento acompañado de los nombres que la lista necesita mostrar. */
 data class MovimientoDetallado(
@@ -53,6 +53,9 @@ data class RenglonPresupuesto(
 ) {
     val desviacionCentavos: Long get() = metaCentavos - kotlin.math.abs(realCentavos)
     val avance: Double
-        get() = if (metaCentavos <= 0L) 0.0
-        else kotlin.math.abs(realCentavos).toDouble() / metaCentavos
+        get() = if (metaCentavos <= 0L) {
+            0.0
+        } else {
+            kotlin.math.abs(realCentavos).toDouble() / metaCentavos
+        }
 }

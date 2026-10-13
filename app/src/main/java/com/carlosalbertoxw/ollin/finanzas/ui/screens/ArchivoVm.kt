@@ -87,10 +87,8 @@ sealed interface EstadoArchivo {
      * rastro en la base: mandar a Salud por ellos llevaba a una pantalla que
      * decia "todo cuadra".
      */
-    data class Importado(
-        val resultado: ResultadoImportacion,
-        val hallazgosEnSalud: Int = 0
-    ) : EstadoArchivo
+    data class Importado(val resultado: ResultadoImportacion, val hallazgosEnSalud: Int = 0) :
+        EstadoArchivo
 
     data class Exportado(val hojas: Int, val movimientos: Int) : EstadoArchivo
     data class Fallo(val mensaje: String) : EstadoArchivo
@@ -196,17 +194,27 @@ class ArchivoVm(
     private fun mensajeDe(fallo: Throwable, accion: String): String = when (fallo) {
         // Los suyos si estan escritos para leerse; el resto no.
         is XlsxLector.ArchivoInvalido -> fallo.message ?: "El archivo no se pudo leer."
+
         is SecurityException -> "Ya no hay permiso sobre ese archivo. Vuelve a elegirlo."
-        is java.io.IOException -> "No se pudo leer o escribir el archivo. Revisa que haya " +
-            "espacio libre y que la ubicacion siga disponible."
-        is OutOfMemoryError -> "El libro es demasiado grande para la memoria del telefono. " +
-            "Exporta menos pestanas desde \"Solo datos\"."
+
+        is java.io.IOException ->
+            "No se pudo leer o escribir el archivo. Revisa que haya " +
+                "espacio libre y que la ubicación siga disponible."
+
+        is OutOfMemoryError ->
+            "El libro es demasiado grande para la memoria del teléfono. " +
+                "Exporta menos pestañas desde \"Solo datos\"."
+
         else -> "No se pudo $accion. Intenta de nuevo."
     }
 
-    fun limpia() { _estado.value = EstadoArchivo.Reposo }
+    fun limpia() {
+        _estado.value = EstadoArchivo.Reposo
+    }
 
-    fun avisa(mensaje: String) { _estado.value = EstadoArchivo.Fallo(mensaje) }
+    fun avisa(mensaje: String) {
+        _estado.value = EstadoArchivo.Fallo(mensaje)
+    }
 
     fun nombreSugerido(): String = "Finanzas-${LocalDate.now()}.xlsx"
 }

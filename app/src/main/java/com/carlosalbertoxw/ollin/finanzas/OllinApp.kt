@@ -158,9 +158,9 @@ class OllinApp : Application() {
         Recordatorios.notifica(
             this,
             id = Recordatorios.ID_VERSION,
-            titulo = "Hay una version nueva: $version",
+            titulo = "Hay una versión nueva: $version",
             texto = "Exporta tu respaldo antes de actualizar. Lo de siempre: el .xlsx es lo " +
-                "unico que sobrevive al cambio de telefono.",
+                "único que sobrevive al cambio de teléfono.",
             ruta = MainActivity.RUTA_ARCHIVO
         )
         contenedor.ajustes.guardaVersionAvisada(version)

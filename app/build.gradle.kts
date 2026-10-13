@@ -10,7 +10,6 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.cyclonedx)
     alias(libs.plugins.licensee)
-    alias(libs.plugins.ktlint)
     alias(libs.plugins.kover)
 }
 
@@ -313,20 +312,6 @@ dependencies {
     androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
-}
-
-/*
- * ktlint: sangria, imports, espacios y largo de linea. Las reglas que piden
- * otro acomodo de lineas estan apagadas en .editorconfig, con su motivo.
- *
- * Sin baseline: el que habia congelaba 275 lineas de mas de 100 columnas por su
- * numero de linea, asi que cualquier cambio que las moviera las hacia aparecer
- * como nuevas. Ya no queda ninguna, y CI falla con la primera. La unica excepcion
- * es XlsxEscritor, que la declara en su cabecera: sus partes OOXML van tal cual
- * las define la norma. Ver docs/desarrollo.md.
- */
-ktlint {
-    version.set(libs.versions.ktlint)
 }
 
 /*

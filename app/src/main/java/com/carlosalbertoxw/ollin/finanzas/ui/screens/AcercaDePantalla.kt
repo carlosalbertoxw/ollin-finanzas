@@ -158,11 +158,11 @@ fun AcercaDePantalla(
 
             HorizontalDivider()
 
-            Text("De donde viene el nombre", style = MaterialTheme.typography.titleMedium)
+            Text("De dónde viene el nombre", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Ollin es \"movimiento\" en nahuatl, y es el nombre del glifo del calendario " +
-                    "mexica que representa el cambio. Un libro de finanzas no es mas que el " +
-                    "registro de tus movimientos, y de ahi sale tambien el icono: dos listones " +
+                "Ollin es \"movimiento\" en náhuatl, y es el nombre del glifo del calendario " +
+                    "mexica que representa el cambio. Un libro de finanzas no es más que el " +
+                    "registro de tus movimientos, y de ahí sale también el icono: dos listones " +
                     "cruzados, el jade para lo que entra y la grana para lo que sale, con el " +
                     "saldo en el centro.",
                 style = MaterialTheme.typography.bodyMedium,
@@ -174,17 +174,17 @@ fun AcercaDePantalla(
             Text("Que hace", style = MaterialTheme.typography.titleMedium)
             Vineta(
                 "Registra entradas, salidas, transferencias y saldos de apertura, con " +
-                    "cuentas y categorias de listas cerradas."
+                    "cuentas y categorías de listas cerradas."
             )
             Vineta(
                 "Separa el patrimonio del consumo: comprar un terreno o cripto es trasladar " +
                     "patrimonio, no gastarlo, y los tableros lo cuentan aparte."
             )
             Vineta(
-                "Vigila la salud de tus datos y repara con un boton lo que se puede reparar solo."
+                "Vigila la salud de tus datos y repara con un botón lo que se puede reparar solo."
             )
             Vineta(
-                "Lleva presupuesto por categoria, tendencia mensual y compromisos por vencer."
+                "Lleva presupuesto por categoría, tendencia mensual y compromisos por vencer."
             )
             Vineta(
                 "Importa y exporta libros .xlsx que abren igual en Excel, WPS, LibreOffice y Sheets."
@@ -194,25 +194,25 @@ fun AcercaDePantalla(
 
             Text("Tu privacidad", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Todo vive en este telefono. No hay cuentas de usuario, ni servidor, ni " +
-                    "analitica, ni publicidad: nada de lo que capturas sale de aqui, salvo " +
-                    "el .xlsx que tu exportas a donde tu decides.",
+                "Todo vive en este teléfono. No hay cuentas de usuario, ni servidor, ni " +
+                    "analítica, ni publicidad: nada de lo que capturas sale de aquí, salvo " +
+                    "el .xlsx que tú exportas a donde tú decides.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = colores.textoTenue
             )
             Text(
                 "La app hace una sola llamada a internet: preguntarle al sitio del proyecto " +
-                    "si hay una version mas nueva, una vez al dia. Es una peticion a un " +
-                    "archivo fijo que no manda ningun dato tuyo -- ni que version traes, ni " +
-                    "que telefono tienes -- y se apaga en Ajustes. El sitio lo sirve GitHub " +
-                    "Pages, que ve tu IP como con cualquier pagina web.",
+                    "si hay una versión más nueva, una vez al día. Es una petición a un " +
+                    "archivo fijo que no manda ningún dato tuyo -- ni que versión traes, ni " +
+                    "que teléfono tienes -- y se apaga en Ajustes. El sitio lo sirve GitHub " +
+                    "Pages, que ve tu IP como con cualquier página web.",
                 style = MaterialTheme.typography.bodySmall,
                 color = colores.textoTenue
             )
             Text(
-                "La base de datos esta cifrada con AES-256 y su llave vive en el Keystore del " +
-                    "telefono. El respaldo automatico del sistema esta desactivado para la base " +
-                    "a proposito: tu respaldo es la exportacion a .xlsx.",
+                "La base de datos está cifrada con AES-256 y su llave vive en el Keystore del " +
+                    "teléfono. El respaldo automático del sistema está desactivado para la base " +
+                    "a propósito: tu respaldo es la exportación a .xlsx.",
                 style = MaterialTheme.typography.bodySmall,
                 color = colores.textoTenue
             )
@@ -220,10 +220,10 @@ fun AcercaDePantalla(
             fallo?.let {
                 HorizontalDivider()
 
-                Text("La app se cerro sola", style = MaterialTheme.typography.titleMedium)
+                Text("La app se cerró sola", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "La ultima vez que Ollin Finanzas se cerro por un error, guardo un " +
-                        "informe aqui, en el telefono. No se manda a ningun lado: puedes " +
+                    "La última vez que Ollin Finanzas se cerró por un error, guardó un " +
+                        "informe aquí, en el teléfono. No se manda a ningún lado: puedes " +
                         "leerlo, copiarlo para reportarlo o borrarlo.",
                     style = MaterialTheme.typography.bodySmall,
                     color = colores.textoTenue
@@ -235,7 +235,7 @@ fun AcercaDePantalla(
 
             HorizontalDivider()
 
-            Text("Como estan hechas las cuentas", style = MaterialTheme.typography.titleMedium)
+            Text("Cómo están hechas las cuentas", style = MaterialTheme.typography.titleMedium)
             Text(
                 "Los importes se guardan en centavos enteros, nunca en decimales flotantes: " +
                     "por eso un saldo en cero es exactamente cero y las conciliaciones cuadran.",
@@ -243,8 +243,8 @@ fun AcercaDePantalla(
                 color = colores.textoTenue
             )
             Text(
-                "Las hojas de analisis se exportan con formulas vivas en vez de tablas " +
-                    "dinamicas, para que se recalculen solas en cualquier suite de oficina.",
+                "Las hojas de análisis se exportan con fórmulas vivas en vez de tablas " +
+                    "dinámicas, para que se recalculen solas en cualquier suite de oficina.",
                 style = MaterialTheme.typography.bodySmall,
                 color = colores.textoTenue
             )
@@ -276,7 +276,7 @@ fun AcercaDePantalla(
     val informe = fallo
     if (verFallo && informe != null) {
         DialogoDeTexto(
-            titulo = "Informe del ultimo fallo",
+            titulo = "Informe del último fallo",
             texto = informe,
             monoespaciado = true,
             alCerrar = { verFallo = false },

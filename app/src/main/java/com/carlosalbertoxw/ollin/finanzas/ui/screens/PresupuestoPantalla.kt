@@ -106,9 +106,13 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
                     -realTotal,
                     Modifier.weight(1f),
                     coloreado = true,
-                    nota = if (metaTotal > 0) "%.0f%% de la meta".format(
-                        realTotal * 100.0 / metaTotal
-                    ) else null
+                    nota = if (metaTotal > 0) {
+                        "%.0f%% de la meta".format(
+                            realTotal * 100.0 / metaTotal
+                        )
+                    } else {
+                        null
+                    }
                 )
             }
         }
@@ -128,8 +132,11 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 TextButton(onClick = {
                     vm.copiaDelMesAnterior { n ->
-                        aviso = if (n == 0) "El mes anterior no tenia metas capturadas."
-                        else "Se copiaron $n metas de ${mes.minusMonths(1)}."
+                        aviso = if (n == 0) {
+                            "El mes anterior no tenía metas capturadas."
+                        } else {
+                            "Se copiaron $n metas de ${mes.minusMonths(1)}."
+                        }
                     }
                 }) { Text("Copiar metas del mes anterior") }
                 TextButton(onClick = alAbrirCategorias) { Text("Categorias") }
@@ -140,11 +147,11 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
             item {
                 EstadoVacio(
                     icono = Icons.Filled.AccountBalanceWallet,
-                    titulo = "Sin categorias de gasto",
+                    titulo = "Sin categorías de gasto",
                     detalle = "Crea las tuyas para empezar a presupuestar.",
                     modifier = Modifier.fillMaxWidth(),
                     accion = {
-                        TextButton(onClick = alAbrirCategorias) { Text("Administrar categorias") }
+                        TextButton(onClick = alAbrirCategorias) { Text("Administrar categorías") }
                     }
                 )
             }
@@ -160,10 +167,12 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(renglon.nombre, style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        if (renglon.metaCentavos > 0)
+                        if (renglon.metaCentavos > 0) {
                             "${Dinero.formateaCorto(abs(renglon.realCentavos))} / " +
                                 Dinero.formateaCorto(renglon.metaCentavos)
-                        else Dinero.formateaCorto(abs(renglon.realCentavos)),
+                        } else {
+                            Dinero.formateaCorto(abs(renglon.realCentavos))
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = when {
                             renglon.metaCentavos == 0L -> colores.textoTenue
@@ -212,7 +221,7 @@ fun PresupuestoPantalla(repo: FinanzasRepositorio, alAbrirCategorias: () -> Unit
                         singleLine = true
                     )
                     Text(
-                        "Deja el campo vacio para quitar la meta.",
+                        "Deja el campo vacío para quitar la meta.",
                         style = MaterialTheme.typography.bodySmall,
                         color = colores.textoTenue
                     )

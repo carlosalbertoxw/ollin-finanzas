@@ -95,9 +95,8 @@ class ExportarImportarTest {
         }
     )
 
-    private suspend fun exportaDesdeOrigen() =
-        FinanzasRepositorio(origen, contexto.contentResolver)
-            .exporta(uri, EsquemaExportacion.EXTENDIDO, HojaExportable.PREDETERMINADAS)
+    private suspend fun exportaDesdeOrigen() = FinanzasRepositorio(origen, contexto.contentResolver)
+        .exporta(uri, EsquemaExportacion.EXTENDIDO, HojaExportable.PREDETERMINADAS)
 
     @Test
     fun loExportadoAUnArchivoVuelveAEntrarEnOtraBase() = runBlocking {

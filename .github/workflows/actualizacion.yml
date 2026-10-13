@@ -12,6 +12,12 @@
 # migraciones: un fallo asi deja sin app a toda la gente que actualizo, y no se
 # arregla desde fuera. Las de interfaz no bloquean, porque dependen de
 # animaciones y su intermitencia no puede impedir publicar una correccion.
+#
+# Las dos versiones se compilan en **release**, con R8 y el shrink de recursos,
+# porque es lo que se instala de verdad. Una regla que falte en
+# proguard-rules.pro —SQLCipher por JNI, Room, un enum que se guarda por su
+# nombre— no se nota en debug y cierra la app de release al abrir la base. Era
+# la unica comprobacion del binario publicado que seguia siendo a mano.
 name: Actualización
 
 on:
@@ -28,7 +34,8 @@ jobs:
   actualizacion:
     name: Actualizar sobre la version anterior
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Dos compilaciones de release, con R8, y el emulador.
+    timeout-minutes: 60
 
     steps:
       # Con historia y etiquetas: la version anterior se saca de la ultima.
@@ -54,6 +61,7 @@ jobs:
           # prueba se dedicaria a instalar una version sobre si misma. Cuando
           # esto corre sobre una rama, GITHUB_REF_NAME no casa con ninguna
           # etiqueta y no descarta nada.
+          #
           # El `|| true` no es adorno: si la unica etiqueta es la que se esta
           # publicando --la primera release de todas-- `grep` no encuentra nada
           # y sale con 1, y con `pipefail` eso aborta el paso entero en vez de
@@ -75,22 +83,58 @@ jobs:
           echo "etiqueta=$etiqueta" >> "$GITHUB_OUTPUT"
           echo "Se actualizara desde $etiqueta."
 
+      # Un almacen que se crea aqui y muere con el runner. Para instalar una
+      # version encima de otra basta con que las dos compartan firma, no hace
+      # falta que sea la de publicacion: asi este flujo prueba el binario de
+      # release sin tocar los secretos del environment `release`, que siguen
+      # existiendo solo para el job que publica. El build lo toma de las mismas
+      # variables OLLIN_FINANZAS_* que usa la publicacion, y las etiquetas
+      # anteriores las leen igual.
+      - name: Almacén desechable para firmar las dos
+        if: steps.anterior.outputs.hay == 'si'
+        run: |
+          set -euo pipefail
+          almacen="$RUNNER_TEMP/desechable.jks"
+          CLAVE=$(openssl rand -hex 24)
+          export CLAVE
+          echo "::add-mask::$CLAVE"
+
+          keytool -genkeypair -noprompt \
+            -keystore "$almacen" -storetype PKCS12 \
+            -storepass:env CLAVE -keypass:env CLAVE \
+            -alias desechable -keyalg RSA -keysize 2048 -validity 2 \
+            -dname "CN=Ollin Finanzas, OU=CI desechable"
+
+          {
+            echo "OLLIN_FINANZAS_STORE_FILE=$almacen"
+            echo "OLLIN_FINANZAS_STORE_PASSWORD=$CLAVE"
+            echo "OLLIN_FINANZAS_KEY_ALIAS=desechable"
+            echo "OLLIN_FINANZAS_KEY_PASSWORD=$CLAVE"
+          } >> "$GITHUB_ENV"
+
+      # Sin firma el build no falla: saca app-release-unsigned.apk. Se comprueba
+      # que salio el firmado, porque uno sin firmar no se instala y la prueba
+      # fallaria mas adelante con un mensaje que no dice por que.
       - name: Compilar la anterior
         if: steps.anterior.outputs.hay == 'si'
         run: |
           set -euo pipefail
           actual=$(git rev-parse HEAD)
           git checkout --detach "${{ steps.anterior.outputs.etiqueta }}"
-          ./gradlew :app:assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/anterior.apk"
+          ./gradlew :app:assembleRelease --no-daemon
+          apk=app/build/outputs/apk/release/app-release.apk
+          [ -f "$apk" ] || { echo "::error::La anterior salio sin firmar."; exit 1; }
+          cp "$apk" "$RUNNER_TEMP/anterior.apk"
           git checkout --detach "$actual"
 
       - name: Compilar esta
         if: steps.anterior.outputs.hay == 'si'
         run: |
           set -euo pipefail
-          ./gradlew :app:assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/nueva.apk"
+          ./gradlew :app:assembleRelease --no-daemon
+          apk=app/build/outputs/apk/release/app-release.apk
+          [ -f "$apk" ] || { echo "::error::Esta version salio sin firmar."; exit 1; }
+          cp "$apk" "$RUNNER_TEMP/nueva.apk"
 
       # La virtualizacion por hardware no viene activada en los runners de
       # Linux; sin esto el emulador arranca en modo software y tarda de mas.
@@ -101,6 +145,30 @@ jobs:
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+
+      # La imagen del emulador se descarga con reintentos antes de arrancarlo.
+      # Una descarga corrupta ("Error on ZipFile unknown archive") dejaba el
+      # emulador sin arrancar y el job en rojo sin haber corrido una prueba:
+      # paso el 12 de octubre de 2026 en Pruebas de interfaz de Finanzas, API 26.
+      # Con la imagen ya instalada, el sdkmanager del action no vuelve a bajarla.
+      - name: Descargar la imagen del emulador
+        if: steps.anterior.outputs.hay == 'si'
+        env:
+          IMAGEN: system-images;android-34;google_apis;x86_64
+        run: |
+          set -uo pipefail
+          sdk="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          for intento in 1 2 3; do
+            if yes | "$sdk" --install "$IMAGEN" --channel=0 > /dev/null; then
+              echo "Imagen lista en el intento $intento."
+              exit 0
+            fi
+            echo "::warning::La descarga de $IMAGEN fallo (intento $intento); se reintenta."
+            rm -rf "$ANDROID_HOME/system-images/android-34" "$HOME/.android/cache"
+            sleep 15
+          done
+          echo "::error::No se pudo descargar $IMAGEN tras tres intentos."
+          exit 1
 
       - name: Instalar una encima de la otra
         if: steps.anterior.outputs.hay == 'si'
@@ -114,7 +182,7 @@ jobs:
 
       - name: Guardar el log
         if: always() && steps.anterior.outputs.hay == 'si'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: log-actualizacion
           path: ${{ runner.temp }}/logcat-*.txt

@@ -87,7 +87,7 @@ class RespaldosTest {
             ahora = lunes + semana
         )
 
-        assertTrue("Debe decir que no hay respaldo, salio: $texto", texto.contains("Todavia no"))
+        assertTrue("Debe decir que no hay respaldo, salio: $texto", texto.contains("Todavía no"))
     }
 
     /**

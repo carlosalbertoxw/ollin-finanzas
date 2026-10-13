@@ -41,11 +41,10 @@ sealed interface Resultado {
  * minimo que sirve para cumplir ese fin y nada mas.
  *
  * **Que sale del telefono.** Una peticion GET a un archivo estatico. No lleva
- * identificador, ni la version instalada, ni el modelo del telefono, ni un solo
- * importe del libro: la comparacion ocurre aqui dentro, con el JSON ya
- * descargado. Lo unico que el otro extremo --GitHub Pages, que sirve el sitio--
- * puede deducir es que alguien, desde una IP, pidio ese archivo con Ollin
- * Finanzas. Ver [AGENTE] y
+ * identificador, ni la version instalada, ni el modelo del telefono, ni un solo importe del libro:
+ * la comparacion ocurre aqui dentro, con el JSON ya descargado. Lo unico que el
+ * otro extremo --GitHub Pages, que sirve el sitio-- puede deducir es que
+ * alguien, desde una IP, pidio ese archivo con Ollin Finanzas. Ver [AGENTE] y
  * docs/seguridad.md.
  *
  * **Que no hace.** No descarga el APK ni lo instala: cuando hay version nueva,
@@ -124,13 +123,14 @@ class ComprobadorActualizaciones(
             val version = Version.de(objeto.optString("version").takeIf { it.isNotBlank() })
                 ?: return null
 
-            // Solo https, y solo hacia las releases o el sitio de este
-            // repositorio. Un enlace en claro acabaria en una descarga que
-            // cualquiera en medio de la red puede cambiar, y uno a otro host,
-            // en la de quien se quedara con el dominio. Ver [DestinosPermitidos].
-            val url = DestinosPermitidos.apk(objeto.optString("apk"))
-                ?: DestinosPermitidos.sitio(objeto.optString("sitio"))
-                ?: return null
+            // Solo una descarga de las releases de este repositorio. Que fuera
+            // https no bastaba: el JSON llega por el dominio propio, y quien se
+            // quedara con el --uno vencido, un DNS secuestrado-- podria anunciar
+            // a todas las instalaciones una "version nueva" con el enlace que
+            // quisiera. Las releases de GitHub no cambian de dueno con el
+            // dominio. `sitio` no sirve de respaldo por la misma razon: el sitio
+            // vive en ese dominio. Ver [DestinosPermitidos].
+            val url = DestinosPermitidos.apk(objeto.optString("apk")) ?: return null
 
             return VersionPublicada(
                 version = version,
@@ -198,7 +198,7 @@ private fun pide(url: String): Respuesta {
         val mudanza = siguienteSalto(codigo, conexion.getHeaderField("Location"))
         if (mudanza != null) return Respuesta.Mudanza(mudanza)
 
-        if (codigo != HttpURLConnection.HTTP_OK) error("El sitio respondio $codigo")
+        if (codigo != HttpURLConnection.HTTP_OK) error("El sitio respondió $codigo")
 
         return Respuesta.Cuerpo(
             conexion.inputStream.bufferedReader().use { lector ->
@@ -272,9 +272,9 @@ internal const val AGENTE = "OllinFinanzas"
  * claro, y quien este en medio de la red podria anunciar la version que
  * quisiera con el enlace de descarga que quisiera.
  *
- * **Y solo hacia el sitio.** Un https cualquiera tampoco basta: si el dominio
- * propio se perdiera, Pages seguiria redirigiendo a el y quien lo comprara
- * contestaria el `version.json`. Ver [DestinosPermitidos].
+ * **Y solo a casa.** El salto existe para la mudanza de `github.io` al dominio
+ * propio; cualquier otro destino no es una mudanza del sitio, y no hay por que
+ * pedirle a un tercero que diga que version toca. Ver [DestinosPermitidos].
  */
 internal fun siguienteSalto(codigo: Int, destino: String?): String? {
     if (codigo !in 300..399) return null
@@ -291,8 +291,9 @@ internal fun siguienteSalto(codigo: Int, destino: String?): String? {
  * "version nueva" con su propio APK. Android no lo instalaria encima por la
  * firma distinta, pero quien desinstale para arreglarlo ya cayo.
  *
- * Por eso el APK solo puede venir de las releases de este repositorio, y el
- * sitio solo puede ser uno de sus dos domicilios. Se compara la direccion ya
+ * Por eso el boton solo puede abrir una descarga de las releases de este
+ * repositorio, y el `version.json` solo se pide a uno de los dos domicilios del
+ * sitio. Se compara la direccion ya
  * desarmada --esquema, host exacto, sin usuario ni puerto, ruta bajo el
  * prefijo-- y no el texto: `startsWith` dejaria pasar un `..` que el
  * navegador resuelve hacia otro repositorio de GitHub.
@@ -301,14 +302,20 @@ internal object DestinosPermitidos {
 
     private class Destino(val host: String, val prefijo: String)
 
-    /** Releases de este repositorio. Nada fuera de ahi es un APK de Ollin Finanzas. */
+    /**
+     * Descargas de las releases de este repositorio. Nada fuera de ahi es un APK
+     * de Ollin Finanzas. Termina en barra para que `ollin-finanzas-falsa` no pase.
+     */
     private val APK = listOf(
-        Destino("github.com", "/carlosalbertoxw/ollin-finanzas/releases/")
+        Destino("github.com", "/carlosalbertoxw/ollin-finanzas/releases/download/")
     )
 
     /**
      * La direccion de github.io, que va compilada en cada APK, y el dominio
-     * propio al que hoy redirige.
+     * propio al que hoy redirige. Casa es el host **y la ruta del proyecto**:
+     * los dos hosts sirven tambien las paginas de otros repositorios de la misma
+     * cuenta, y quien pudiera publicar en uno de ellos contestaria el
+     * `version.json`.
      */
     private val SITIO = listOf(
         Destino("carlosalbertoxw.github.io", "/ollin-finanzas/"),

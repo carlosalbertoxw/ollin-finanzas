@@ -95,8 +95,8 @@ fun RevisionPantalla(
 
             hallazgo == null -> EstadoVacio(
                 icono = Icons.Filled.CheckCircle,
-                titulo = "Ya quedo",
-                detalle = "No queda ningun movimiento con este problema.",
+                titulo = "Ya quedó",
+                detalle = "No queda ningún movimiento con este problema.",
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -145,19 +145,19 @@ fun RevisionPantalla(
 
 /** Elegir categoria sin abrir el movimiento: clasificar cien renglones a mano cansa. */
 @Composable
-private fun AsignadorCategoria(
-    opciones: List<Categoria>,
-    alElegir: (Long) -> Unit
-) {
+private fun AsignadorCategoria(opciones: List<Categoria>, alElegir: (Long) -> Unit) {
     if (opciones.isEmpty()) return
     var abierto by remember { mutableStateOf(false) }
     Box {
-        TextButton(onClick = { abierto = true }) { Text("Asignar categoria") }
+        TextButton(onClick = { abierto = true }) { Text("Asignar categoría") }
         DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
             opciones.forEach { categoria ->
                 DropdownMenuItem(
                     text = { Text(categoria.nombre) },
-                    onClick = { alElegir(categoria.id); abierto = false }
+                    onClick = {
+                        alElegir(categoria.id)
+                        abierto = false
+                    }
                 )
             }
         }

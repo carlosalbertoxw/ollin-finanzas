@@ -8,7 +8,7 @@ Ollin Finanzas es un proyecto personal, pero el código es abierto ([MIT](LICENS
 
 ## Cómo se trabaja
 
-- **Ramas cortas y pull request a `main`.** El flujo [`pruebas.yml`](.github/workflows/pruebas.yml) tiene que quedar en verde: licencias, pruebas unitarias, Lint, ktlint, la suite instrumentada compilada, `assembleRelease` y el sitio. `./gradlew ktlintFormat` arregla lo que ktlint sabe arreglar solo.
+- **Ramas cortas y pull request a `main`.** El flujo [`pruebas.yml`](.github/workflows/pruebas.yml) tiene que quedar en verde: el formato de ktlint, licencias, pruebas unitarias con su cobertura, Lint, la suite instrumentada compilada, `assembleRelease` y el sitio. `./gradlew spotlessApply` deja el formato como lo pide. La [plantilla del PR](.github/pull_request_template.md) repite esta lista y marca lo que conviene mirar dos veces.
 - **Commits que dicen qué cambia para quien usa la app**, en español y en presente: *«El candado se cierra al salir»*, no *«fix»*. El cuerpo explica el porqué.
 - **El CHANGELOG en el mismo cambio.** Lo que se nota en la app va bajo `## [Sin publicar]`, con el formato de [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). De ahí salen la versión del APK y las notas de la release, así que lo que no está ahí no se publica. Ver [publicación](docs/publicacion.md).
 - **La documentación en el mismo cambio que la vuelve obsoleta.** Si un comando, un archivo o una regla cambia, cambia también donde se explica.

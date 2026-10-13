@@ -144,7 +144,10 @@ data class EstadoTablero(
     val patrimonioAcumulado: List<Long>
         get() {
             var acumulado = 0L
-            return flujo.map { acumulado += it.netoCentavos; acumulado }
+            return flujo.map {
+                acumulado += it.netoCentavos
+                acumulado
+            }
         }
 }
 class TableroVm(

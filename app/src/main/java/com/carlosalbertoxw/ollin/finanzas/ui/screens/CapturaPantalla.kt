@@ -146,7 +146,7 @@ fun CapturaPantalla(
                         style = MaterialTheme.typography.titleSmall
                     )
                     Text(
-                        "Una transferencia son dos renglones que se cancelan entre si, y aqui " +
+                        "Una transferencia son dos renglones que se cancelan entre sí, y aquí " +
                             "solo se ve uno. Se edita completa para que el par siga cuadrando.",
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -225,8 +225,11 @@ fun CapturaPantalla(
                 onValueChange = { vm.importeTexto = it },
                 label = {
                     Text(
-                        if (vm.naturaleza == NaturalezaCaptura.AJUSTE) "Cuanto vale ahora"
-                        else "Importe"
+                        if (vm.naturaleza == NaturalezaCaptura.AJUSTE) {
+                            "Cuánto vale ahora"
+                        } else {
+                            "Importe"
+                        }
                     )
                 },
                 prefix = { Text("$") },
@@ -244,7 +247,7 @@ fun CapturaPantalla(
                 val diferencia = vm.diferenciaDelAjuste()
                 Text(
                     buildString {
-                        append("Hoy esta en ${Dinero.formatea(vm.valorBase())}.")
+                        append("Hoy está en ${Dinero.formatea(vm.valorBase())}.")
                         if (diferencia != null && diferencia != 0L) {
                             append(if (diferencia > 0) "  Sube " else "  Baja ")
                             append(Dinero.formatea(kotlin.math.abs(diferencia)))
@@ -306,7 +309,7 @@ fun CapturaPantalla(
 
             if (vm.naturaleza == NaturalezaCaptura.AJUSTE && revaluables.isEmpty()) {
                 Text(
-                    "No tienes cuentas de tipo Activo ni Inversion. Crea una en Ajustes > " +
+                    "No tienes cuentas de tipo Activo ni Inversión. Crea una en Ajustes > " +
                         "Cuentas para poder registrar lo que vale.",
                     style = MaterialTheme.typography.bodySmall,
                     color = colores.alerta
@@ -392,7 +395,11 @@ fun CapturaPantalla(
                 }
 
             vm.error?.let {
-                Text(it, color = colores.salida, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
 
             Button(onClick = vm::guarda, modifier = Modifier.fillMaxWidth()) {
@@ -468,7 +475,10 @@ fun SelectorDesplegable(
             opciones.forEach { (id, texto) ->
                 DropdownMenuItem(
                     text = { Text(texto) },
-                    onClick = { alElegir(id); abierto = false }
+                    onClick = {
+                        alElegir(id)
+                        abierto = false
+                    }
                 )
             }
         }

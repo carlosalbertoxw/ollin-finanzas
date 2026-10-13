@@ -129,8 +129,11 @@ class ExcelRoundTripTest {
         descripcion = descripcion,
         medio = Medio.ELECTRONICO,
         tipo = tipo,
-        contraparte = if (tipo.esTransferencia || tipo == TipoMovimiento.BALANCE_INICIAL)
-            Contraparte.PROPIA else Contraparte.TERCERO,
+        contraparte = if (tipo.esTransferencia || tipo == TipoMovimiento.BALANCE_INICIAL) {
+            Contraparte.PROPIA
+        } else {
+            Contraparte.TERCERO
+        },
         grupoTransferencia = grupo
     )
 
@@ -191,8 +194,13 @@ class ExcelRoundTripTest {
         val libro = archivo.inputStream().use(XlsxLector::lee)
         assertEquals(
             listOf(
-                "Balance", "Ingresos - Egresos", "Presupuesto",
-                "Transferencias", "Compromisos", "Registros", "Diccionarios"
+                "Balance",
+                "Ingresos - Egresos",
+                "Presupuesto",
+                "Transferencias",
+                "Compromisos",
+                "Registros",
+                "Diccionarios"
             ),
             libro.hojas.map { it.nombre }
         )

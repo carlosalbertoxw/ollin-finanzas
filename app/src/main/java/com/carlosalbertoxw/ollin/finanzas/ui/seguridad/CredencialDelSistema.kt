@@ -57,8 +57,11 @@ fun pedirCredencialDelSistema(
     val lanzador = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { resultado ->
-        if (resultado.resultCode == Activity.RESULT_OK) alLograr()
-        else alFallar("No se pudo verificar. Intenta de nuevo.")
+        if (resultado.resultCode == Activity.RESULT_OK) {
+            alLograr()
+        } else {
+            alFallar("No se pudo verificar. Intenta de nuevo.")
+        }
     }
 
     val pantallaDelSistema: () -> Unit = {
@@ -67,7 +70,7 @@ fun pedirCredencialDelSistema(
         @Suppress("DEPRECATION")
         val intencion = guardia?.createConfirmDeviceCredentialIntent(
             titulo,
-            "Usa tu patron, PIN o contrasena"
+            "Usa tu patrón, PIN o contraseña"
         )
         if (intencion != null) {
             alSalirAlSistema()
@@ -77,10 +80,10 @@ fun pedirCredencialDelSistema(
                 // Sin pantalla de desbloqueo no hay vuelta que esperar, y un
                 // aviso armado le regalaria la gracia a la siguiente salida.
                 alNoSalirAlSistema()
-                alFallar("No se pudo abrir la pantalla de desbloqueo del telefono.")
+                alFallar("No se pudo abrir la pantalla de desbloqueo del teléfono.")
             }
         } else {
-            alFallar("Tu telefono ya no tiene patron ni PIN configurado.")
+            alFallar("Tu teléfono ya no tiene patrón ni PIN configurado.")
         }
     }
 
@@ -97,7 +100,8 @@ fun pedirCredencialDelSistema(
                         ) {
                             if (LlaveDeDesbloqueo.demuestraAutenticacion(
                                     resultado.cryptoObject?.cipher
-                                )) {
+                                )
+                            ) {
                                 alLograr()
                             } else {
                                 alFallar("No se pudo verificar. Intenta de nuevo.")
@@ -111,7 +115,7 @@ fun pedirCredencialDelSistema(
                 ).authenticate(
                     BiometricPrompt.PromptInfo.Builder()
                         .setTitle(titulo)
-                        .setSubtitle("Usa tu huella, patron o PIN")
+                        .setSubtitle("Usa tu huella, patrón o PIN")
                         .setAllowedAuthenticators(BIOMETRIC_STRONG or DEVICE_CREDENTIAL)
                         .build(),
                     BiometricPrompt.CryptoObject(cifrador)

@@ -142,8 +142,12 @@ class ImportadorExcel(private val db: OllinDatabase) {
         val cuentas = HashSet<String>()
         val categorias = HashSet<String>()
 
-        fun anotaCuenta(nombre: String) { cuentas += nombre.normalizaClave() }
-        fun anotaCategoria(nombre: String) { categorias += nombre.normalizaClave() }
+        fun anotaCuenta(nombre: String) {
+            cuentas += nombre.normalizaClave()
+        }
+        fun anotaCategoria(nombre: String) {
+            categorias += nombre.normalizaClave()
+        }
     }
 
     /**
@@ -163,7 +167,7 @@ class ImportadorExcel(private val db: OllinDatabase) {
         } else {
             Diagnostico(
                 Severidad.ERROR,
-                "No encontre ninguna hoja con columnas de Fecha, Cantidad y Cuenta."
+                "No encontré ninguna hoja con columnas de Fecha, Cantidad y Cuenta."
             )
         }
         return copy(diagnosticos = diagnosticos + aviso)
@@ -178,10 +182,9 @@ class ImportadorExcel(private val db: OllinDatabase) {
 
     private class MapaColumnas(private val indices: Map<String, Int>) {
         operator fun get(clave: String): Int? = indices[clave]
-        fun esUtilizable(): Boolean =
-            indices.containsKey(
-                "fecha"
-            ) && indices.containsKey("cantidad") && indices.containsKey("cuenta")
+        fun esUtilizable(): Boolean = indices.containsKey(
+            "fecha"
+        ) && indices.containsKey("cantidad") && indices.containsKey("cuenta")
     }
 
     private fun mapaColumnas(hoja: HojaLeida): MapaColumnas {
@@ -218,7 +221,7 @@ class ImportadorExcel(private val db: OllinDatabase) {
                 omitidos = lectura.omitidos,
                 diagnosticos = diagnosticos + Diagnostico(
                     Severidad.ERROR,
-                    "No hubo ningun renglon aprovechable."
+                    "No hubo ningún renglón aprovechable."
                 )
             )
         }
@@ -234,14 +237,14 @@ class ImportadorExcel(private val db: OllinDatabase) {
             diagnosticos += Diagnostico(
                 Severidad.INFO,
                 "Recalcule la contraparte de ${insercion.contrapartesRecalculadas} movimientos: " +
-                    "el archivo los marcaba como si intervinera un tercero, pero son traspasos " +
+                    "el archivo los marcaba como si interviniera un tercero, pero son traspasos " +
                     "entre cuentas tuyas."
             )
         }
         if (categorias.sinCategoria > 0) {
             diagnosticos += Diagnostico(
                 Severidad.AVISO,
-                "${categorias.sinCategoria} movimientos quedaron sin categoria. " +
+                "${categorias.sinCategoria} movimientos quedaron sin categoría. " +
                     "Puedes asignarlas en lote desde la lista."
             )
         }
@@ -337,9 +340,13 @@ class ImportadorExcel(private val db: OllinDatabase) {
 
             val nuevo = when (fila.tipo) {
                 TipoMovimiento.TRANSFERENCIA_ENTRADA -> TipoMovimiento.TRANSFERENCIA_SALIDA
+
                 TipoMovimiento.TRANSFERENCIA_SALIDA -> TipoMovimiento.TRANSFERENCIA_ENTRADA
+
                 TipoMovimiento.ENTRADA -> TipoMovimiento.SALIDA
+
                 TipoMovimiento.SALIDA -> TipoMovimiento.ENTRADA
+
                 // Los internos aceptan cualquier signo: revaluar sube, depreciar baja.
                 TipoMovimiento.BALANCE_INICIAL, TipoMovimiento.AJUSTE_VALOR -> fila.tipo
             }
@@ -348,7 +355,7 @@ class ImportadorExcel(private val db: OllinDatabase) {
                 Severidad.AVISO,
                 "El tipo decia \"${fila.tipo.etiqueta}\" pero el importe es " +
                     "${if (real > 0) "positivo" else "negativo"}. " +
-                    "Se corrigio a \"${nuevo.etiqueta}\"; el importe no se toco.",
+                    "Se corrigio a \"${nuevo.etiqueta}\"; el importe no se tocó.",
                 fila.numeroFila
             )
             fila.copy(tipo = nuevo)
@@ -405,7 +412,7 @@ class ImportadorExcel(private val db: OllinDatabase) {
             diagnosticos += Diagnostico(
                 Severidad.AVISO,
                 "Quedaron $huerfanas patas de transferencia sin pareja. " +
-                    "Suelen ser movimientos que salen de una cuenta que no esta registrada."
+                    "Suelen ser movimientos que salen de una cuenta que no está registrada."
             )
         }
         return Emparejado(grupos, emparejadas, huerfanas)
@@ -477,7 +484,10 @@ class ImportadorExcel(private val db: OllinDatabase) {
             // a) la columna Categoria manda si viene
             fila.categoria?.let { nombre -> return deLaColumna(nombre, fila.tipo) }
 
-            if (!opciones.autoCategorizar) { sinCategoria++; return null }
+            if (!opciones.autoCategorizar) {
+                sinCategoria++
+                return null
+            }
 
             // b) mapeo por descripcion, primero la variante especifica por tipo
             mapeo[Semilla.claveAlias(fila.descripcion, fila.tipo)]?.let { return it }
@@ -551,7 +561,10 @@ class ImportadorExcel(private val db: OllinDatabase) {
 
         for (fila in filas) {
             val cuenta = cuentas[fila.cuenta.normalizaClave()]
-            if (cuenta == null) { omitidos++; continue }
+            if (cuenta == null) {
+                omitidos++
+                continue
+            }
 
             val derivada = derivaContraparte(fila.tipo)
             val contraparte = if (opciones.derivarContraparte) {
@@ -654,9 +667,9 @@ class ImportadorExcel(private val db: OllinDatabase) {
         if (creadas.size > antes) {
             diagnosticos += Diagnostico(
                 Severidad.INFO,
-                "Cree ${creadas.size - antes} categorias que venian en la pestaña Diccionarios. " +
-                    "La hoja no guarda si una categoria es de patrimonio, asi que entraron como " +
-                    "gasto o ingreso segun su uso; revisalas si alguna era compra de patrimonio."
+                "Creé ${creadas.size - antes} categorías que venían en la pestaña Diccionarios. " +
+                    "La hoja no guarda si una categoría es de patrimonio, así que entraron como " +
+                    "gasto o ingreso según su uso; revísalas si alguna era compra de patrimonio."
             )
         }
     }
@@ -793,7 +806,7 @@ class ImportadorExcel(private val db: OllinDatabase) {
             diagnosticos += Diagnostico(
                 Severidad.INFO,
                 "Al reemplazar quite ${cuentasSobran.size} cuentas y " +
-                    "$categoriasEliminadas categorias que quedaron sin un solo movimiento y " +
+                    "$categoriasEliminadas categorías que quedaron sin un solo movimiento y " +
                     "que el libro no nombra" +
                     if (cuentasSobran.isEmpty()) {
                         "."
@@ -805,8 +818,8 @@ class ImportadorExcel(private val db: OllinDatabase) {
         if (loBorraTodo) {
             diagnosticos += Diagnostico(
                 Severidad.INFO,
-                "El libro no trae categorias, asi que las tuyas se quedaron como estaban: " +
-                    "borrarlas dejaria la captura sin donde clasificar."
+                "El libro no trae categorías, así que las tuyas se quedaron como estaban: " +
+                    "borrarlas dejaría la captura sin dónde clasificar."
             )
         }
 
@@ -841,9 +854,15 @@ class ImportadorExcel(private val db: OllinDatabase) {
 
         metas.forEach { meta ->
             val categoria = indice[meta.categoria.normalizaClave()]
-            if (categoria == null) { sinCategoria++; return@forEach }
+            if (categoria == null) {
+                sinCategoria++
+                return@forEach
+            }
             val periodo = meta.periodo
-            if (periodo == null) { sinPeriodo++; return@forEach }
+            if (periodo == null) {
+                sinPeriodo++
+                return@forEach
+            }
             // La ultima gana: si la hoja repite categoria y mes, el renglon de
             // mas abajo es el que el usuario dejo al final.
             aGuardar[Triple(categoria.id, periodo.year, periodo.monthValue)] = Presupuesto(
@@ -868,8 +887,8 @@ class ImportadorExcel(private val db: OllinDatabase) {
         if (sinCategoria > 0) {
             diagnosticos += Diagnostico(
                 Severidad.AVISO,
-                "$sinCategoria metas de presupuesto apuntan a categorias que no existen en " +
-                    "Ollin Finanzas. Crea la categoria y vuelve a importar, o captura la meta a mano."
+                "$sinCategoria metas de presupuesto apuntan a categorías que no existen en " +
+                    "Ollin Finanzas. Crea la categoría y vuelve a importar, o captura la meta a mano."
             )
         }
         if (sinPeriodo > 0) {
@@ -912,7 +931,10 @@ class ImportadorExcel(private val db: OllinDatabase) {
         val aInsertar = mutableListOf<Compromiso>()
 
         leidos.forEach { leido ->
-            if (!yaExisten.add(leido.nombre.normalizaClave())) { repetidos++; return@forEach }
+            if (!yaExisten.add(leido.nombre.normalizaClave())) {
+                repetidos++
+                return@forEach
+            }
             val cuentaId = leido.cuenta?.let { nombre ->
                 cuentas[nombre.normalizaClave()]?.id.also { if (it == null) sinCuenta++ }
             }
@@ -959,8 +981,8 @@ class ImportadorExcel(private val db: OllinDatabase) {
         if (sinCategoria > 0) {
             diagnosticos += Diagnostico(
                 Severidad.AVISO,
-                "$sinCategoria compromisos nombran una categoria que no existe; quedaron sin " +
-                    "categoria. Crea la categoria y vuelve a importar, o asignala a mano."
+                "$sinCategoria compromisos nombran una categoría que no existe; quedaron sin " +
+                    "categoría. Crea la categoría y vuelve a importar, o asígnala a mano."
             )
         }
 
@@ -980,7 +1002,9 @@ class ImportadorExcel(private val db: OllinDatabase) {
             texto.startsWith(
                 "1"
             ) || texto.contains("propia") || texto.contains("mis cuentas") -> Contraparte.PROPIA
+
             texto.startsWith("2") || texto.contains("tercero") -> Contraparte.TERCERO
+
             else -> null
         }
     }
@@ -1026,9 +1050,11 @@ class ImportadorExcel(private val db: OllinDatabase) {
             clave.contains(
                 "cartera"
             ) || clave.contains("efectivo") || clave.contains("caja") -> TipoCuenta.EFECTIVO
+
             clave.contains(
                 "terreno"
             ) || clave.contains("cripto") || clave.contains("inmueble") -> TipoCuenta.ACTIVO
+
             else -> TipoCuenta.DEBITO
         }
     }
@@ -1057,6 +1083,9 @@ class ImportadorExcel(private val db: OllinDatabase) {
     private fun derivaContraparte(tipo: TipoMovimiento): Contraparte =
         // Un traspaso o un saldo de apertura mueve dinero tuyo de un lado a otro.
         // Una entrada o una salida, por definicion, cruza contra alguien mas.
-        if (tipo.esTransferencia || tipo.esInterno) Contraparte.PROPIA
-        else Contraparte.TERCERO
+        if (tipo.esTransferencia || tipo.esInterno) {
+            Contraparte.PROPIA
+        } else {
+            Contraparte.TERCERO
+        }
 }

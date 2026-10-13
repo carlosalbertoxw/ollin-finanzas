@@ -8,15 +8,14 @@ package com.carlosalbertoxw.ollin.finanzas.data.actualizaciones
  * enterarse de la actualizacion justo cuando el proyecto empieza a tener
  * historia.
  */
-data class Version(
-    val mayor: Int,
-    val menor: Int,
-    val parche: Int
-) : Comparable<Version> {
+data class Version(val mayor: Int, val menor: Int, val parche: Int) : Comparable<Version> {
 
     override fun compareTo(other: Version): Int = compareValuesBy(
-        this, other,
-        Version::mayor, Version::menor, Version::parche
+        this,
+        other,
+        Version::mayor,
+        Version::menor,
+        Version::parche
     )
 
     override fun toString(): String = "$mayor.$menor.$parche"

@@ -49,15 +49,13 @@ class ActualizacionesTest {
         }
     }
 
-    private fun comprobador(
-        instalada: String? = "1.0.0",
-        respuesta: String = JSON_1_1_0
-    ) = ComprobadorActualizaciones(
-        ajustes = ajustes,
-        instalada = Version.de(instalada),
-        url = "https://ejemplo.invalido/version.json",
-        descarga = { respuesta }
-    )
+    private fun comprobador(instalada: String? = "1.0.0", respuesta: String = JSON_1_1_0) =
+        ComprobadorActualizaciones(
+            ajustes = ajustes,
+            instalada = Version.de(instalada),
+            url = "https://ejemplo.invalido/version.json",
+            descarga = { respuesta }
+        )
 
     // --------------------------------------------------------------- versiones
 
@@ -113,14 +111,17 @@ class ActualizacionesTest {
         assertTrue(notas.endsWith("…"))
     }
 
-    /** Sin apk se manda al sitio, que es donde estan las instrucciones. */
+    /**
+     * El sitio no sirve de respaldo: vive en el dominio propio, y quien se
+     * quedara con el podria mandar el boton a donde quisiera.
+     */
     @Test
-    fun `sin enlace al apk se cae al sitio`() {
-        val publicada = ComprobadorActualizaciones.lee(
-            """{"version":"1.1.0","sitio":"$SITIO"}"""
+    fun `sin enlace al apk no hay aviso aunque venga el sitio`() {
+        assertNull(
+            ComprobadorActualizaciones.lee(
+                """{"version":"1.1.0","sitio":"$SITIO"}"""
+            )
         )
-
-        assertEquals(SITIO, publicada?.url)
     }
 
     /**
@@ -139,45 +140,31 @@ class ActualizacionesTest {
 
     /**
      * https no basta: si el dominio propio cambiara de manos, el que lo tenga
-     * contestaria el version.json. El APK solo sale de las releases de este
-     * repositorio y el sitio solo es uno de sus dos domicilios.
+     * contestaria el version.json. El APK solo sale de las descargas de las
+     * releases de este repositorio, y ni siquiera el sitio lo sustituye.
      */
     @Test
-    fun `un apk fuera de las releases del repositorio se cambia por el sitio`() {
+    fun `solo se acepta una descarga de las releases de este repositorio`() {
         val ajenos = listOf(
             "https://ejemplo.invalido/ollin-finanzas.apk",
             "https://github.com/otra-cuenta/ollin-finanzas/releases/download/v9.0.0/x.apk",
+            "https://github.com/carlosalbertoxw/ollin-finanzas-falsa/releases/download/v1/x.apk",
+            // La pagina de una release no es una descarga.
+            "https://github.com/carlosalbertoxw/ollin-finanzas/releases/tag/v1.1.0",
             // `..` y su forma codificada: el navegador los resuelve hacia otro repositorio.
-            "https://github.com/carlosalbertoxw/ollin-finanzas/releases/../../../otra/x/releases/download/a.apk",
-            "https://github.com/carlosalbertoxw/ollin-finanzas/releases/%2e%2e/%2e%2e/otra/a.apk",
-            "https://github.com.ejemplo.invalido/carlosalbertoxw/ollin-finanzas/releases/a.apk",
-            "https://github.com@ejemplo.invalido/carlosalbertoxw/ollin-finanzas/releases/a.apk",
-            "https://github.com:8443/carlosalbertoxw/ollin-finanzas/releases/a.apk"
+            "https://github.com/carlosalbertoxw/ollin-finanzas/releases/download/../../../otra/x.apk",
+            "https://github.com/carlosalbertoxw/ollin-finanzas/releases/download/%2e%2e/%2e%2e/otra/a.apk",
+            "https://github.com.ejemplo.invalido/carlosalbertoxw/ollin-finanzas/releases/download/a.apk",
+            "https://github.com@ejemplo.invalido/carlosalbertoxw/ollin-finanzas/releases/download/a.apk",
+            "https://github.com:8443/carlosalbertoxw/ollin-finanzas/releases/download/a.apk",
+            "$APK?x=1",
+            "$APK#x"
         )
         ajenos.forEach { apk ->
             val publicada = ComprobadorActualizaciones.lee(
                 """{"version":"1.1.0","apk":"$apk","sitio":"$SITIO"}"""
             )
-            assertEquals("No debio aceptarse $apk", SITIO, publicada?.url)
-        }
-    }
-
-    @Test
-    fun `sin un destino conocido no hay aviso`() {
-        assertNull(
-            ComprobadorActualizaciones.lee(
-                """{"version":"1.1.0","apk":"https://ejemplo.invalido/x.apk","sitio":"https://ejemplo.invalido/"}"""
-            )
-        )
-    }
-
-    @Test
-    fun `los dos domicilios del sitio se aceptan`() {
-        listOf(SITIO, "https://carlosalbertoxw.com/ollin-finanzas/").forEach { sitio ->
-            val publicada = ComprobadorActualizaciones.lee(
-                """{"version":"1.1.0","sitio":"$sitio"}"""
-            )
-            assertEquals(sitio, publicada?.url)
+            assertNull("No debio aceptarse $apk", publicada)
         }
     }
 

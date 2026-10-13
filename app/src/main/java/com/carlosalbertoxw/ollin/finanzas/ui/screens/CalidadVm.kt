@@ -48,10 +48,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class CalidadVm(
-    private val revisaCalidad: RevisaCalidad,
-    private val reparaDatos: ReparaDatos
-) : ViewModel() {
+class CalidadVm(private val revisaCalidad: RevisaCalidad, private val reparaDatos: ReparaDatos) :
+    ViewModel() {
 
     private val _hallazgos = MutableStateFlow<List<Hallazgo>>(emptyList())
     val hallazgos: StateFlow<List<Hallazgo>> = _hallazgos
@@ -114,8 +112,10 @@ class CalidadVm(
             val n = runCatching { reparaDatos.repara(hallazgo.clave) }.getOrDefault(0)
             _aviso.value = when {
                 n > 0 -> "Se corrigieron $n movimientos."
+
                 hallazgo.idsMovimiento.isNotEmpty() ->
-                    "Ninguno se podia corregir solo. Abrelos uno por uno para resolverlos a mano."
+                    "Ninguno se podía corregir solo. Ábrelos uno por uno para resolverlos a mano."
+
                 else -> "No hubo nada que corregir."
             }
             audita()

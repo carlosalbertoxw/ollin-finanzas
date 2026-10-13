@@ -41,8 +41,7 @@ import java.time.LocalDate
  */
 class ImportadorHojasTest : BaseEnMemoria() {
 
-    private fun importador() =
-        ImportadorExcel(db)
+    private fun importador() = ImportadorExcel(db)
 
     private fun libro(vararg hojas: Hoja): InputStream {
         val salida = ByteArrayOutputStream()
@@ -438,7 +437,7 @@ class ImportadorHojasTest : BaseEnMemoria() {
         assertEquals(0, categoriaDao.todas().count { it.nombre == "Seguros" })
         assertTrue(
             resultado.diagnosticos.any {
-                it.severidad == Severidad.AVISO && it.mensaje.contains("categoria que no existe")
+                it.severidad == Severidad.AVISO && it.mensaje.contains("categoría que no existe")
             }
         )
     }
@@ -450,8 +449,10 @@ class ImportadorHojasTest : BaseEnMemoria() {
                 "Compromisos",
                 texto("Compromiso", "Monto", "Proximo pago", "Pagos restantes"),
                 listOf(
-                    Celda.Texto("Seguro auto"), Celda.Numero(3200.0),
-                    Celda.Fecha(LocalDate.of(2026, 6, 1)), Celda.Numero(3.0)
+                    Celda.Texto("Seguro auto"),
+                    Celda.Numero(3200.0),
+                    Celda.Fecha(LocalDate.of(2026, 6, 1)),
+                    Celda.Numero(3.0)
                 )
             )
         }
@@ -493,8 +494,10 @@ class ImportadorHojasTest : BaseEnMemoria() {
                     "Compromisos",
                     texto("Compromiso", "Monto", "Proximo pago", "Pagos restantes"),
                     listOf(
-                        Celda.Texto("Nuevo"), Celda.Numero(700.0),
-                        Celda.Fecha(LocalDate.of(2026, 4, 1)), Celda.Numero(6.0)
+                        Celda.Texto("Nuevo"),
+                        Celda.Numero(700.0),
+                        Celda.Fecha(LocalDate.of(2026, 4, 1)),
+                        Celda.Numero(6.0)
                     )
                 ),
                 hojaRegistros(registro(cantidad = -500.0, descripcion = "Carga"))
@@ -526,8 +529,10 @@ class ImportadorHojasTest : BaseEnMemoria() {
                     "Compromisos",
                     texto("Compromiso", "Monto", "Proximo pago", "Pagos restantes"),
                     listOf(
-                        Celda.Texto("Predial"), Celda.Numero(1200.0),
-                        Celda.Fecha(LocalDate.of(2026, 12, 1)), Celda.Numero(1.0)
+                        Celda.Texto("Predial"),
+                        Celda.Numero(1200.0),
+                        Celda.Fecha(LocalDate.of(2026, 12, 1)),
+                        Celda.Numero(1.0)
                     )
                 )
             )

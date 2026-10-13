@@ -77,7 +77,7 @@ fun CategoriasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
                         tipo = TipoCategoria.GASTO,
                         orden = renglones.size
                     )
-                }) { Icon(Icons.Filled.Add, contentDescription = "Nueva categoria") }
+                }) { Icon(Icons.Filled.Add, contentDescription = "Nueva categoría") }
             }
         )
 
@@ -112,16 +112,16 @@ fun CategoriasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
             item {
                 Spacer(Modifier.height(24.dp))
                 Text(
-                    "Un rubro agrupa; sus hijas son las que capturas. La descripcion del " +
-                        "movimiento es el detalle, no la categoria: por eso el analisis puede " +
+                    "Un rubro agrupa; sus hijas son las que capturas. La descripción del " +
+                        "movimiento es el detalle, no la categoría: por eso el análisis puede " +
                         "sumar todo un rubro aunque cada gasto se llame distinto.",
                     style = MaterialTheme.typography.bodySmall,
                     color = colores.textoTenue
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "Al borrar una categoria con movimientos se archiva en vez de eliminarse: " +
-                        "asi el historial no se queda sin clasificar.",
+                    "Al borrar una categoría con movimientos se archiva en vez de eliminarse: " +
+                        "así el historial no se queda sin clasificar.",
                     style = MaterialTheme.typography.bodySmall,
                     color = colores.textoTenue
                 )
@@ -133,7 +133,10 @@ fun CategoriasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
         DialogoCategoria(
             categoria = categoria,
             renglones = renglones,
-            alGuardar = { vm.guarda(it) { mensaje -> aviso = mensaje }; editando = null },
+            alGuardar = {
+                vm.guarda(it) { mensaje -> aviso = mensaje }
+                editando = null
+            },
             alEliminar = {
                 renglones.firstOrNull { it.categoria.id == categoria.id }?.let(vm::elimina)
                 editando = null
@@ -167,13 +170,19 @@ private fun RenglonCategoriaVista(renglon: RenglonCategoria, alTocar: () -> Unit
         Column(Modifier.weight(1f)) {
             Text(
                 categoria.nombre,
-                style = if (renglon.esRaiz) MaterialTheme.typography.titleSmall
-                else MaterialTheme.typography.bodyLarge
+                style = if (renglon.esRaiz) {
+                    MaterialTheme.typography.titleSmall
+                } else {
+                    MaterialTheme.typography.bodyLarge
+                }
             )
             Text(
                 buildString {
-                    if (renglon.esRaiz) append("${renglon.hijas} subcategorias")
-                    else append("${renglon.movimientos} movimientos")
+                    if (renglon.esRaiz) {
+                        append("${renglon.hijas} subcategorías")
+                    } else {
+                        append("${renglon.movimientos} movimientos")
+                    }
                     if (categoria.esencial) append("  ·  esencial")
                     if (categoria.archivada) append("  ·  archivada")
                 },
@@ -216,7 +225,7 @@ private fun DialogoCategoria(
 
     AlertDialog(
         onDismissRequest = alCancelar,
-        title = { Text(if (categoria.id == 0L) "Nueva categoria" else "Editar categoria") },
+        title = { Text(if (categoria.id == 0L) "Nueva categoría" else "Editar categoría") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
@@ -238,7 +247,9 @@ private fun DialogoCategoria(
                         label = { Text("Naturaleza") },
                         supportingText = if (padre != null) {
                             { Text("La hereda de ${padre.nombre}.") }
-                        } else null,
+                        } else {
+                            null
+                        },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(abreTipo) },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -251,7 +262,11 @@ private fun DialogoCategoria(
                         TipoCategoria.entries.forEach { opcion ->
                             DropdownMenuItem(
                                 text = { Text(opcion.etiqueta) },
-                                onClick = { tipo = opcion; padreId = null; abreTipo = false }
+                                onClick = {
+                                    tipo = opcion
+                                    padreId = null
+                                    abreTipo = false
+                                }
                             )
                         }
                     }
@@ -278,7 +293,10 @@ private fun DialogoCategoria(
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Ninguna (es un rubro)") },
-                                onClick = { padreId = null; abrePadre = false }
+                                onClick = {
+                                    padreId = null
+                                    abrePadre = false
+                                }
                             )
                             posiblesPadres.forEach { opcion ->
                                 DropdownMenuItem(

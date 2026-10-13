@@ -150,7 +150,7 @@ fun ArchivoPantalla(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                "Ollin Finanzas guarda tus datos en el telefono y usa el .xlsx como formato de " +
+                "Ollin Finanzas guarda tus datos en el teléfono y usa el .xlsx como formato de " +
                     "intercambio: lo lees, lo escribes, y sigue siendo tuyo.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = colores.textoTenue
@@ -188,7 +188,7 @@ fun ArchivoPantalla(
                         Spacer(Modifier.height(4.dp))
                         Text(
                             "${e.hojas} pestañas con ${e.movimientos} movimientos. " +
-                                "Las hojas de analisis llevan formulas vivas: se recalculan al abrir.",
+                                "Las hojas de análisis llevan fórmulas vivas: se recalculan al abrir.",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         TextButton(onClick = vm::limpia) { Text("Listo") }
@@ -204,8 +204,8 @@ fun ArchivoPantalla(
             // ----------------------------------------------------------- importar
             SeccionTitulo("Importar")
             Text(
-                "Lee un .xlsx y reconoce sus encabezados sin importar acentos ni mayusculas. " +
-                    "Al entrar corrige lo que encuentre mal. Ademas de los movimientos, entran " +
+                "Lee un .xlsx y reconoce sus encabezados sin importar acentos ni mayúsculas. " +
+                    "Al entrar corrige lo que encuentre mal. Además de los movimientos, entran " +
                     "Diccionarios, Presupuesto y Compromisos si el libro trae esas pestañas.",
                 style = MaterialTheme.typography.bodySmall,
                 color = colores.textoTenue
@@ -225,8 +225,8 @@ fun ArchivoPantalla(
                         detalle = if (ajustes.reemplazarAlImportar) {
                             "Se borran los $total movimientos actuales —y las metas y " +
                                 "compromisos— y se cargan los del archivo. Las cuentas y " +
-                                "categorias que queden sin un solo movimiento, incluidas las de " +
-                                "ejemplo, tambien se van."
+                                "categorías que queden sin un solo movimiento, incluidas las de " +
+                                "ejemplo, también se van."
                         } else {
                             "Lo del archivo se agrega a lo que ya tienes."
                         },
@@ -256,7 +256,7 @@ fun ArchivoPantalla(
             // el aviso semanal empuja a guardarlo en la nube o en un correo.
             Text(
                 "El archivo no va cifrado: lleva todo tu libro y lo puede abrir quien lo " +
-                    "tenga. Guardalo donde guardarias un estado de cuenta.",
+                    "tenga. Guárdalo donde guardarías un estado de cuenta.",
                 style = MaterialTheme.typography.bodySmall,
                 color = colores.textoTenue
             )
@@ -334,7 +334,7 @@ fun ArchivoPantalla(
 
             if (total == 0) {
                 Text(
-                    "Todavia no hay movimientos que exportar.",
+                    "Todavía no hay movimientos que exportar.",
                     style = MaterialTheme.typography.bodySmall,
                     color = colores.textoTenue
                 )
@@ -368,14 +368,14 @@ private inline fun lanza(
         // quedara armada, la siguiente salida de verdad se la llevaria.
         alNoSalirAlSistema()
         vm.avisa(
-            "Este telefono no tiene una aplicacion de archivos con la que $accion el .xlsx. " +
+            "Este teléfono no tiene una aplicación de archivos con la que $accion el .xlsx. " +
                 "Instala un gestor de archivos o activa el de Android."
         )
     } catch (e: Exception) {
         alNoSalirAlSistema()
         vm.avisa(
             "No se pudo abrir el selector de archivos para $accion el .xlsx " +
-                "(${e.javaClass.simpleName}). Revisa que tu gestor de archivos este activo."
+                "(${e.javaClass.simpleName}). Revisa que tu gestor de archivos esté activo."
         )
     }
 }
@@ -388,8 +388,8 @@ private fun sufijoDeFilas(diagnostico: DiagnosticoAgrupado): String {
     if (diagnostico.filas.isEmpty()) return ""
     val muestra = diagnostico.filas.take(5).joinToString(", ")
     val resto = diagnostico.filas.size - 5
-    val palabra = if (diagnostico.filas.size == 1) "renglon" else "renglones"
-    return if (resto > 0) " ($palabra $muestra y $resto mas)" else " ($palabra $muestra)"
+    val palabra = if (diagnostico.filas.size == 1) "renglón" else "renglones"
+    return if (resto > 0) " ($palabra $muestra y $resto más)" else " ($palabra $muestra)"
 }
 
 @Composable
@@ -464,7 +464,7 @@ private fun ResumenImportacion(
                 Text("· Cuentas nuevas: ${resultado.cuentasCreadas.joinToString()}")
             }
             if (resultado.categoriasCreadas.isNotEmpty()) {
-                Text("· ${resultado.categoriasCreadas.size} categorias nuevas")
+                Text("· ${resultado.categoriasCreadas.size} categorías nuevas")
             }
             if (resultado.presupuestosImportados > 0) {
                 Text("· ${resultado.presupuestosImportados} metas de presupuesto")
@@ -473,7 +473,7 @@ private fun ResumenImportacion(
                 Text("· ${resultado.compromisosImportados} compromisos")
             }
             if (resultado.sinCategoria > 0) {
-                Text("· ${resultado.sinCategoria} movimientos sin categoria")
+                Text("· ${resultado.sinCategoria} movimientos sin categoría")
             }
             if (resultado.omitidos > 0) {
                 Text("· ${resultado.omitidos} renglones omitidos por venir incompletos")
@@ -481,7 +481,7 @@ private fun ResumenImportacion(
             if (resultado.cuentasEliminadas.isNotEmpty() || resultado.categoriasEliminadas > 0) {
                 Text(
                     "· Al reemplazar se fueron ${resultado.cuentasEliminadas.size} cuentas y " +
-                        "${resultado.categoriasEliminadas} categorias que quedaron sin uso"
+                        "${resultado.categoriasEliminadas} categorías que quedaron sin uso"
                 )
             }
 

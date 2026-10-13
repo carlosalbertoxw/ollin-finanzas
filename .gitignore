@@ -1,8 +1,13 @@
 *.iml
 .gradle/
+# Sesiones del compilador de Kotlin, se regenera en cada compilacion.
 .kotlin/
 /local.properties
 /.idea/
+# Configuracion local de las herramientas de edicion, como /.idea. Solo
+# launch.json se versiona: dice como levantar el sitio en local.
+/.claude/*
+!/.claude/launch.json
 .DS_Store
 /build
 /app/build
@@ -12,9 +17,20 @@
 local.properties
 *.apk
 *.aab
+
+# El sitio: dependencias y compilado. Los JSON generados se ignoran desde
+# web/.gitignore, junto a la explicacion de por que no se versionan.
+node_modules/
+web/dist/
+
+# Firma de release. Ni el almacen ni sus contrasenas entran al repositorio:
+# con ellos cualquiera publica una actualizacion falsa de Ollin Finanzas.
+# La plantilla keystore.properties.example si se versiona.
 *.keystore
 *.jks
-!debug.keystore
-
-# Rutas y contrasenas de la llave de firma. La plantilla .example si se versiona.
 /keystore.properties
+!debug.keystore
+# El almacen en base64 que se pega en el secreto de Actions. Es el .jks
+# entero, solo que en texto: se borra en cuanto se copia, y mientras tanto
+# no puede entrar a un commit.
+*.b64

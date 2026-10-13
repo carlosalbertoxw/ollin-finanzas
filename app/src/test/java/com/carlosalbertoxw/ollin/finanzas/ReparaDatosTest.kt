@@ -77,11 +77,17 @@ class ReparaDatosTest : BaseEnMemoria() {
         val cartera = nuevaCuenta("Cartera", TipoCuenta.EFECTIVO)
         val tarjeta = nuevaCuenta("Tarjeta Oro", TipoCuenta.CREDITO)
         nuevoMovimiento(
-            cartera, -10_000, TipoMovimiento.SALIDA, "Tortilleria",
+            cartera,
+            -10_000,
+            TipoMovimiento.SALIDA,
+            "Tortilleria",
             medio = Medio.ELECTRONICO
         )
         nuevoMovimiento(
-            tarjeta, -20_000, TipoMovimiento.SALIDA, "Restaurante",
+            tarjeta,
+            -20_000,
+            TipoMovimiento.SALIDA,
+            "Restaurante",
             medio = Medio.EFECTIVO
         )
 
@@ -99,7 +105,10 @@ class ReparaDatosTest : BaseEnMemoria() {
     fun `una cuenta sin regla de medio no se toca`() = runTest {
         val banorte = nuevaCuenta("Banorte", TipoCuenta.DEBITO)
         nuevoMovimiento(
-            banorte, -10_000, TipoMovimiento.SALIDA, "Propina",
+            banorte,
+            -10_000,
+            TipoMovimiento.SALIDA,
+            "Propina",
             medio = Medio.EFECTIVO
         )
 

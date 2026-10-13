@@ -71,6 +71,7 @@ import com.carlosalbertoxw.ollin.finanzas.ui.components.EstadoVacio
 import com.carlosalbertoxw.ollin.finanzas.ui.components.FilaDeslizable
 import com.carlosalbertoxw.ollin.finanzas.ui.components.TarjetaCifra
 import com.carlosalbertoxw.ollin.finanzas.ui.components.TextoDinero
+import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaPidePermisoDeAvisos
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
 import kotlinx.coroutines.flow.SharingStarted
@@ -114,8 +115,11 @@ private fun TarjetaCompromiso(
     Card(
         modifier.fillMaxWidth().clickable(onClick = alEditar),
         colors = CardDefaults.cardColors(
-            containerColor = if (c.activo) MaterialTheme.colorScheme.surfaceContainer
-            else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (c.activo) {
+                MaterialTheme.colorScheme.surfaceContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
         )
     ) {
         Column(Modifier.padding(16.dp)) {
@@ -156,7 +160,7 @@ private fun TarjetaCompromiso(
                     // Un pago atrasado no se cae de la lista: se queda
                     // marcado hasta que se cumpla o se descarte.
                     Text(
-                        (if (vencido) "Vencio el $fecha" else "Proximo: $fecha") +
+                        (if (vencido) "Venció el $fecha" else "Próximo: $fecha") +
                             if (pendiente(c) > 0) {
                                 "  ·  faltan ${Dinero.formateaCorto(pendiente(c))}"
                             } else {
@@ -175,11 +179,7 @@ private fun TarjetaCompromiso(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CompromisosPantalla(
-    repo: FinanzasRepositorio,
-    alPagar: (Long) -> Unit,
-    alCerrar: () -> Unit
-) {
+fun CompromisosPantalla(repo: FinanzasRepositorio, alPagar: (Long) -> Unit, alCerrar: () -> Unit) {
     val vm = recuerdaVm("compromisos") { CompromisosVm(repo) }
     val compromisos by vm.compromisos.collectAsStateWithLifecycle()
     val cuentas by vm.cuentas.collectAsStateWithLifecycle()
@@ -192,6 +192,10 @@ fun CompromisosPantalla(
 
     val avisos = remember { SnackbarHostState() }
     val alcance = rememberCoroutineScope()
+    // Un compromiso guardado es un aviso que alguien quiere recibir: es el
+    // momento de pedir el permiso, no al abrir la app. Si lo niega, el
+    // compromiso se guarda igual y Ajustes dice que los avisos estan apagados.
+    val pideAvisos = recuerdaPidePermisoDeAvisos()
 
     /** Cumplir y descartar se deshacen: son decisiones de un toque sobre datos reales. */
     fun avisa(texto: String, alDeshacer: () -> Unit) {
@@ -231,10 +235,16 @@ fun CompromisosPantalla(
                     ) {
                         Icon(
                             Icons.Filled.Inventory2,
-                            contentDescription = if (abreArchivados) "Ver pendientes"
-                            else "Ver archivados",
-                            tint = if (abreArchivados) MaterialTheme.colorScheme.primary
-                            else LocalContentColor.current
+                            contentDescription = if (abreArchivados) {
+                                "Ver pendientes"
+                            } else {
+                                "Ver archivados"
+                            },
+                            tint = if (abreArchivados) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                LocalContentColor.current
+                            }
                         )
                     }
                     IconButton(onClick = {
@@ -259,9 +269,9 @@ fun CompromisosPantalla(
                 if (compromisos.archivados.isEmpty()) {
                     EstadoVacio(
                         icono = Icons.Filled.Inventory2,
-                        titulo = "Nada archivado todavia",
-                        detalle = "Aqui van a caer los pagos unicos que cumplas o descartes " +
-                            "y los planes a plazos que lleguen a su ultima mensualidad.",
+                        titulo = "Nada archivado todavía",
+                        detalle = "Aquí van a caer los pagos únicos que cumplas o descartes " +
+                            "y los planes a plazos que lleguen a su última mensualidad.",
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
@@ -317,11 +327,15 @@ fun CompromisosPantalla(
                     item {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             TarjetaCifra(
-                                "Comprometido a futuro", -totalPendiente, Modifier.weight(1f),
+                                "Comprometido a futuro",
+                                -totalPendiente,
+                                Modifier.weight(1f),
                                 nota = "solo planes con fin"
                             )
                             TarjetaCifra(
-                                "Carga fija mensual", -mensualFijo, Modifier.weight(1f),
+                                "Carga fija mensual",
+                                -mensualFijo,
+                                Modifier.weight(1f),
                                 nota = "suscripciones y MSI"
                             )
                         }
@@ -356,13 +370,14 @@ fun CompromisosPantalla(
                     if (compromisos.activos.isEmpty()) {
                         item {
                             Text(
-                                if (compromisos.archivados.size == 1)
-                                    "No queda ningun compromiso pendiente. El que ya cerraste " +
-                                        "esta en el archivo, con el boton de la caja."
-                                else
-                                    "No queda ningun compromiso pendiente. Los " +
-                                        "${compromisos.archivados.size} que ya cerraste estan " +
-                                        "en el archivo, con el boton de la caja.",
+                                if (compromisos.archivados.size == 1) {
+                                    "No queda ningún compromiso pendiente. El que ya cerraste " +
+                                        "está en el archivo, con el botón de la caja."
+                                } else {
+                                    "No queda ningún compromiso pendiente. Los " +
+                                        "${compromisos.archivados.size} que ya cerraste están " +
+                                        "en el archivo, con el botón de la caja."
+                                },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = colores.textoTenue,
                                 modifier = Modifier.padding(vertical = 8.dp)
@@ -376,9 +391,9 @@ fun CompromisosPantalla(
                             "Desliza un compromiso a la derecha para darlo por cumplido o " +
                                 "descartar ese pago. Nada avanza solo: hasta que decidas, " +
                                 "sigue pendiente y Ollin Finanzas te lo recuerda una vez al " +
-                                "dia. Lo que ya no pide nada -- un pago unico resuelto o un " +
-                                "plan que llego a su ultima mensualidad -- se archiva y deja " +
-                                "de avisar; el boton de la caja, arriba, cambia a esa lista.",
+                                "día. Lo que ya no pide nada -- un pago único resuelto o un " +
+                                "plan que llegó a su última mensualidad -- se archiva y deja " +
+                                "de avisar; el botón de la caja, arriba, cambia a esa lista.",
                             style = MaterialTheme.typography.bodySmall,
                             color = colores.textoTenue
                         )
@@ -395,9 +410,22 @@ fun CompromisosPantalla(
             compromiso = c,
             cuentas = cuentas,
             categorias = categorias,
-            alGuardar = { vm.guarda(it); editando = null },
+            alGuardar = {
+                vm.guarda(it)
+                editando = null
+                if (it.activo) pideAvisos {}
+            },
             alCancelar = { editando = null },
-            alEliminar = if (c.id != 0L) ({ vm.elimina(c); editando = null }) else null
+            alEliminar = if (c.id != 0L) {
+                (
+                    {
+                        vm.elimina(c)
+                        editando = null
+                    }
+                    )
+            } else {
+                null
+            }
         )
     }
 }
@@ -480,8 +508,11 @@ private fun DialogoCompromiso(
                         // meses: un plan semanal cae en un dia distinto cada vez,
                         // y uno unico no cae una segunda vez en ningun dia.
                         Text(
-                            if (periodicidad.esUnico || periodicidad.dias > 0) periodicidad.cada
-                            else "${periodicidad.cada} el dia ${siguientePago.dayOfMonth}"
+                            if (periodicidad.esUnico || periodicidad.dias > 0) {
+                                periodicidad.cada
+                            } else {
+                                "${periodicidad.cada} el día ${siguientePago.dayOfMonth}"
+                            }
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -497,7 +528,7 @@ private fun DialogoCompromiso(
                     OutlinedTextField(
                         value = totalPagos,
                         onValueChange = { totalPagos = it.filter(Char::isDigit) },
-                        label = { Text("Numero de pagos (vacio = indefinido)") },
+                        label = { Text("Número de pagos (vacío = indefinido)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true
                     )
@@ -540,8 +571,11 @@ private fun DialogoCompromiso(
                             // al cumplirlo. Se cuenta sobre los pagos ya hechos
                             // para que convertir un plan viejo en unico deje
                             // exactamente uno por delante y no borre su historia.
-                            totalPagos = if (periodicidad.esUnico) compromiso.pagosRealizados + 1
-                            else totalPagos.toIntOrNull(),
+                            totalPagos = if (periodicidad.esUnico) {
+                                compromiso.pagosRealizados + 1
+                            } else {
+                                totalPagos.toIntOrNull()
+                            },
                             cuentaId = cuentaId,
                             categoriaId = categoriaId
                         )
@@ -603,7 +637,10 @@ private fun MenuEnum(
         )
         ExposedDropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
             opciones.forEachIndexed { i, texto ->
-                DropdownMenuItem(text = { Text(texto) }, onClick = { alElegir(i); abierto = false })
+                DropdownMenuItem(text = { Text(texto) }, onClick = {
+                    alElegir(i)
+                    abierto = false
+                })
             }
         }
     }

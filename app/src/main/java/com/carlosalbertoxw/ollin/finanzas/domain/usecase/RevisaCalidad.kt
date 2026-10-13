@@ -185,7 +185,9 @@ class RevisaCalidad(private val repo: FinanzasRepositorio) {
                 // Lo unico que vale para cualquier cuenta: el dinero de una
                 // cartera se mueve en mano. Lo demas lo decide cada cuenta.
                 cuenta.tipo == TipoCuenta.EFECTIVO -> m.medio != Medio.EFECTIVO
+
                 cuenta.soloElectronico -> m.medio != Medio.ELECTRONICO
+
                 else -> false
             }
         }

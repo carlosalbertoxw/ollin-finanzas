@@ -9,10 +9,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -20,11 +17,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.carlosalbertoxw.ollin.finanzas.data.prefs.Ajustes
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ClavePin
 import com.carlosalbertoxw.ollin.finanzas.data.seguridad.ControlBloqueo
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -36,27 +31,14 @@ import kotlinx.coroutines.launch
  * aqui sin espera y llevarse uno que su dueno quiza usa en otros lados.
  */
 @Composable
-fun DialogoPinActual(
-    ajustes: Ajustes,
-    bloqueo: ControlBloqueo,
-    alConfirmar: () -> Unit,
-    alCancelar: () -> Unit
-) {
+fun DialogoPinActual(bloqueo: ControlBloqueo, alConfirmar: () -> Unit, alCancelar: () -> Unit) {
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var verificando by remember { mutableStateOf(false) }
-    var espera by remember { mutableIntStateOf(bloqueo.segundosDeEspera()) }
-    val esperaHasta by bloqueo.esperaHasta.collectAsState()
     val ambito = rememberCoroutineScope()
 
-    // La misma cuenta regresiva que la pantalla de bloqueo, leida del control.
-    LaunchedEffect(esperaHasta) {
-        espera = bloqueo.segundosDeEspera()
-        while (espera > 0) {
-            delay(1_000)
-            espera = bloqueo.segundosDeEspera()
-        }
-    }
+    // La misma cuenta atras que la pantalla de bloqueo, leida del control.
+    val espera = segundosDeEsperaPin(bloqueo)
 
     AlertDialog(
         onDismissRequest = alCancelar,
@@ -69,19 +51,26 @@ fun DialogoPinActual(
                 )
                 OutlinedTextField(
                     value = pin,
-                    onValueChange = { pin = it.filter(Char::isDigit).take(12) },
+                    onValueChange = { pin = it.filter(Char::isDigit).take(ClavePin.LARGO_MAXIMO) },
                     label = { Text("PIN actual") },
                     singleLine = true,
                     isError = error != null,
+                    enabled = espera == 0,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
                 )
-                val mensaje = if (espera > 0) "Demasiados intentos. Espera $espera s." else error
-                mensaje?.let {
+                error?.let {
                     Text(
                         it,
                         style = MaterialTheme.typography.bodySmall,
-                        color = LocalColoresOllin.current.salida
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                if (espera > 0) {
+                    Text(
+                        "Demasiados intentos fallidos. Vuelve a probar en un momento.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = LocalColoresOllin.current.textoTenue
                     )
                 }
             }
@@ -93,18 +82,34 @@ fun DialogoPinActual(
                     verificando = true
                     error = null
                     ambito.launch {
-                        val intento = bloqueo.intentaPin(pin, ajustes.pinHash, ajustes.pinSal)
-                        verificando = false
-                        if (intento == ControlBloqueo.IntentoDePin.Correcto) {
-                            alConfirmar()
-                        } else {
-                            espera = bloqueo.segundosDeEspera()
-                            error = "PIN incorrecto"
-                            pin = ""
+                        // `verificando` se suelta con el intento ya resuelto: el
+                        // control apunta el fallo y fija la espera antes de contestar.
+                        val intento = try {
+                            bloqueo.intentaPin(pin)
+                        } finally {
+                            verificando = false
+                        }
+                        when (intento) {
+                            ControlBloqueo.IntentoDePin.Correcto -> alConfirmar()
+
+                            ControlBloqueo.IntentoDePin.Incorrecto -> {
+                                error = "PIN incorrecto"
+                                pin = ""
+                            }
+
+                            is ControlBloqueo.IntentoDePin.EnEspera -> pin = ""
                         }
                     }
                 }
-            ) { Text(if (verificando) "Comprobando..." else "Confirmar") }
+            ) {
+                Text(
+                    when {
+                        espera > 0 -> textoDeEspera(espera)
+                        verificando -> "Comprobando…"
+                        else -> "Confirmar"
+                    }
+                )
+            }
         },
         dismissButton = { TextButton(onClick = alCancelar) { Text("Cancelar") } }
     )
@@ -124,13 +129,13 @@ fun DialogoNuevoPin(alGuardar: (String) -> Unit, alCancelar: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "Minimo ${ClavePin.LARGO_MINIMO} digitos. No se guarda tal cual: " +
-                        "de el solo queda una huella de la que no se puede volver atras.",
+                    "Mínimo ${ClavePin.LARGO_MINIMO} dígitos. No se guarda tal cual: " +
+                        "de el solo queda una huella de la que no se puede volver atrás.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 OutlinedTextField(
                     value = pin,
-                    onValueChange = { pin = it.filter(Char::isDigit).take(12) },
+                    onValueChange = { pin = it.filter(Char::isDigit).take(ClavePin.LARGO_MAXIMO) },
                     label = { Text("PIN nuevo") },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
@@ -138,8 +143,10 @@ fun DialogoNuevoPin(alGuardar: (String) -> Unit, alCancelar: () -> Unit) {
                 )
                 OutlinedTextField(
                     value = confirmacion,
-                    onValueChange = { confirmacion = it.filter(Char::isDigit).take(12) },
-                    label = { Text("Repitelo") },
+                    onValueChange = {
+                        confirmacion = it.filter(Char::isDigit).take(ClavePin.LARGO_MAXIMO)
+                    },
+                    label = { Text("Repítelo") },
                     singleLine = true,
                     isError = distintos,
                     visualTransformation = PasswordVisualTransformation(),
@@ -149,7 +156,7 @@ fun DialogoNuevoPin(alGuardar: (String) -> Unit, alCancelar: () -> Unit) {
                     Text(
                         "Los dos PIN no coinciden.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = LocalColoresOllin.current.salida
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }

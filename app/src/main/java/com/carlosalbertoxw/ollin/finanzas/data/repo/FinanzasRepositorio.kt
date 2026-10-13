@@ -36,10 +36,7 @@ import java.util.UUID
  * poder saltarse desde la interfaz: una transferencia siempre genera sus dos
  * patas y la contraparte siempre se deriva.
  */
-class FinanzasRepositorio(
-    private val db: OllinDatabase,
-    private val resolver: ContentResolver
-) {
+class FinanzasRepositorio(private val db: OllinDatabase, private val resolver: ContentResolver) {
 
     private val cuentas = db.cuentaDao()
     private val categorias = db.categoriaDao()
@@ -127,9 +124,8 @@ class FinanzasRepositorio(
 
     /** Las dos patas de una transferencia, para poder editarla como una sola cosa. */
     suspend fun movimientosDeGrupo(grupo: String): List<Movimiento> = movimientos.porGrupo(grupo)
-    suspend fun balanceInicialDe(
-        cuentaId: Long
-    ): Movimiento? = movimientos.balanceInicialDe(cuentaId)
+    suspend fun balanceInicialDe(cuentaId: Long): Movimiento? =
+        movimientos.balanceInicialDe(cuentaId)
     suspend fun compromiso(id: Long): Compromiso? = compromisos.porId(id)
     suspend fun listaCuentas(): List<Cuenta> = cuentas.todas()
     suspend fun listaCategorias(): List<Categoria> = categorias.todas()
@@ -154,8 +150,11 @@ class FinanzasRepositorio(
      */
     suspend fun guardaMovimiento(movimiento: Movimiento): Long {
         val normalizado = movimiento.copy(
-            contraparte = if (movimiento.tipo.esTransferencia || movimiento.tipo.esInterno)
-                Contraparte.PROPIA else Contraparte.TERCERO,
+            contraparte = if (movimiento.tipo.esTransferencia || movimiento.tipo.esInterno) {
+                Contraparte.PROPIA
+            } else {
+                Contraparte.TERCERO
+            },
             actualizadoEn = System.currentTimeMillis()
         )
         return if (normalizado.id == 0L) {
@@ -278,21 +277,24 @@ class FinanzasRepositorio(
         )
     }
 
-    suspend fun guardaCuenta(cuenta: Cuenta): Long =
-        if (cuenta.id == 0L) cuentas.inserta(cuenta) else { cuentas.actualiza(cuenta); cuenta.id }
+    suspend fun guardaCuenta(cuenta: Cuenta): Long = if (cuenta.id == 0L) {
+        cuentas.inserta(cuenta)
+    } else {
+        cuentas.actualiza(cuenta)
+        cuenta.id
+    }
 
     /** Sirve para avisar del nombre repetido antes de que el indice unico rebote el guardado. */
     suspend fun cuentaPorNombre(nombre: String): Cuenta? = cuentas.porNombre(nombre)
 
     suspend fun eliminaCuenta(cuenta: Cuenta) = cuentas.elimina(cuenta)
 
-    suspend fun guardaCategoria(categoria: Categoria): Long =
-        if (categoria.id == 0L) {
-            categorias.inserta(categoria)
-        } else {
-            categorias.actualiza(categoria)
-            categoria.id
-        }
+    suspend fun guardaCategoria(categoria: Categoria): Long = if (categoria.id == 0L) {
+        categorias.inserta(categoria)
+    } else {
+        categorias.actualiza(categoria)
+        categoria.id
+    }
 
     suspend fun eliminaCategoria(categoria: Categoria) = categorias.elimina(categoria)
 
@@ -322,9 +324,12 @@ class FinanzasRepositorio(
         return origen.size
     }
 
-    suspend fun guardaCompromiso(compromiso: Compromiso): Long =
-        if (compromiso.id == 0L) compromisos.inserta(compromiso)
-        else { compromisos.actualiza(compromiso); compromiso.id }
+    suspend fun guardaCompromiso(compromiso: Compromiso): Long = if (compromiso.id == 0L) {
+        compromisos.inserta(compromiso)
+    } else {
+        compromisos.actualiza(compromiso)
+        compromiso.id
+    }
 
     suspend fun eliminaCompromiso(compromiso: Compromiso) = compromisos.elimina(compromiso)
 
@@ -394,22 +399,19 @@ class FinanzasRepositorio(
                 ?: error("No se pudo abrir el archivo seleccionado")
         }
 
-    suspend fun exporta(
-        uri: Uri,
-        esquema: EsquemaExportacion,
-        hojas: Set<HojaExportable>
-    ) = withContext(Dispatchers.IO) {
-        val datos = DatosExportacion(
-            cuentas = cuentas.todas().filter { !it.archivada },
-            categorias = categorias.todas(),
-            movimientos = movimientos.todos(),
-            presupuestos = presupuestos.todos(),
-            compromisos = compromisos.todos()
-        )
-        abreParaEscribir(uri).use { salida ->
-            ExportadorExcel(datos, esquema, hojas).escribeEn(salida)
+    suspend fun exporta(uri: Uri, esquema: EsquemaExportacion, hojas: Set<HojaExportable>) =
+        withContext(Dispatchers.IO) {
+            val datos = DatosExportacion(
+                cuentas = cuentas.todas().filter { !it.archivada },
+                categorias = categorias.todas(),
+                movimientos = movimientos.todos(),
+                presupuestos = presupuestos.todos(),
+                compromisos = compromisos.todos()
+            )
+            abreParaEscribir(uri).use { salida ->
+                ExportadorExcel(datos, esquema, hojas).escribeEn(salida)
+            }
         }
-    }
 
     /**
      * Abre el destino elegido en el selector del sistema.

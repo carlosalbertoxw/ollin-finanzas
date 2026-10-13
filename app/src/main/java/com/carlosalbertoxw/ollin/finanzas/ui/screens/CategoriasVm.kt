@@ -53,11 +53,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** Una categoria con lo que la pantalla necesita saber para decidir que se puede hacer con ella. */
-data class RenglonCategoria(
-    val categoria: Categoria,
-    val movimientos: Int,
-    val hijas: Int
-) {
+data class RenglonCategoria(val categoria: Categoria, val movimientos: Int, val hijas: Int) {
     val esRaiz: Boolean get() = categoria.padreId == null
 
     /**
@@ -89,14 +85,17 @@ class CategoriasVm(private val repo: FinanzasRepositorio) : ViewModel() {
             // El indice unico (nombre, padreId) rebota los duplicados. Vale mas
             // explicarlo que dejar que la excepcion se lleve la pantalla.
             runCatching { repo.guardaCategoria(categoria) }
-                .onFailure { alFallar("Ya existe una categoria con ese nombre en el mismo nivel.") }
+                .onFailure { alFallar("Ya existe una categoría con ese nombre en el mismo nivel.") }
         }
     }
 
     fun elimina(renglon: RenglonCategoria) {
         viewModelScope.launch {
-            if (renglon.sePuedeBorrar) repo.eliminaCategoria(renglon.categoria)
-            else repo.guardaCategoria(renglon.categoria.copy(archivada = true))
+            if (renglon.sePuedeBorrar) {
+                repo.eliminaCategoria(renglon.categoria)
+            } else {
+                repo.guardaCategoria(renglon.categoria.copy(archivada = true))
+            }
         }
     }
 }

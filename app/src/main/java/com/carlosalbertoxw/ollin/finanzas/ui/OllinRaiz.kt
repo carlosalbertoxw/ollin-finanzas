@@ -196,8 +196,14 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
                 composable(
                     route = Rutas.CAPTURA_CON_ID,
                     arguments = listOf(
-                        navArgument("id") { type = NavType.LongType; defaultValue = 0L },
-                        navArgument("compromiso") { type = NavType.LongType; defaultValue = 0L }
+                        navArgument("id") {
+                            type = NavType.LongType
+                            defaultValue = 0L
+                        },
+                        navArgument("compromiso") {
+                            type = NavType.LongType
+                            defaultValue = 0L
+                        }
                     )
                 ) { destino ->
                     CapturaPantalla(
@@ -222,7 +228,10 @@ fun OllinRaiz(contenedor: Contenedor, rutaInicial: String? = null) {
                 composable(
                     route = Rutas.TRANSFERENCIA_CON_ID,
                     arguments = listOf(
-                        navArgument("id") { type = NavType.LongType; defaultValue = 0L }
+                        navArgument("id") {
+                            type = NavType.LongType
+                            defaultValue = 0L
+                        }
                     )
                 ) { destino ->
                     TransferenciaPantalla(

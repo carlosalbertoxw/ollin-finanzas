@@ -63,11 +63,7 @@ data class ValidacionLista(
 data class AnchoColumna(val columna: Int, val ancho: Double)
 
 /** Definicion de un ListObject (tabla de Excel) sobre un rango. */
-data class TablaExcel(
-    val nombre: String,
-    val rango: String,
-    val encabezados: List<String>
-)
+data class TablaExcel(val nombre: String, val rango: String, val encabezados: List<String>)
 
 /** Una hoja completa lista para escribirse. */
 data class Hoja(

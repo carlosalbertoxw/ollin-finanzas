@@ -68,7 +68,7 @@ jobs:
           echo "base=${BASE_PATH%/}/" >> "$GITHUB_OUTPUT"
 
       - name: Preparar Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
           cache: npm
@@ -99,7 +99,19 @@ jobs:
             exit 0
           fi
 
-          url=$(echo "$apk" | jq -r '.browser_download_url // .url')
+          # Solo la descarga publica. En `gh release view --json` es el campo
+          # `url`; `browser_download_url` es el nombre de la API REST y aqui
+          # sale nulo, y `apiUrl` apunta a api.github.com, que la app rechaza.
+          # Sin una descarga publica no se despliega: el version.json que la
+          # anunciara lo descartarian todas las instalaciones.
+          url=$(echo "$apk" | jq -r '.url // empty')
+          case "$url" in
+            https://github.com/*/releases/download/*) ;;
+            *)
+              echo "::error::La release $etiqueta no da una descarga publica del APK (url='$url')."
+              exit 1
+              ;;
+          esac
           bytes=$(echo "$apk" | jq -r '.size')
 
           # La huella se calcula sobre el archivo que la gente va a descargar,
@@ -133,6 +145,14 @@ jobs:
           OLLIN_APK_SHA256: ${{ steps.release.outputs.apk_sha256 }}
           OLLIN_PUBLICADA: ${{ steps.release.outputs.publicada }}
         run: npm run build
+
+      # El que se va a publicar, con los datos de la release, con las mismas
+      # reglas que aplica la app. pruebas.yml solo puede comprobar el que sale
+      # sin release; si GitHub cambiara el formato de sus descargas, es aqui
+      # donde se notaria, y mejor un despliegue fallido que un aviso apagado en
+      # todos los telefonos. Ver .github/scripts/comprueba-version-json.sh.
+      - name: El version.json cumple con lo que lee la app
+        run: bash .github/scripts/comprueba-version-json.sh web/dist/version.json
 
       - name: Subir el sitio
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

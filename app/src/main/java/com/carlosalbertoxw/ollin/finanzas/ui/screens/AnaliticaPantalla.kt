@@ -58,8 +58,8 @@ fun AnaliticaPantalla(repo: FinanzasRepositorio) {
     if (flujo.isEmpty()) {
         EstadoVacio(
             icono = Icons.Filled.Insights,
-            titulo = "Aun no hay que analizar",
-            detalle = "Importa tu Excel o captura unos movimientos y aqui aparece la lectura.",
+            titulo = "Aún no hay nada que analizar",
+            detalle = "Importa tu Excel o captura unos movimientos y aquí aparece la lectura.",
             modifier = Modifier.fillMaxSize()
         )
         return
@@ -79,7 +79,7 @@ fun AnaliticaPantalla(repo: FinanzasRepositorio) {
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item { Text("Analitica", style = MaterialTheme.typography.headlineSmall) }
+        item { Text("Analítica", style = MaterialTheme.typography.headlineSmall) }
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -94,7 +94,7 @@ fun AnaliticaPantalla(repo: FinanzasRepositorio) {
                     etiqueta = "Compra de patrimonio",
                     centavos = patrimonio,
                     modifier = Modifier.fillMaxWidth(),
-                    nota = "No es gasto: el dinero cambio de forma, no desaparecio.",
+                    nota = "No es gasto: el dinero cambió de forma, no desapareció.",
                     acento = colores.patrimonio
                 )
             }
@@ -157,7 +157,7 @@ fun AnaliticaPantalla(repo: FinanzasRepositorio) {
             }
         }
 
-        item { SeccionTitulo("Donde se va el dinero") }
+        item { SeccionTitulo("Dónde se va el dinero") }
         items(grupos, key = { "grupo-${it.nombre}" }) { grupo ->
             Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

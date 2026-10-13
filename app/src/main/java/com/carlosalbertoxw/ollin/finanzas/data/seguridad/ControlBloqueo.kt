@@ -1,6 +1,7 @@
 package com.carlosalbertoxw.ollin.finanzas.data.seguridad
 
 import android.os.SystemClock
+import androidx.annotation.VisibleForTesting
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.Ajustes
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.ModoBloqueo
 import kotlinx.coroutines.CoroutineScope
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -21,26 +23,37 @@ import kotlinx.coroutines.sync.withLock
  * actividad se recree: si el estado se perdiera al girar el telefono, girarlo
  * seria la forma de saltarse el candado.
  *
- * Recibe el flujo de preferencias y la funcion que guarda los fallos, no el
- * [AjustesRepositorio] entero. Es codigo de seguridad y sus reglas —arrancar
- * cerrado, la gracia, el freno— tienen que poder probarse sin levantar
- * DataStore, que lee de disco en su propio dispatcher y volvia las pruebas no
- * deterministas. [reloj] se inyecta por lo mismo: para no dormir de verdad.
+ * Recibe el flujo de preferencias y las funciones que guardan, no el
+ * [com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio] entero. Es
+ * codigo de seguridad y sus reglas --arrancar cerrado, la gracia, el freno--
+ * tienen que poder probarse sin levantar DataStore, que lee de disco en su
+ * propio dispatcher y vuelve las pruebas no deterministas. [reloj] se inyecta
+ * por lo mismo: para no dormir de verdad.
  *
  * Todo PIN que se teclea en la app pasa por [intentaPin], tambien el que pide
  * Ajustes antes de cambiarlo o quitarlo. Si cada pantalla lo comprobara por su
  * cuenta, la que se olvidara del freno seria el atajo para adivinarlo.
+ *
+ * Es la misma clase en Ollin Actividades y en Ollin Finanzas: el candado se
+ * comporta igual en las dos.
  */
 class ControlBloqueo(
-    preferencias: Flow<Ajustes>,
+    private val preferencias: Flow<Ajustes>,
+    /** Guarda la cuenta de fallos seguidos. Cero la borra. */
     private val guardaFallos: suspend (Int) -> Unit,
     /** Sella las huellas del PIN. En la app es [LlaveDelPin]. */
     private val sello: ClavePin.Sello,
     /** Guarda una huella ya sellada en lugar de una vieja, con la misma sal. */
     private val guardaHuella: suspend (hash: String, sal: String) -> Unit,
     private val reloj: () -> Long = { SystemClock.elapsedRealtime() },
-    private val ambito: CoroutineScope =
-        CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    /**
+     * `Main` a secas y no `Main.immediate`. Con `immediate`, construir el
+     * control desde el hilo principal ejecuta el colector **dentro del
+     * constructor** siempre que DataStore pueda servir de cache, y "arranca
+     * bloqueada" deja de ser una garantia para depender de si la cache estaba
+     * caliente.
+     */
+    private val ambito: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 ) {
 
     /** En que quedo un intento de PIN. */
@@ -66,7 +79,10 @@ class ControlBloqueo(
     private val _bloqueado = MutableStateFlow(true)
     val bloqueado: StateFlow<Boolean> = _bloqueado.asStateFlow()
 
-    /** Instante del reloj monotono hasta el que no se admite otro intento de PIN. */
+    /**
+     * Instante del reloj monotono hasta el que no se admite otro intento de PIN.
+     * Las pantallas que piden el PIN leen de aqui la cuenta atras.
+     */
     private val _esperaHasta = MutableStateFlow(0L)
     val esperaHasta: StateFlow<Long> = _esperaHasta.asStateFlow()
 
@@ -95,12 +111,11 @@ class ControlBloqueo(
                 fallosDePin = actuales.pinFallos
                 if (modo == ModoBloqueo.NINGUNO) _bloqueado.value = false
 
-                // La espera vive en el reloj monotono, que no se puede guardar:
-                // se reinicia con el telefono. Por eso al arrancar se vuelve a
-                // cobrar entera la que tocan los fallos guardados. Sin esto,
-                // cerrar la app despues de cada fallo daba un intento gratis
-                // por arranque, y los diez mil PIN volvian a caber en una tarde.
-                // Solo en la primera lectura: las siguientes son el eco de
+                // La espera vive en el reloj monotono, que no se guarda: al
+                // arrancar se vuelve a cobrar entera la que tocan los fallos que
+                // si estan en disco. Asi cerrar la app no regala un intento, y no
+                // hay hora guardada que enganar cambiando la del telefono. Solo
+                // en la primera lectura: las siguientes son el eco de
                 // [guardaFallos], que ya fijo su propia espera.
                 if (primeraLectura) {
                     primeraLectura = false
@@ -135,7 +150,7 @@ class ControlBloqueo(
 
     /**
      * Retira el aviso de [esperaVueltaDelSistema] cuando la pantalla del
-     * sistema no llego a abrirse: no hay telefono de archivos, el lanzamiento
+     * sistema no llego a abrirse: no hay gestor de archivos, el lanzamiento
      * fallo. La caducidad lo cubriria igual; esto lo cierra en el acto.
      */
     fun cancelaVueltaEsperada() {
@@ -171,9 +186,16 @@ class ControlBloqueo(
 
     // ------------------------------------------------------- intentos de PIN
 
-    /** Segundos que faltan para poder volver a intentar. Cero si ya se puede. */
-    fun segundosDeEspera(): Int =
-        ((_esperaHasta.value - reloj()) / 1000L).coerceAtLeast(0L).toInt()
+    /**
+     * Segundos que faltan para poder volver a intentar. Cero si ya se puede.
+     *
+     * Redondea hacia arriba: mientras quede medio segundo, la pantalla dice
+     * "1 s" y no "0 s" con el boton todavia apagado.
+     */
+    fun segundosDeEspera(): Int {
+        val falta = _esperaHasta.value - reloj()
+        return if (falta <= 0) 0 else ((falta + 999) / 1_000).toInt()
+    }
 
     /**
      * Un PIN de cuatro digitos son diez mil combinaciones. PBKDF2 ya hace que
@@ -191,32 +213,42 @@ class ControlBloqueo(
     /**
      * Comprueba [pin] contra la huella guardada, respetando la espera.
      *
-     * Acertar contra una huella de la 1.2.0 o anterior la vuelve a guardar
-     * sellada con [sello]: se migra sola, sin pedirle nada a nadie. Si guardarla
-     * falla se deja como estaba; volvera a intentarse en el siguiente acierto.
+     * La huella se lee de las preferencias en el momento del intento, no de lo
+     * que la pantalla tenga a mano: una copia vieja --la de antes de cambiar el
+     * PIN-- daria por bueno el anterior.
      */
-    suspend fun intentaPin(
-        pin: String,
-        hash: String?,
-        sal: String?
-    ): IntentoDePin = turno.withLock {
-        val espera = segundosDeEspera()
-        if (espera > 0) return@withLock IntentoDePin.EnEspera(espera)
-
-        when (ClavePin.verifica(pin, hash, sal, sello)) {
-            ClavePin.Verificacion.INCORRECTO -> {
-                registraFalloDePin()
-                return@withLock IntentoDePin.Incorrecto
-            }
-            ClavePin.Verificacion.CORRECTO_SIN_SELLAR -> runCatching {
-                // hash y sal no son nulos: con cualquiera de los dos nulo no se acierta.
-                guardaHuella(ClavePin.huella(pin, sal!!, sello), sal)
-            }
-            ClavePin.Verificacion.CORRECTO -> Unit
-        }
-        registraAciertoDePin()
-        IntentoDePin.Correcto
+    suspend fun intentaPin(pin: String): IntentoDePin {
+        val actuales = preferencias.first()
+        return intentaPin(pin, actuales.pinHash, actuales.pinSal)
     }
+
+    /**
+     * Acertar contra una huella de antes del sello la vuelve a guardar sellada
+     * con [sello]: se migra sola, sin pedirle nada a nadie. Si guardarla falla
+     * se deja como estaba; volvera a intentarse en el siguiente acierto.
+     */
+    @VisibleForTesting
+    internal suspend fun intentaPin(pin: String, hash: String?, sal: String?): IntentoDePin =
+        turno.withLock {
+            val espera = segundosDeEspera()
+            if (espera > 0) return@withLock IntentoDePin.EnEspera(espera)
+
+            when (ClavePin.verifica(pin, hash, sal, sello)) {
+                ClavePin.Verificacion.INCORRECTO -> {
+                    registraFalloDePin()
+                    return@withLock IntentoDePin.Incorrecto
+                }
+
+                ClavePin.Verificacion.CORRECTO_SIN_SELLAR -> runCatching {
+                    // hash y sal no son nulos: con cualquiera de los dos nulo no se acierta.
+                    guardaHuella(ClavePin.huella(pin, sal!!, sello), sal)
+                }
+
+                ClavePin.Verificacion.CORRECTO -> Unit
+            }
+            registraAciertoDePin()
+            IntentoDePin.Correcto
+        }
 
     /** La huella y la sal de un PIN nuevo, ya selladas, listas para guardar. */
     suspend fun huellaNueva(pin: String): Pair<String, String> {
@@ -249,20 +281,32 @@ class ControlBloqueo(
          */
         const val VIGENCIA_AVISO_MILLIS = 5_000L
 
-        /** Los primeros cuatro fallos salen gratis: teclear mal el PIN es normal. */
-        const val FALLOS_DE_GRACIA = 4
+        /** Fallos seguidos que se perdonan sin hacer esperar: teclear mal el PIN es normal. */
+        const val FALLOS_DE_GRACIA = 3
 
         /** Tope de la espera. Mas alla, castigar mas solo estorba al dueno. */
         const val ESPERA_MAXIMA_MILLIS = 300_000L
 
+        /** Segundos de espera a partir del cuarto fallo, uno por escalon. */
+        private val ESCALA_SEGUNDOS = listOf(5, 15, 30, 60, 120, 300)
+
         /**
-         * Duplica en cada fallo a partir del quinto: 1 s, 2 s, 4 s... hasta el
-         * tope. Diez mil intentos dejan de caber en una tarde.
+         * La espera que toca tras [fallos] intentos fallidos seguidos.
+         *
+         * PBKDF2 encarece cada intento, pero no lo suficiente: un PIN de cuatro
+         * digitos son diez mil combinaciones y, a un par de decimas por
+         * derivacion, quien tenga el telefono en la mano y sepa automatizar
+         * pulsaciones las agota en menos de una hora. La espera crece para que
+         * ese ataque deje de caber en una tarde --pasado el tope, cada intento
+         * cuesta cinco minutos--, sin castigar a quien de verdad se equivoco dos
+         * veces.
          */
         fun esperaMillis(fallos: Int): Long {
             if (fallos <= FALLOS_DE_GRACIA) return 0L
-            val pasos = (fallos - FALLOS_DE_GRACIA - 1).coerceAtMost(20)
-            return (1_000L shl pasos).coerceAtMost(ESPERA_MAXIMA_MILLIS)
+            val segundos = ESCALA_SEGUNDOS.getOrElse(fallos - FALLOS_DE_GRACIA - 1) {
+                ESCALA_SEGUNDOS.last()
+            }
+            return (segundos * 1_000L).coerceAtMost(ESPERA_MAXIMA_MILLIS)
         }
     }
 }

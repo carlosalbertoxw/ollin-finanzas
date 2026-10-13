@@ -50,9 +50,9 @@ enum class TipoMovimiento(val etiqueta: String) {
 enum class TipoCuenta(val etiqueta: String, val esDeuda: Boolean, val esLiquida: Boolean) {
     EFECTIVO("Efectivo", esDeuda = false, esLiquida = true),
     DEBITO("Cuenta de banco", esDeuda = false, esLiquida = true),
-    INVERSION("Inversion", esDeuda = false, esLiquida = true),
-    CREDITO("Creditos - prestamos", esDeuda = true, esLiquida = false),
-    CREDITO_MSI("Creditos - MSI", esDeuda = true, esLiquida = false),
+    INVERSION("Inversión", esDeuda = false, esLiquida = true),
+    CREDITO("Créditos - préstamos", esDeuda = true, esLiquida = false),
+    CREDITO_MSI("Créditos - MSI", esDeuda = true, esLiquida = false),
     ACTIVO("Activo / patrimonio", esDeuda = false, esLiquida = false);
 
     companion object {
@@ -68,7 +68,7 @@ enum class TipoCuenta(val etiqueta: String, val esDeuda: Boolean, val esLiquida:
 /** Como se movio el dinero: en mano o por medios electronicos. */
 enum class Medio(val etiqueta: String) {
     EFECTIVO("Efectivo"),
-    ELECTRONICO("Electronico");
+    ELECTRONICO("Electrónico");
 
     companion object {
         fun desdeEtiqueta(valor: String?): Medio? {
@@ -140,7 +140,7 @@ enum class Periodicidad(val etiqueta: String, val meses: Int = 0, val dias: Int 
      * un plan de un solo pago, y al cumplirlo se archiva igual que cualquier
      * otro plan que llego a su ultimo pago.
      */
-    UNICO("Unico"),
+    UNICO("Único"),
     SEMANAL("Semanal", dias = 7),
 
     /** Cada quince dias, tal cual: no es "dos veces al mes" con dia fijo. */
@@ -179,7 +179,7 @@ enum class Periodicidad(val etiqueta: String, val meses: Int = 0, val dias: Int 
         get() = when {
             esUnico -> "Una sola vez"
             dias == 7 -> "Cada semana"
-            dias > 0 -> "Cada $dias dias"
+            dias > 0 -> "Cada $dias días"
             meses == 1 -> "Cada mes"
             else -> "Cada $meses meses"
         }
@@ -194,7 +194,9 @@ enum class Periodicidad(val etiqueta: String, val meses: Int = 0, val dias: Int 
         // Sin repeticion no hay a donde avanzar: el unico pago es el del ancla,
         // y ahi se queda hasta que alguien lo cumpla o lo descarte.
         esUnico -> ancla
+
         dias > 0 -> ancla.plusDays(pasos * dias)
+
         else -> ancla.plusMonths(pasos * meses)
     }
 
