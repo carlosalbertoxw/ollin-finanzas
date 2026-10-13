@@ -15,6 +15,7 @@
 # Va en un flujo aparte y no dentro de pruebas.yml porque necesita su propia
 # compilacion instrumentada, que es mas lenta, y porque su permiso de escribir
 # eventos de seguridad no tiene por que tenerlo nadie mas.
+
 name: CodeQL
 on:
   push:

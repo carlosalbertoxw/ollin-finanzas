@@ -99,7 +99,10 @@ jobs:
             exit 0
           fi
 
-          url=$(echo "$apk" | jq -r '.browser_download_url // .url')
+          # Solo la descarga publica. El `url` del asset es una direccion de
+          # api.github.com que la app rechaza: usarlo de respaldo publicaria un
+          # version.json que todas las instalaciones descartarian.
+          url=$(echo "$apk" | jq -r '.browser_download_url')
           bytes=$(echo "$apk" | jq -r '.size')
 
           # La huella se calcula sobre el archivo que la gente va a descargar,
@@ -133,6 +136,14 @@ jobs:
           OLLIN_APK_SHA256: ${{ steps.release.outputs.apk_sha256 }}
           OLLIN_PUBLICADA: ${{ steps.release.outputs.publicada }}
         run: npm run build
+
+      # El que se va a publicar, con los datos de la release, con las mismas
+      # reglas que aplica la app. pruebas.yml solo puede comprobar el que sale
+      # sin release; si GitHub cambiara el formato de sus descargas, es aqui
+      # donde se notaria, y mejor un despliegue fallido que un aviso apagado en
+      # todos los telefonos. Ver .github/scripts/comprueba-version-json.sh.
+      - name: El version.json cumple con lo que lee la app
+        run: bash .github/scripts/comprueba-version-json.sh web/dist/version.json
 
       - name: Subir el sitio
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

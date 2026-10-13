@@ -47,26 +47,25 @@ jobs:
       # Todo en una invocacion para que Gradle reutilice la configuracion y las
       # tareas comunes en vez de arrancar cinco veces.
       #
+      #   spotlessCheck            el estilo de ktlint; lo barato, primero
       #   licenseeAndroidRelease   que lo que viaja en el APK tenga una licencia
       #                            de la lista de app/build.gradle.kts
       #   testDebugUnitTest        las pruebas en la JVM, EsquemaDeBaseTest incluido
       #   koverHtmlReportDebug     la cobertura de esas pruebas, sin umbral: se
       #   koverXmlReportDebug      guarda como artefacto para ver que falta
       #   lintDebug                falla la compilacion si Lint encuentra errores
-      #   ktlintCheck              estilo de Kotlin; sin baseline, falla con la
-      #                            primera infraccion
       #   assembleDebugAndroidTest compila la suite instrumentada sin ejecutarla,
       #                            que es lo unico que se puede hacer sin emulador
       #   assembleRelease          R8 y shrink: rompe aqui, no al etiquetar
-      - name: Pruebas, Lint y compilacion
+      - name: Estilo, pruebas, Lint y compilacion
         run: >
           ./gradlew
+          spotlessCheck
           licenseeAndroidRelease
           testDebugUnitTest
           koverHtmlReportDebug
           koverXmlReportDebug
           lintDebug
-          ktlintCheck
           assembleDebugAndroidTest
           assembleRelease
           --no-daemon --stacktrace
@@ -125,19 +124,7 @@ jobs:
       # DestinosPermitidos) y no se puede corregir desde fuera. Renombrar un
       # campo en genera-version.mjs, o mover la descarga fuera de las releases
       # del repositorio, apagaria el aviso de actualizacion en todos ellos sin
-      # que fallara nada: aqui se comprueba que siga trayendo lo que la app acepta.
+      # que fallara nada: aqui se comprueba con las mismas reglas que aplica la
+      # app. sitio.yml repite la comprobacion sobre el que de verdad se publica.
       - name: El version.json cumple con lo que lee la app
-        working-directory: web
-        run: |
-          set -euo pipefail
-          jq -e '
-            (.version | type == "string" and test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) and
-            (.apk | type == "string" and startswith("https://github.com/carlosalbertoxw/ollin-finanzas/releases/")) and
-            (.sitio | type == "string" and startswith("https://"))
-          ' dist/version.json > /dev/null || {
-            echo "::error::dist/version.json ya no trae version, apk y sitio como los lee la app."
-            cat dist/version.json
-            exit 1
-          }
-          echo "version.json en regla:"
-          cat dist/version.json
+        run: bash .github/scripts/comprueba-version-json.sh web/dist/version.json

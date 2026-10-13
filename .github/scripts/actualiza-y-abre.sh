@@ -1,29 +1,36 @@
 #!/usr/bin/env bash
 #
 # Instala la version anterior, la usa, instala la nueva encima y comprueba que
-# abre. Es la prueba que faltaba cuando la 1.0.1 se cerraba al arrancar en los
-# telefonos que venian de la 1.0.0.
+# abre: el fallo que solo existe en los telefonos que venian de la anterior.
 #
-# Lo corre el emulador de .github/workflows/actualizacion.yml, con los dos APK
-# ya compilados en $RUNNER_TEMP. Se puede correr en local contra un telefono o
-# un emulador conectado:
+# Lo corre el emulador de .github/workflows/actualizacion.yml, con los
+# dos APK ya compilados en $RUNNER_TEMP. Se puede correr en local contra un
+# telefono o un emulador conectado:
 #
 #   RUNNER_TEMP=/tmp .github/scripts/actualiza-y-abre.sh
+#
+# Los APK son de release, que es lo que se instala de verdad (ver el flujo). Para
+# probar dos de depuracion, que llevan otro applicationId:
+#
+#   PAQUETE=com.carlosalbertoxw.ollin.finanzas.debug RUNNER_TEMP=/tmp .github/scripts/actualiza-y-abre.sh
+#
+# En release `run-as` no funciona, porque la app no es depurable: el listado de
+# preferencias que se intenta mas abajo sale vacio, y eso no es motivo para
+# fallar.
 #
 # Lo que se afirma es deliberadamente pobre: que el proceso siga vivo y que no
 # haya una excepcion mortal. No mira la pantalla. Un fallo de arranque se
 # manifiesta como el proceso que desaparece, y eso se ve sin depender de
 # animaciones ni de esperar a que se dibuje nada.
 #
-# Todo paso dice lo que hace y todo fallo deja el logcat. La primera version de
-# este script moria en silencio si `monkey` devolvia un codigo distinto de cero
-# --sin mensaje, sin log, sin forma de saber si la culpa era de la app o del
-# emulador--, y eso convierte una puerta que bloquea publicaciones en una
-# moneda al aire.
+# Todo paso dice lo que hace y todo fallo deja el logcat. Una prueba que bloquea
+# publicaciones no puede morir en silencio: si `monkey` o `am start` devuelven
+# algo raro sin mensaje ni log, no hay forma de saber si la culpa es de la app o
+# del emulador, y la puerta se vuelve una moneda al aire.
 
 set -euo pipefail
 
-PAQUETE="com.carlosalbertoxw.ollin.finanzas.debug"
+PAQUETE="${PAQUETE:-com.carlosalbertoxw.ollin.finanzas}"
 ACTIVIDAD="$PAQUETE/com.carlosalbertoxw.ollin.finanzas.MainActivity"
 ANTERIOR="${RUNNER_TEMP:?falta RUNNER_TEMP}/anterior.apk"
 NUEVA="$RUNNER_TEMP/nueva.apk"
@@ -38,15 +45,17 @@ trap 'echo "::error::La prueba de actualizacion fallo en la linea $LINENO."; vue
 
 # Saca a anotacion del run lo que el log diga de nuestro proceso.
 #
-# Un artefacto de 164 KB que hay que descargar con token no lo lee nadie, y sin
-# leerlo no se distingue un fallo de la app de uno de la prueba --que ya costo
-# dos ciclos--. Solo lineas de nuestro paquete o de AndroidRuntime: filtrar por
-# "died" a secas trae las trazas del ActivityManager, que hablan de cualquiera.
+# Un artefacto que hay que descargar con token no lo lee nadie, y sin leerlo no
+# se distingue un fallo de la app de uno de la prueba. Solo lineas de nuestro
+# paquete o de AndroidRuntime: filtrar por "died" a secas trae las trazas del
+# ActivityManager, que hablan de cualquiera.
 anota() {
   local archivo="$1"
   local motivos
   motivos="$(
-    grep -E "$PAQUETE|AndroidRuntime|FATAL EXCEPTION" "$archivo" 2>/dev/null       | head -15       || true
+    grep -E "$PAQUETE|AndroidRuntime|FATAL EXCEPTION" "$archivo" 2>/dev/null \
+      | head -15 \
+      || true
   )"
   [ -z "$motivos" ] && { echo "::error::El log no dice nada de $PAQUETE."; return 0; }
   echo "$motivos" | while IFS= read -r linea; do
@@ -68,18 +77,18 @@ pid() {
 
 # Concede el permiso de avisos sin pasar por el dialogo del sistema.
 #
-# La app lo pide nada mas abrir, y quien dibuja el dialogo es
-# com.google.android.permissioncontroller, no nuestro paquete: `am force-stop`
-# se lleva por delante a la app pero deja ese dialogo en pie encima de la tarea.
-# En el arranque siguiente `am start -S` --que solo cierra el paquete destino--
-# encuentra arriba una instancia ajena, entrega el intent sin levantar nada y
-# contesta TotalTime 0. La prueba media entonces un proceso que nunca existio y
-# lo apuntaba como una regresion al actualizar: eso fue el fallo del 7 de
-# septiembre de 2026, con los dos APK llevando la misma app.
+# Hoy la app lo pide desde Ajustes y no al abrir, pero basta con que una version
+# lo pida al arrancar para que la prueba mida otra cosa: el dialogo lo dibuja
+# com.google.android.permissioncontroller, no nuestro paquete, y `am force-stop`
+# se lleva la app pero lo deja en pie encima de la tarea. En el arranque
+# siguiente `am start -S` --que solo cierra el paquete destino-- encontraria
+# arriba una instancia ajena, entregaria el intent sin levantar nada y la
+# prueba culparia a la app de un proceso que nunca existio.
 #
-# Concederlo es ademas lo que hace la mayoria de la gente, asi que el escenario
-# no se falsea. Va tras cada instalacion desde cero; al actualizar con `-r` el
-# permiso se conserva, que es justo lo que le pasa a quien ya lo habia dado.
+# Concederlo es ademas lo que hace quien usa los recordatorios, asi que el
+# escenario no se falsea. Va tras cada instalacion desde cero; al actualizar con
+# `-r` el permiso se conserva, que es justo lo que le pasa a quien ya lo habia
+# dado.
 concede_avisos() {
   local salida
   if salida="$(adb shell pm grant "$PAQUETE" android.permission.POST_NOTIFICATIONS 2>&1)"; then
@@ -96,8 +105,8 @@ concede_avisos() {
 # `-S` fuerza a cerrar la app antes de arrancarla, y no es opcional aqui.
 # Instalar encima deja la tarea viva en recientes aunque el proceso este muerto,
 # y entonces `am start` a secas contesta "intent has been delivered to currently
-# running top-most instance" sin levantar nada: la prueba media un proceso que
-# nunca arranco y culpaba a la app. Ademas es lo que se quiere medir, un
+# running top-most instance" sin levantar nada: la prueba mediria un proceso que
+# nunca arranco y culparia a la app. Ademas es lo que se quiere medir, un
 # arranque en frio sobre los datos de la version anterior.
 #
 # `-W` espera a que termine de arrancar y dice como fue, en vez de dejarlo a
@@ -109,11 +118,10 @@ abre() {
   echo "$salida" | sed 's/^/    /'
 
   # `am start` contesta "Status: ok" aunque no haya levantado nada: si encuentra
-  # algo arriba se limita a entregarle el intent, y lo dice en un aviso que
-  # hasta ahora se imprimia y se tiraba. Sin leerlo, la prueba no distingue "no
-  # arranco porque nadie lo intento" de "no arranco porque la app se cerro", y
-  # ahi esta toda la diferencia entre un fallo de esta prueba y una regresion
-  # que debe bloquear una publicacion.
+  # algo arriba se limita a entregarle el intent, y lo dice en un aviso. Sin
+  # leerlo, la prueba no distingue "no arranco porque nadie lo intento" de "no
+  # arranco porque la app se cerro", y ahi esta toda la diferencia entre un
+  # fallo de esta prueba y una regresion que debe bloquear una publicacion.
   if echo "$salida" | grep -q "Activity not started"; then
     echo "::error::El intent no arranco nada: se entrego a lo que ya estaba encima."
     echo "::error::Falla esta prueba, no la app. Mira que quedo arriba de la tarea."
@@ -149,7 +157,8 @@ abre
 
 # Que la anterior haya llegado a escribir sus preferencias es lo que da sentido
 # a todo esto: el fallo que motivo la prueba estaba en leer lo que ella dejo, no
-# en instalar por instalar.
+# en instalar por instalar. La comprobacion de actualizaciones del primer
+# arranque es la que escribe, y necesita red.
 if [ -z "$(pid)" ]; then
   echo "::error::La version anterior no se mantuvo abierta. El problema no es la actualizacion."
   vuelca "anterior"
@@ -186,11 +195,11 @@ if [ -z "$vivo" ]; then
   echo "::error::La version nueva no se mantuvo abierta sobre la anterior."
   anota "$RUNNER_TEMP/logcat-nueva.txt"
 
-  # El experimento de control, y la razon de ser de este bloque: sin el, una
-  # compilacion que no arranca en ningun sitio se lee igual que una que solo
-  # muere al actualizar, y son problemas distintos --uno es de la version, el
-  # otro de lo que dejo escrito la anterior--. Aqui se borra todo y se instala
-  # de cero: si tampoco asi arranca, la actualizacion no tiene nada que ver.
+  # El experimento de control: sin el, una compilacion que no arranca en ningun
+  # sitio se lee igual que una que solo muere al actualizar, y son problemas
+  # distintos --uno es de la version, el otro de lo que dejo escrito la
+  # anterior--. Aqui se borra todo y se instala de cero: si tampoco asi
+  # arranca, la actualizacion no tiene nada que ver.
   echo "--- Control: la misma version, sin datos de la anterior"
   adb uninstall "$PAQUETE" 2>&1 | sed 's/^/    /' || true
   adb install "$NUEVA" 2>&1 | sed 's/^/    /'

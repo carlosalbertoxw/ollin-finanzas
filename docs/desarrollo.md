@@ -51,8 +51,9 @@ sdk.dir=C\:\\Users\\<usuario>\\AppData\\Local\\Android\\Sdk
 ./gradlew :app:testDebugUnitTest  # pruebas unitarias (JVM)
 ./gradlew :app:connectedDebugAndroidTest  # pruebas de interfaz (necesita dispositivo)
 ./gradlew :app:assembleRelease    # con minify y shrink de recursos
-./gradlew :app:ktlintCheck        # estilo de Kotlin, como en CI
-./gradlew :app:ktlintFormat       # arregla lo que ktlint sabe arreglar solo
+./gradlew spotlessApply           # da formato al codigo con ktlint
+./gradlew spotlessCheck           # solo comprueba el formato, como en CI
+./gradlew :app:koverHtmlReportDebug  # cobertura de las pruebas unitarias
 ./gradlew :app:licenseeAndroidRelease  # que lo que viaja en el APK tenga una licencia permitida
 ./gradlew :app:cyclonedxDirectBom # SBOM del APK de release, en app/build/reports/sbom/
 ./gradlew clean
@@ -124,7 +125,7 @@ La pantalla de Acerca de lee la versión del **paquete instalado** (`PackageMana
 
 ## Pruebas
 
-Hay dos suites: las **unitarias**, en la JVM, y las **de interfaz**, que necesitan dispositivo. Las unitarias, el lint y ktlint corren en cada push y cada PR ([`pruebas.yml`](../.github/workflows/pruebas.yml)).
+Hay dos suites: las **unitarias**, en la JVM, y las **de interfaz**, que necesitan dispositivo. Las unitarias, el lint y el formato corren en cada push y cada PR ([`pruebas.yml`](../.github/workflows/pruebas.yml)).
 
 ### Unitarias (JVM)
 
@@ -152,7 +153,7 @@ Hay dos suites: las **unitarias**, en la JVM, y las **de interfaz**, que necesit
 | [`EsquemaDeBaseTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/EsquemaDeBaseTest.kt) | La guardia de la base: cada versión con su json exportado y la cadena de migraciones sin huecos. Ver [modelo de datos](modelo-de-datos.md#migraciones) |
 | [`RespaldosTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/RespaldosTest.kt) | Cuándo toca recordar un respaldo: la semana desde el último, el ancla cuando no hay ninguno, el reloj movido hacia atrás y qué dice el aviso. Ver [seguridad](seguridad.md#el-recordatorio) |
 | [`PreferenciasHeredadasTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/PreferenciasHeredadasTest.kt) | Actualizar por encima de una versión anterior: unas preferencias escritas por la 1.0.0 se leen sin cerrar la app, y una clave con el tipo equivocado se trata como ausente. Ver [modelo de datos](modelo-de-datos.md#las-preferencias-también-son-datos-guardados) |
-| [`ActualizacionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ActualizacionesTest.kt) | El aviso de versión nueva sin red: comparación semántica (`1.10.0` es posterior a `1.9.0`), el `version.json` con sus aristas, el salto de redirección que solo se sigue hacia `https` y hacia el sitio, los enlaces que solo pueden ir a las releases del repositorio o al sitio (con `..`, `%2e`, usuario y puerto rechazados), cuándo toca preguntar, que un día sin respuesta no gaste el turno, y que la petición no diga qué teléfono la hace (`User-Agent` propio) |
+| [`ActualizacionesTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/ActualizacionesTest.kt) | El aviso de versión nueva sin red: comparación semántica (`1.10.0` es posterior a `1.9.0`), el `version.json` con sus aristas, el salto de redirección que solo se sigue hacia `https` y hacia el sitio, los enlaces que solo pueden ir a una descarga de las releases del repositorio, sin el sitio de respaldo (con `..`, `%2e`, usuario, puerto, consulta y fragmento rechazados), cuándo toca preguntar, que un día sin respuesta no gaste el turno, y que la petición no diga qué teléfono la hace (`User-Agent` propio) |
 | [`RendimientoTest`](../app/src/test/java/com/carlosalbertoxw/ollin/finanzas/RendimientoTest.kt) | Un libro de 50 000 movimientos y 5 000 descripciones: revisar la calidad, exportar e importar. No falla por tiempo —los runners varían demasiado—; comprueba el resultado y deja los tiempos en `app/build/pruebas/rendimiento.txt` para compararlos entre versiones. Tarda cerca de un minuto, así que **solo corre si se pide** (abajo) |
 
 Las pruebas de Excel escriben libros reales en `app/build/pruebas/`, útiles para abrirlos a mano y comprobar el resultado. El reporte HTML queda en `app/build/reports/tests/`.
@@ -267,17 +268,19 @@ Siete flujos, todos con **JDK 21**, en [`.github/workflows/`](../.github/workflo
 
 | Flujo | Cuándo | Qué corre |
 |---|---|---|
-| `pruebas.yml` | push a `main` y cada PR | `licenseeAndroidRelease`, `testDebugUnitTest` con su cobertura (`koverXmlReportDebug`, `koverHtmlReportDebug`), `lintDebug`, `ktlintCheck`, `assembleDebugAndroidTest`, `assembleRelease`; y del sitio, `npm audit`, el build y que `version.json` siga trayendo lo que lee la app |
+| `pruebas.yml` | push a `main` y cada PR | `licenseeAndroidRelease`, `testDebugUnitTest` con su cobertura (`koverXmlReportDebug`, `koverHtmlReportDebug`), `lintDebug`, `spotlessCheck`, `assembleDebugAndroidTest`, `assembleRelease`; y del sitio, `npm audit`, el build y que `version.json` siga trayendo lo que lee la app |
 | `pruebas-instrumentadas.yml` | lunes, y a mano | La suite de interfaz sobre un emulador |
 | `actualizacion.yml` | al etiquetar, lunes, y a mano | Instala la versión nueva sobre la anterior y comprueba que abre |
 | `publicacion.yml` | tag `vX.Y.Z` | Comprueba la etiqueta contra el CHANGELOG, invoca `pruebas.yml` y `actualizacion.yml`, corre `MigracionesTest` en emulador, firma, atesta y publica el APK con su SBOM |
-| `sitio.yml` | `web/**`, `CHANGELOG.md`, o al terminar una publicación | Construye el sitio y lo publica en GitHub Pages |
+| `sitio.yml` | `web/**`, `CHANGELOG.md`, o al terminar una publicación | Construye el sitio, comprueba que la app aceptaría su `version.json` y lo publica en GitHub Pages |
 | `codeql.yml` | push a `main`, cada PR y los lunes | Análisis estático de seguridad del código Kotlin, del JavaScript del sitio y de los propios flujos |
 | `dependencias.yml` | push a `main` que toque Gradle, y a mano | Envía a GitHub el grafo real de dependencias de Gradle, para que lleguen sus alertas |
 
 Las acciones van **fijadas por SHA**, con la versión en un comentario (`@<sha> # v4.4.0`). Una etiqueta como `@v4` la puede mover quien controle esa acción, y el job que firma la release corre con las contraseñas del almacén en el entorno: una acción alterada podría llevárselas. [Dependabot](../.github/dependabot.yml) propone cada lunes las versiones nuevas de las acciones, de Gradle y del sitio, así que fijar no significa congelar. El wrapper lleva también `distributionSha256Sum`, para que Gradle compruebe la distribución que descarga.
 
 `publicacion.yml` **invoca** a `pruebas.yml` y a `actualizacion.yml` con `workflow_call` en vez de copiar sus pasos: una etiqueta no puede pasar por una comprobación más floja que un pull request cualquiera. Los dos bloquean la publicación, igual que las migraciones en emulador — si fallan, no se firma nada ni se crea la release.
+
+El job del sitio en `pruebas.yml` y el despliegue de `sitio.yml` comprueban además, con [`comprueba-version-json.sh`](../.github/scripts/comprueba-version-json.sh), que la app aceptaría el `version.json`: `version` como X.Y.Z y `apk` como una descarga de las releases de este repositorio, con las mismas reglas que `DestinosPermitidos.apk`. Es un contrato con cada APK ya instalado, que no se puede corregir desde fuera: si la app lo rechaza, descarta el archivo entero y el aviso de actualización se apaga en todos sin que nada falle. `pruebas.yml` solo ve el que sale sin release; el que lleva los datos de la release de verdad solo existe en `sitio.yml`, y por eso se comprueba también ahí, antes de subirlo.
 
 CodeQL va en la configuración avanzada y no en el *default setup* del repositorio, porque Kotlin hay que compilarlo para analizarlo y aquí se decide cómo. Los dos no conviven: con el *default setup* encendido, GitHub rechaza lo que sube el flujo, así que tiene que estar apagado en *Settings → Code security*.
 
@@ -290,7 +293,7 @@ El precio es que **cada cambio de dependencias tiene que traer su metadata**. Lo
 ```bash
 gh pr checkout <número>
 ./gradlew --write-verification-metadata sha256 --refresh-dependencies --no-configuration-cache \
-  ktlintCheck licenseeAndroidRelease testDebugUnitTest koverHtmlReportDebug koverXmlReportDebug lintDebug assembleDebug \
+  spotlessCheck licenseeAndroidRelease testDebugUnitTest koverHtmlReportDebug koverXmlReportDebug lintDebug assembleDebug \
   assembleDebugAndroidTest assembleRelease bundleRelease :app:cyclonedxDirectBom :app:dependencies
 git diff gradle/verification-metadata.xml   # solo deben aparecer las versiones del PR
 ```
@@ -314,7 +317,7 @@ Cuando CI falla, el reporte HTML de pruebas y el de lint quedan como artefacto d
 Lo mismo que corre allá corre aquí:
 
 ```bash
-./gradlew licenseeAndroidRelease testDebugUnitTest lintDebug ktlintCheck assembleDebugAndroidTest assembleRelease
+./gradlew spotlessCheck licenseeAndroidRelease testDebugUnitTest koverHtmlReportDebug lintDebug assembleDebugAndroidTest assembleRelease
 ```
 
 El proceso completo de publicar una versión está en [publicación](publicacion.md).
@@ -335,12 +338,18 @@ npm --prefix web run build
 
 - **Todo en español**: nombres de clases, funciones, variables y comentarios. Los nombres de prueba van en backticks y en prosa (`` `el modo compacto emite exactamente ocho columnas` ``) — salvo en `androidTest`, donde van en camelCase porque los espacios solo son legales desde la API 30.
 - **Los comentarios explican el porqué, no el qué.** Si una decisión tiene una alternativa obvia que se descartó, el comentario dice por qué se descartó.
-- **Sin acentos en los comentarios y literales del código** (la documentación de `docs/` y el sitio de `web/` sí los usan).
+- **Sin acentos en los comentarios**; el texto que ve el usuario sí va acentuado, igual que en Ollin Actividades. La excepción son los nombres de hoja, los encabezados de columna y los alias del `.xlsx`, y los valores que se guardan tal cual —como `(sin descripcion)`—: esos son el formato del archivo o datos, no copy, y cambiarlos rompería la reimportación de libros ya exportados. Las etiquetas de los tipos sí llevan acento: se comparan con `normalizaClave`, que ignora las tildes, así que un libro viejo se sigue leyendo.
 - **`.editorconfig` fija el estilo**: LF, UTF-8, cuatro espacios, 100 columnas en Kotlin y sin imports con comodín.
-- **ktlint lo vigila** con el estilo de IntelliJ (`ktlint_code_style = intellij_idea`): sangría, orden de imports, espacios y largo de línea. Las reglas que piden otro acomodo de líneas —argumentos uno por renglón, llaves en todo `if`— están apagadas en `.editorconfig` con su motivo, porque el código usa otro de forma pareja. **No hay baseline**: CI falla con la primera infracción. El que hubo congelaba las líneas de más de 100 columnas por su número de línea, y cualquier cambio que las moviera las hacía aparecer como nuevas; se cortaron todas. La única excepción es [`XlsxEscritor`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/XlsxEscritor.kt), que la declara en su cabecera con `@file:Suppress("ktlint:standard:max-line-length")`: sus partes OOXML van tal cual las define la norma, y partir esas URLs las haría ilegibles. Una línea que solo contiene una cadena tampoco cuenta, así que un texto largo se pone en su propio renglón en vez de partirse a mitad de frase.
+- **ktlint lo vigila**, a través de [Spotless](../build.gradle.kts), con el estilo de IntelliJ (`ktlint_code_style = intellij_idea`, el oficial de Kotlin) y todas sus reglas: sangría, orden de imports, espacios, acomodo de líneas y largo de línea. `spotlessCheck` corre en `pruebas.yml`, así que un cambio con otro formato no entra; `./gradlew spotlessApply` lo deja como debe. Es el mismo estilo y la misma herramienta que en Ollin Actividades. Spotless y no el plugin de ktlint para Gradle porque revisa también los `*.gradle.kts` y no depende de los source sets del plugin de Kotlin, que desde AGP 9 ya no se aplica. **No hay baseline**: CI falla con la primera infracción. La única excepción es [`XlsxEscritor`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/data/excel/XlsxEscritor.kt), que la declara en su cabecera con `@file:Suppress("ktlint:standard:max-line-length")`: sus partes OOXML van tal cual las define la norma, y partir esas URLs las haría ilegibles. Una línea que solo contiene una cadena tampoco cuenta, así que un texto largo se pone en su propio renglón en vez de partirse a mitad de frase.
 - **Una pantalla por archivo**, con sus composables privados; su ViewModel y los modelos de estado que publica van al lado, en `XxxVm.kt`.
 - **La escritura pasa por el repositorio.** Las pantallas no tocan los DAO.
 - **Los importes son centavos en `Long`**, nunca decimales flotantes.
+- **Los mensajes al usuario son los mismos en Ollin Actividades y en Ollin Finanzas**, y se eligen por lo que está en juego:
+  - **Deshacer en un snackbar** para lo que se hace de un toque y se revierte sin perder nada —cumplir o descartar un pago—: la acción ocurre en el acto y el aviso de abajo ofrece «Deshacer».
+  - **Un diálogo que pregunta antes** solo cuando el control cae justo donde va el pulgar y el error borraría algo sin que nadie se entere —deshacer un hábito ya marcado— o cuando la acción no tiene vuelta, como borrar o reemplazar al importar.
+  - **Los errores van en rojo** (`MaterialTheme.colorScheme.error`) y dicen qué hacer, no qué excepción saltó.
+  - **Los permisos se piden en contexto**, en el gesto que los necesita —encender un aviso, guardar algo que va a avisar—, nunca al abrir la app. Si el sistema los niega, *Ajustes* lo dice y ofrece el atajo para arreglarlo ([`PermisoAvisos.kt`](../app/src/main/java/com/carlosalbertoxw/ollin/finanzas/ui/PermisoAvisos.kt)).
+  - **Las esperas del PIN se cuentan en el botón** («Espera 15 s»), con el campo apagado mientras corren.
 - Las cadenas visibles están en el código, no en `strings.xml`: la app es monolingüe por diseño. En `strings.xml` solo viven el nombre, el lema y los textos del canal de notificaciones.
 
 ## Añadir una pantalla

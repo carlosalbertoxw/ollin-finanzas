@@ -140,7 +140,7 @@ jobs:
   # puesto para devolverla aqui.
   # ---------------------------------------------------------------------------
   actualizacion:
-    name: Actualizacion
+    name: Actualización
     needs: etiqueta
     uses: ./.github/workflows/actualizacion.yml
 
@@ -337,8 +337,8 @@ jobs:
           # Firmado no basta: tiene que ser con *la* llave. La huella esperada
           # vive en el README, que es contra lo que la gente compara al instalar.
           # Un APK firmado con otra --un almacen equivocado en los secretos, uno
-          # de pruebas-- se instalaria limpio en un telefono nuevo y despues no
-          # podria actualizar a nadie, o al reves.
+          # de pruebas, el de otra app-- se instalaria limpio en un telefono
+          # nuevo y despues no podria actualizar a nadie, o al reves.
           esperada=$(grep -oP 'SHA-256 del certificado de firma: `\K[0-9a-f]{64}' README.md || true)
           if [ -z "$esperada" ]; then
             echo "::error::El README no trae la línea 'SHA-256 del certificado de firma'."
