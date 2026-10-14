@@ -129,9 +129,16 @@ data class EstadoTablero(
      * null mientras no haya gasto registrado. Un "0.0 meses" ahi seria mentira:
      * no dice que no tengas colchon, dice que no hay contra que medirlo, y son
      * cosas opuestas para quien lo lee.
+     *
+     * Con la liquidez en rojo el colchon es cero, no "-1.0 meses": no existen los
+     * meses negativos de respaldo, y lo que se debe ya sale en Liquidez.
      */
     val mesesDeColchon: Double?
-        get() = if (gastoMensualPromedio <= 0L) null else liquidez.toDouble() / gastoMensualPromedio
+        get() = if (gastoMensualPromedio <= 0L) {
+            null
+        } else {
+            (liquidez.toDouble() / gastoMensualPromedio).coerceAtLeast(0.0)
+        }
 
     /** null sin ingresos registrados; un 0% se leeria como "no ahorras nada". */
     val tasaAhorroPromedio: Double?

@@ -289,7 +289,7 @@ fun TableroPantalla(
 
                     val meses = estado.mesesDeColchon
                     TarjetaValor(
-                        etiqueta = "Fondo de emergencia",
+                        etiqueta = "Colchón",
                         valor = if (meses == null) "Sin datos" else "%.1f meses".format(meses),
                         nota = if (meses == null) {
                             "Sin gastos aún"

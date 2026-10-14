@@ -66,6 +66,7 @@ import com.carlosalbertoxw.ollin.finanzas.data.db.Compromiso
 import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
+import com.carlosalbertoxw.ollin.finanzas.domain.model.Fechas
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Periodicidad
 import com.carlosalbertoxw.ollin.finanzas.ui.components.EstadoVacio
 import com.carlosalbertoxw.ollin.finanzas.ui.components.FilaDeslizable
@@ -485,7 +486,7 @@ private fun DialogoCompromiso(
                 // Es lo que permite que "Pagar" abra la captura ya clasificada,
                 // y de paso lo que ata el compromiso a su rubro del presupuesto.
                 SelectorDesplegable(
-                    etiqueta = "Categoria",
+                    etiqueta = "Categoría",
                     valor = categorias.firstOrNull { it.id == categoriaId }?.nombre.orEmpty(),
                     opciones = categorias.map { it.id to it.nombre },
                     alElegir = { categoriaId = it }
@@ -497,7 +498,7 @@ private fun DialogoCompromiso(
                     alElegir = { i -> periodicidad = Periodicidad.entries[i] }
                 )
                 OutlinedTextField(
-                    value = siguientePago.toString(),
+                    value = Fechas.larga(siguientePago),
                     onValueChange = {},
                     label = {
                         Text(if (periodicidad.esUnico) "Fecha del pago" else "Siguiente pago")

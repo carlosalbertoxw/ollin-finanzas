@@ -513,3 +513,6 @@ private fun AccionDeslizada(
         Text(etiqueta, style = MaterialTheme.typography.labelSmall, color = color, maxLines = 1)
     }
 }
+
+/** "1 movimiento", "3 movimientos": el conteo sin el "1 movimientos". */
+fun movimientos(n: Int) = if (n == 1) "1 movimiento" else "$n movimientos"

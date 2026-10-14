@@ -29,9 +29,9 @@ object Semilla {
     val CUENTAS = listOf(
         PlantillaCuenta("Efectivo", TipoCuenta.EFECTIVO, 0, "#E9A13B"),
         PlantillaCuenta("Cuenta de banco", TipoCuenta.DEBITO, 1, "#3D6DB5"),
-        PlantillaCuenta("Inversion", TipoCuenta.INVERSION, 2, "#2F9E6E"),
-        PlantillaCuenta("Creditos - prestamos", TipoCuenta.CREDITO, 3, "#C4453F"),
-        PlantillaCuenta("Creditos - MSI", TipoCuenta.CREDITO_MSI, 4, "#7A4FA3"),
+        PlantillaCuenta("Inversión", TipoCuenta.INVERSION, 2, "#2F9E6E"),
+        PlantillaCuenta("Créditos - préstamos", TipoCuenta.CREDITO, 3, "#C4453F"),
+        PlantillaCuenta("Créditos - MSI", TipoCuenta.CREDITO_MSI, 4, "#7A4FA3"),
         // Cuenta de patrimonio: existe para que comprar un inmueble o un bien
         // duradero deje de contarse como gasto y pase a ser traslado de patrimonio.
         PlantillaCuenta("Patrimonio", TipoCuenta.ACTIVO, 5, "#8A6B3F")
@@ -65,9 +65,9 @@ object Semilla {
             esencial = true,
             hijas = listOf(
                 "Gasolina",
-                "Transporte publico",
+                "Transporte público",
                 "Transporte privado",
-                "Mantenimiento vehiculo",
+                "Mantenimiento vehículo",
                 "Estacionamiento",
                 "Seguro de auto"
             )
@@ -76,31 +76,31 @@ object Semilla {
             "Salud",
             TipoCategoria.GASTO,
             esencial = true,
-            hijas = listOf("Consulta medica", "Medicamentos", "Estudios laboratorio")
+            hijas = listOf("Consulta médica", "Medicamentos", "Estudios laboratorio")
         ),
         PlantillaCategoria(
             "Comunicaciones",
             TipoCategoria.GASTO,
             esencial = true,
-            hijas = listOf("Telefono", "Internet")
+            hijas = listOf("Teléfono", "Internet")
         ),
         PlantillaCategoria(
-            "Impuestos y tramites",
+            "Impuestos y trámites",
             TipoCategoria.GASTO,
             esencial = true,
-            hijas = listOf("Impuestos", "Tramites", "Comisiones bancarias")
+            hijas = listOf("Impuestos", "Trámites", "Comisiones bancarias")
         ),
         PlantillaCategoria(
             "Compras",
             TipoCategoria.GASTO,
             esencial = false,
-            hijas = listOf("Ropa", "Articulos para el hogar", "Articulos personales")
+            hijas = listOf("Ropa", "Artículos para el hogar", "Artículos personales")
         ),
         PlantillaCategoria(
             "Suscripciones",
             TipoCategoria.GASTO,
             esencial = false,
-            hijas = listOf("Streaming", "Software", "Membresias")
+            hijas = listOf("Streaming", "Software", "Membresías")
         ),
         PlantillaCategoria(
             "Entretenimiento",
@@ -118,10 +118,10 @@ object Semilla {
             "Cuidado personal",
             TipoCategoria.GASTO,
             esencial = false,
-            hijas = listOf("Peluqueria")
+            hijas = listOf("Peluquería")
         ),
         PlantillaCategoria(
-            "Educacion",
+            "Educación",
             TipoCategoria.GASTO,
             esencial = false,
             hijas = listOf("Cursos")
@@ -168,10 +168,10 @@ object Semilla {
             "Inmuebles",
             TipoCategoria.PATRIMONIO,
             esencial = false,
-            hijas = listOf("Construccion")
+            hijas = listOf("Construcción")
         ),
         PlantillaCategoria(
-            "Inversion variable",
+            "Inversión variable",
             TipoCategoria.PATRIMONIO,
             esencial = false,
             hijas = listOf("Criptomonedas", "Metales")
@@ -180,7 +180,7 @@ object Semilla {
             "Bienes duraderos",
             TipoCategoria.PATRIMONIO,
             esencial = false,
-            hijas = listOf("Vehiculo", "Equipo de computo")
+            hijas = listOf("Vehículo", "Equipo de cómputo")
         ),
 
         PlantillaCategoria(
@@ -207,9 +207,9 @@ object Semilla {
         put("super", "Despensa")
         put("mandado", "Despensa")
         put("farmacia", "Medicamentos")
-        put("doctor", "Consulta medica")
-        put("taxi", "Transporte publico")
-        put("recarga telefonica", "Telefono")
+        put("doctor", "Consulta médica")
+        put("taxi", "Transporte público")
+        put("recarga telefonica", "Teléfono")
         put("pago tarjeta credito", "Pago de tarjeta")
         put("pago de tarjeta de credito", "Pago de tarjeta")
         put("transferencia", "Transferencia entre cuentas")

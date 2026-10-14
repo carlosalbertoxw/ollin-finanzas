@@ -52,6 +52,7 @@ import com.carlosalbertoxw.ollin.finanzas.domain.model.Medio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCuenta
 import com.carlosalbertoxw.ollin.finanzas.ui.components.SeccionTitulo
 import com.carlosalbertoxw.ollin.finanzas.ui.components.TextoDinero
+import com.carlosalbertoxw.ollin.finanzas.ui.components.movimientos
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
 import kotlinx.coroutines.flow.SharingStarted
@@ -115,7 +116,7 @@ fun CuentasPantalla(repo: FinanzasRepositorio, alCerrar: () -> Unit) {
                             Text(saldo.nombre, style = MaterialTheme.typography.bodyLarge)
                             Text(
                                 buildString {
-                                    append("${saldo.movimientos} movimientos")
+                                    append(movimientos(saldo.movimientos))
                                     if (!saldo.incluirEnPatrimonio) {
                                         append("  ·  fuera del patrimonio")
                                     }
@@ -297,7 +298,7 @@ private fun DialogoCuenta(
                         Text(
                             "Apágalo para el dinero que administras pero no es tuyo. Sigue " +
                                 "registrando sus movimientos, pero deja de sumar a tu " +
-                                "patrimonio, tu liquidez y tu fondo de emergencia.",
+                                "patrimonio, tu liquidez y tu colchón.",
                             style = MaterialTheme.typography.bodySmall,
                             color = LocalColoresOllin.current.textoTenue
                         )

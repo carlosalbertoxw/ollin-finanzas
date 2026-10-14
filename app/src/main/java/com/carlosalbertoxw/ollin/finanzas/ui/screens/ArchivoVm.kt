@@ -133,7 +133,7 @@ class ArchivoVm(
     }
 
     fun importa(uri: Uri) {
-        _estado.value = EstadoArchivo.Trabajando("Leyendo el archivo...")
+        _estado.value = EstadoArchivo.Trabajando("Leyendo el archivo…")
         viewModelScope.launch {
             val a = ajustes.value
             runCatching {
@@ -160,7 +160,7 @@ class ArchivoVm(
     }
 
     fun exporta(uri: Uri) {
-        _estado.value = EstadoArchivo.Trabajando("Generando el libro...")
+        _estado.value = EstadoArchivo.Trabajando("Generando el libro…")
         viewModelScope.launch {
             val a = ajustes.value
             runCatching { repo.exporta(uri, a.esquema, a.hojas) }.fold(
@@ -205,7 +205,7 @@ class ArchivoVm(
             "El libro es demasiado grande para la memoria del teléfono. " +
                 "Exporta menos pestañas desde \"Solo datos\"."
 
-        else -> "No se pudo $accion. Intenta de nuevo."
+        else -> "No se pudo $accion. Inténtalo de nuevo."
     }
 
     fun limpia() {

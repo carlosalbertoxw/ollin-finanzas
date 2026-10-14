@@ -37,6 +37,7 @@ import androidx.lifecycle.viewModelScope
 import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
+import com.carlosalbertoxw.ollin.finanzas.domain.model.Fechas
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -119,7 +120,7 @@ fun TransferenciaPantalla(
             )
 
             OutlinedTextField(
-                value = vm.fecha.toString(),
+                value = Fechas.larga(vm.fecha),
                 onValueChange = {},
                 label = { Text("Fecha") },
                 readOnly = true,
@@ -146,7 +147,7 @@ fun TransferenciaPantalla(
             OutlinedTextField(
                 value = vm.descripcion,
                 onValueChange = { vm.descripcion = it },
-                label = { Text("Descripcion") },
+                label = { Text("Descripción") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )

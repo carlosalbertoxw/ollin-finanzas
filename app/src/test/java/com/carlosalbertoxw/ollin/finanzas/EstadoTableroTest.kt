@@ -1,8 +1,10 @@
 package com.carlosalbertoxw.ollin.finanzas
 
+import com.carlosalbertoxw.ollin.finanzas.data.db.FlujoMes
 import com.carlosalbertoxw.ollin.finanzas.data.db.SaldoCuenta
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCuenta
 import com.carlosalbertoxw.ollin.finanzas.ui.screens.EstadoTablero
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -53,5 +55,16 @@ class EstadoTableroTest {
     @Test
     fun `con los tutoriales apagados no sale`() {
         assertFalse(EstadoTablero(cargado = true).muestraBienvenida(muestraTutoriales = false))
+    }
+
+    @Test
+    fun `con la liquidez en rojo el colchon es cero y no meses negativos`() {
+        val estado = EstadoTablero(
+            saldos = listOf(cuenta(movimientos = 1).copy(saldoCentavos = -15_050)),
+            flujo = listOf(FlujoMes("2026-10", 0, -15_050, 0)),
+            cargado = true
+        )
+
+        assertEquals(0.0, estado.mesesDeColchon!!, 0.0)
     }
 }

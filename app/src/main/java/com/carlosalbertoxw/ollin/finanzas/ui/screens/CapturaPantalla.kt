@@ -57,6 +57,7 @@ import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Contraparte
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
+import com.carlosalbertoxw.ollin.finanzas.domain.model.Fechas
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Medio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCategoria
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCuenta
@@ -279,7 +280,7 @@ fun CapturaPantalla(
             }
 
             OutlinedTextField(
-                value = vm.fecha.toString(),
+                value = Fechas.larga(vm.fecha),
                 onValueChange = {},
                 label = { Text("Fecha") },
                 readOnly = true,
@@ -299,7 +300,7 @@ fun CapturaPantalla(
             SelectorDesplegable(
                 etiqueta = when (vm.naturaleza) {
                     NaturalezaCaptura.PATRIMONIO -> "Sale de"
-                    NaturalezaCaptura.AJUSTE -> "Que bien"
+                    NaturalezaCaptura.AJUSTE -> "Qué bien"
                     else -> "Cuenta"
                 },
                 valor = elegibles.firstOrNull { it.id == vm.cuentaId }?.nombre.orEmpty(),
@@ -341,7 +342,7 @@ fun CapturaPantalla(
             ) {
                 val aplicables = vm.categoriasAplicables(categorias)
                 SelectorDesplegable(
-                    etiqueta = "Categoria",
+                    etiqueta = "Categoría",
                     valor = aplicables.firstOrNull { it.id == vm.categoriaId }?.nombre.orEmpty(),
                     opciones = aplicables.map { it.id to it.nombre },
                     alElegir = { vm.categoriaId = it }
@@ -351,7 +352,7 @@ fun CapturaPantalla(
             OutlinedTextField(
                 value = vm.descripcion,
                 onValueChange = { vm.descripcion = it },
-                label = { Text("Descripcion") },
+                label = { Text("Descripción") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )

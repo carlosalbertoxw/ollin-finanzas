@@ -112,7 +112,7 @@ Las cuentas marcadas como **fuera del patrimonio** no entran a ninguna cifra agr
 ## Colchón y tasa de ahorro
 
 - **Gasto mensual promedio** — promedio del gasto de *consumo* por mes, **descartando el mes en curso**: un mes a medias jala el promedio hacia abajo y regala meses de colchón que no existen.
-- **Meses de colchón** = liquidez ÷ gasto mensual promedio. Solo cuenta la liquidez: el patrimonio no líquido no paga la despensa.
+- **Meses de colchón** = liquidez ÷ gasto mensual promedio. Solo cuenta la liquidez: el patrimonio no líquido no paga la despensa. Con la liquidez en rojo vale cero, no un número negativo de meses: lo que se debe ya se ve en Liquidez.
 - **Tasa de ahorro** = (ingresos + gasto de consumo) ÷ ingresos, con el gasto en negativo. Se mide contra el consumo real, que es el que refleja tu tren de vida.
 
 Las dos son `null` mientras no haya contra qué medirlas. Un "0.0 meses" o un "0%" ahí no dirían "no tienes colchón", dirían "no hay datos", y son cosas opuestas para quien lee.

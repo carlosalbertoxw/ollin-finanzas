@@ -171,7 +171,7 @@ fun AcercaDePantalla(
 
             HorizontalDivider()
 
-            Text("Que hace", style = MaterialTheme.typography.titleMedium)
+            Text("Qué hace", style = MaterialTheme.typography.titleMedium)
             Vineta(
                 "Registra entradas, salidas, transferencias y saldos de apertura, con " +
                     "cuentas y categorías de listas cerradas."
@@ -370,7 +370,7 @@ private fun SeccionVersion(
             Text("Actualizaciones", style = MaterialTheme.typography.titleMedium)
             Text(
                 when {
-                    comprobando -> "Preguntando al sitio..."
+                    comprobando -> "Preguntando al sitio…"
                     nueva != null -> "Hay una versión nueva: ${nueva.publicada.version}"
                     estado is Resultado.AlDia -> "Tienes la versión más reciente."
                     estado is Resultado.Fallo -> estado.motivo

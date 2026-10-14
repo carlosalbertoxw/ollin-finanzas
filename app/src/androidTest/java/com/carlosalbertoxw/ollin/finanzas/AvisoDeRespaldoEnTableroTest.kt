@@ -103,7 +103,7 @@ class AvisoDeRespaldoEnTableroTest {
     @Test
     fun elAvisoSaleArribaYLaCruzLoQuita() {
         esperaAviso(presente = true)
-        compose.onNodeWithText("Todavia no has exportado tu libro", substring = true).assertExists()
+        compose.onNodeWithText("Todavía no has exportado tu libro", substring = true).assertExists()
 
         compose.onNodeWithContentDescription("Quitar el aviso").performClick()
 

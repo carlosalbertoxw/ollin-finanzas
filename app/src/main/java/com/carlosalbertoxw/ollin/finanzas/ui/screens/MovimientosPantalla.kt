@@ -36,6 +36,7 @@ import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
 import com.carlosalbertoxw.ollin.finanzas.ui.components.EstadoVacio
 import com.carlosalbertoxw.ollin.finanzas.ui.components.SeccionTitulo
+import com.carlosalbertoxw.ollin.finanzas.ui.components.movimientos
 import com.carlosalbertoxw.ollin.finanzas.ui.recuerdaVm
 import com.carlosalbertoxw.ollin.finanzas.ui.theme.LocalColoresOllin
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -125,7 +126,7 @@ fun MovimientosPantalla(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "${movimientos.size} movimientos",
+                    movimientos(movimientos.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = colores.textoTenue
                 )
