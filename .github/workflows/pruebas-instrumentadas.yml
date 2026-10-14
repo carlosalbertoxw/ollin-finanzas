@@ -64,13 +64,25 @@ jobs:
         run: |
           set -uo pipefail
           sdk="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          # "system-images;android-34;google_apis;x86_64" vive en esa misma ruta.
+          destino="$ANDROID_HOME/${IMAGEN//;//}"
+          registro="$RUNNER_TEMP/descarga-imagen.log"
           for intento in 1 2 3; do
-            if yes | "$sdk" --install "$IMAGEN" --channel=0 > /dev/null; then
-              echo "Imagen lista en el intento $intento."
-              exit 0
-            fi
+            # Lo que decide es que la imagen quede en disco, no el codigo de la
+            # tuberia: `yes` muere con "Broken pipe" en cuanto sdkmanager deja de
+            # leer, y con pipefail eso tumbaba el paso con la imagen ya bajada.
+            # cmdline-tools 23 convierte a sdkmanager en la CLI `android`, que
+            # lista los paquetes con "/": si el nombre con ";" no la trae, se pide asi.
+            for nombre in "$IMAGEN" "${IMAGEN//;//}"; do
+              { yes 2>/dev/null || true; } | "$sdk" --install "$nombre" --channel=0 > "$registro" 2>&1 || true
+              if [ -f "$destino/source.properties" ] || [ -f "$destino/package.xml" ]; then
+                echo "Imagen lista en el intento $intento."
+                exit 0
+              fi
+            done
             echo "::warning::La descarga de $IMAGEN fallo (intento $intento); se reintenta."
-            rm -rf "$ANDROID_HOME/system-images/android-${{ matrix.api-level }}" "$HOME/.android/cache"
+            tail -n 20 "$registro"
+            rm -rf "$destino" "$HOME/.android/cache"
             sleep 15
           done
           echo "::error::No se pudo descargar $IMAGEN tras tres intentos."
