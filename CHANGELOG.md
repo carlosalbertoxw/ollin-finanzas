@@ -16,6 +16,8 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ## [Sin publicar]
 
+## [1.3.0] - 2026-10-14
+
 ### Seguridad
 
 - **Salir de la app la cierra en el acto.** Con candado puesto, la app seguía abierta durante un minuto después de mandarla al fondo: bastaba pulsar Inicio y pasarle el teléfono a alguien. Ese minuto ahora solo se concede al volver del selector de archivos o de la credencial del sistema, que es para lo que existía. Girar el teléfono no cuenta como salir.
@@ -44,7 +46,6 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 - **Las fechas de la captura se leen como fecha.** Movimiento, transferencia y compromiso dicen «Martes 13 de octubre» en vez de «2026-10-13», igual que Ollin Actividades. El año solo aparece cuando no es este.
 - **El tablero dice «Colchón».** «Fondo de emergencia» no cabía en la tarjeta y se cortaba; el tutorial explica que es lo mismo.
-- **Los textos llevan sus acentos.** *Categoría*, *Descripción*, «Qué hace» y otros; los reintentos dicen «Inténtalo de nuevo», como en Ollin Actividades.
 - **Las cuentas y categorías de una instalación nueva llevan acento:** Inversión, Créditos, Transporte público, Teléfono, Educación y las demás. Las que ya tienes no cambian, y un respaldo viejo las reconoce igual.
 - El código Kotlin pasa por ktlint en cada cambio, sin excepciones heredadas, y las dependencias del sitio por `npm audit`.
 - Cada biblioteca que descarga el build se compara contra su huella registrada, y CI rechaza cualquier dependencia con una licencia que no admita la del proyecto.
@@ -55,7 +56,7 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 - CI mide la cobertura de las pruebas, y hay una prueba de rendimiento, que se corre a mano, con un libro de cincuenta mil movimientos.
 - **El permiso de notificaciones se pide cuando hace falta, no al abrir la app.** Se pide al guardar un compromiso o al encender el recordatorio de respaldo, y *Ajustes* avisa si las notificaciones están apagadas, con un botón para permitirlas. Así lo hace también Ollin Actividades.
 - **La espera tras fallar el PIN es la misma que en Ollin Actividades.** Tres fallos de gracia y luego 5 s, 15 s, 30 s, 1 min, 2 min y 5 min. La cuenta atrás sale en el botón y el campo se apaga mientras corre; ya no dice «0 s» con el botón todavía apagado.
-- **Los textos de la app llevan acentos.** Mensajes, avisos, tutoriales y pantallas se escribían sin tildes. Los encabezados y los nombres de hoja del `.xlsx` no cambian, así que los libros ya exportados se siguen importando igual.
+- **Los textos de la app llevan acentos.** Mensajes, avisos, tutoriales y pantallas se escribían sin tildes. Los encabezados y los nombres de hoja del `.xlsx` no cambian, así que los libros ya exportados se siguen importando igual. Los reintentos dicen «Inténtalo de nuevo», como en Ollin Actividades.
 - **La pantalla del candado dice qué app está bloqueada** y los mensajes de error usan el rojo de error del tema, igual que en Ollin Actividades.
 - El formato del código lo vigila Spotless con las reglas completas de ktlint, como en Ollin Actividades; la prueba de actualizar sobre la versión anterior instala el APK de **release**, como el que se descarga; el despliegue del sitio se niega a publicar un `version.json` que la app descartaría, y los PR traen una plantilla con lo que hay que comprobar.
 - Herramientas al día, iguales en las dos apps: Gradle 9.8.1, Kotlin 2.4.21, SQLCipher 4.19.1, Vite 8.3.4 y las acciones de GitHub en sus últimas versiones.
@@ -169,7 +170,8 @@ Primera versión pública.
 - **Aviso de actualizaciones.** Ollin consulta una vez al día si hay una versión más nueva publicada y lo enseña en *Acerca de*. Se apaga en Ajustes. Ver [seguridad y privacidad](https://github.com/carlosalbertoxw/ollin-finanzas/blob/main/docs/seguridad.md).
 - **Sitio de descarga** en GitHub Pages, con el APK firmado, su huella y las instrucciones de instalación fuera de la tienda.
 
-[Sin publicar]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.2.0...HEAD
+[Sin publicar]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/carlosalbertoxw/ollin-finanzas/compare/v1.0.2...v1.0.3
