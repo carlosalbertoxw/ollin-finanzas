@@ -34,6 +34,7 @@ import com.carlosalbertoxw.ollin.finanzas.data.db.FlujoMes
 import com.carlosalbertoxw.ollin.finanzas.data.db.MovimientoDetallado
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
+import com.carlosalbertoxw.ollin.finanzas.domain.model.Fechas
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoCategoria
 import com.carlosalbertoxw.ollin.finanzas.domain.model.TipoMovimiento
 import com.carlosalbertoxw.ollin.finanzas.ui.components.BarrasFlujo
@@ -114,7 +115,7 @@ fun AnaliticaPantalla(repo: FinanzasRepositorio) {
                     BarrasFlujo(
                         ingresos = ultimos.map { it.ingresosCentavos },
                         gastos = ultimos.map { it.gastoConsumoCentavos },
-                        etiquetas = ultimos.map { it.periodo.takeLast(2) }
+                        etiquetas = ultimos.map { Fechas.rotuloDeMes(it.periodo) }
                     )
                 }
             }
@@ -128,9 +129,9 @@ fun AnaliticaPantalla(repo: FinanzasRepositorio) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    mes.periodo,
+                    Fechas.periodo(mes.periodo)?.let { Fechas.mesCorto(it) } ?: mes.periodo,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.width(58.dp)
+                    modifier = Modifier.width(76.dp)
                 )
                 Box(
                     Modifier

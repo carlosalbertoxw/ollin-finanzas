@@ -34,6 +34,7 @@ import com.carlosalbertoxw.ollin.finanzas.data.db.Cuenta
 import com.carlosalbertoxw.ollin.finanzas.data.db.MovimientoDetallado
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
+import com.carlosalbertoxw.ollin.finanzas.domain.model.Fechas
 import com.carlosalbertoxw.ollin.finanzas.ui.components.EstadoVacio
 import com.carlosalbertoxw.ollin.finanzas.ui.components.SeccionTitulo
 import com.carlosalbertoxw.ollin.finanzas.ui.components.movimientos
@@ -162,7 +163,7 @@ fun MovimientosPantalla(
             val porFecha = movimientos.groupBy { it.movimiento.fecha }
             porFecha.forEach { (fecha, delDia) ->
                 item(key = "cab-$fecha") {
-                    SeccionTitulo(fecha.toString(), Modifier.padding(vertical = 8.dp)) {
+                    SeccionTitulo(Fechas.relativa(fecha), Modifier.padding(vertical = 8.dp)) {
                         Text(
                             Dinero.formatea(delDia.sumOf { it.movimiento.importeCentavos }),
                             style = MaterialTheme.typography.bodySmall,
@@ -171,7 +172,9 @@ fun MovimientosPantalla(
                     }
                 }
                 items(delDia, key = { it.movimiento.id }) { detalle ->
-                    RenglonMovimiento(detalle) { alAbrirMovimiento(detalle.movimiento.id) }
+                    RenglonMovimiento(detalle, conFecha = false) {
+                        alAbrirMovimiento(detalle.movimiento.id)
+                    }
                 }
             }
 

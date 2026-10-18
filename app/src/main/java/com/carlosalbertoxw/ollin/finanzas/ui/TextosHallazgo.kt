@@ -1,6 +1,7 @@
 package com.carlosalbertoxw.ollin.finanzas.ui
 
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
+import com.carlosalbertoxw.ollin.finanzas.domain.model.Fechas
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.ClaveHallazgo
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.Hallazgo
 
@@ -65,9 +66,12 @@ fun Hallazgo.detalle(): String = when (clave) {
             "está partiendo en dos renglones: " +
             datos.ejemplos.joinToString("; ") { "\"${it.first}\" / \"${it.second}\"" }
 
-    ClaveHallazgo.MESES_VACIOS ->
-        "No hay registros en ${datos.periodos.joinToString(", ")}. O no capturaste, " +
-            "o falta importar un periodo."
+    ClaveHallazgo.MESES_VACIOS -> {
+        val meses = datos.periodos.joinToString(", ") { periodo ->
+            Fechas.periodo(periodo)?.let(Fechas::mesEnFrase) ?: periodo
+        }
+        "No hay registros en $meses. O no capturaste, o falta importar un periodo."
+    }
 
     ClaveHallazgo.SALDO_NEGATIVO ->
         "Estas cuentas quedaron en rojo: ${datos.cuentas.joinToString()}. " +
