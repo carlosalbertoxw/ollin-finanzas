@@ -388,7 +388,9 @@ fun CapturaPantalla(
                     Text(
                         "Esta cuenta ya tiene un saldo inicial de " +
                             "${Dinero.formatea(previo.importeCentavos)} " +
-                            "con fecha ${previo.fecha}. Si guardas otro, los dos se suman: " +
+                            "con fecha del ${Fechas.corta(
+                                previo.fecha
+                            )}. Si guardas otro, los dos se suman: " +
                             "conviene editar el que ya existe.",
                         color = colores.alerta,
                         style = MaterialTheme.typography.bodySmall

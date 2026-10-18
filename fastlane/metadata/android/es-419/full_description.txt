@@ -1,0 +1,29 @@
+Ollin Finanzas es el libro de tus movimientos: registra lo que entra y lo que sale, lo clasifica y te dice en qué se te está yendo el dinero. Todo vive en tu teléfono: sin cuentas, sin nube y sin publicidad.
+
+QUÉ HACE
+
+• Movimientos con listas cerradas. Entradas, salidas, transferencias y saldos de apertura. La cuenta y la categoría se eligen, no se escriben: así «Súper» y «super » no acaban siendo dos rubros.
+
+• Transferencias en una captura. Mueves dinero entre tus cuentas una vez y la app escribe los dos renglones ligados. Borrar uno borra el otro: nunca queda media transferencia.
+
+• Patrimonio aparte del gasto. Comprar un terreno o cripto es trasladar patrimonio, no gastarlo. Los tableros lo cuentan aparte, así que tu tasa de ahorro no se desploma ese mes.
+
+• Salud de los datos. Revisa todo el tiempo tipos que contradicen al importe, transferencias sin pareja, movimientos sin categoría y descripciones casi idénticas. Varios se reparan con un botón.
+
+• Compromisos que avisan. Mensualidades, suscripciones, la renta, el seguro anual. Cada uno con su periodicidad y su próximo pago, y un aviso diario a la hora que tú elijas.
+
+• Tu respaldo es un Excel. Exporta el libro completo a .xlsx con fórmulas vivas que se recalculan solas en Excel, WPS, LibreOffice y Google Sheets. Y lo vuelve a importar.
+
+PRIVACIDAD
+
+• Ollin no usa internet: ni siquiera tiene el permiso para hacerlo. Nada de lo que capturas sale de tu teléfono. No hay cuentas, ni servidor, ni analítica, ni publicidad.
+
+• La base de datos va cifrada con AES-256 y su llave vive en el Keystore del teléfono: copiar el archivo por USB no revela un solo importe.
+
+• Puedes ponerle candado con la huella, el patrón del teléfono o un PIN propio de Ollin.
+
+• El respaldo automático de Android está desactivado para la base a propósito: una llave del Keystore no se puede restaurar, así que la copia llegaría ilegible. Tu respaldo real es el .xlsx que tú exportas; guárdalo antes de cambiar de teléfono.
+
+Ollin es «movimiento» en náhuatl, y es el glifo del calendario mexica que representa el cambio: justo lo que registra un libro de finanzas.
+
+Código abierto (licencia MIT): github.com/carlosalbertoxw/ollin-finanzas

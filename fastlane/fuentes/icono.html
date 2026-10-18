@@ -1,0 +1,28 @@
+<!doctype html>
+<!--
+  Icono de la ficha de Play, 512x512. Son las mismas capas que el icono
+  adaptable de la app (res/mipmap-anydpi-v26/ic_launcher.xml): fondo obsidiana
+  y el glifo encima. El viewBox recorta 12 unidades por lado de las 108 del
+  lienzo adaptable para que el glifo se vea del tamano que tiene en el
+  telefono, con margen para la esquina redondeada que Play le pone encima.
+  Se regenera con genera.sh.
+-->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: transparent; }
+  svg { display: block; width: 512px; height: 512px; }
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="12 12 84 84">
+  <rect x="0" y="0" width="108" height="108" fill="#12181B" />
+  <path fill="#2F9E6E" d="M54,54 C58,38 72,24 90,18 C84,36 70,50 54,54 Z" />
+  <path fill="#2F9E6E" d="M54,54 C50,70 36,84 18,90 C24,72 38,58 54,54 Z" />
+  <path fill="#C4453F" d="M54,54 C50,38 36,24 18,18 C24,36 38,50 54,54 Z" />
+  <path fill="#C4453F" d="M54,54 C58,70 72,84 90,90 C84,72 70,58 54,54 Z" />
+  <circle fill="#E9A13B" cx="54" cy="54" r="10" />
+</svg>
+</body>
+</html>

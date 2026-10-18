@@ -20,6 +20,11 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 - **Ollin Finanzas se puede compilar para Google Play.** La copia de Play no busca versiones nuevas —ahí avisa y actualiza la tienda— y ni siquiera tiene permiso de internet. La del sitio no cambia. Ver [Google Play](https://github.com/carlosalbertoxw/ollin-finanzas/blob/main/docs/publicacion.md#google-play).
 
+### Corregido
+
+- **Las cifras ya no se cortan.** En un teléfono angosto, las tarjetas de dos en fondo —Liquidez y Deuda en el tablero, Gastado en el presupuesto, Ingresos y Consumo en la analítica— recortaban el final de cualquier importe de seis cifras: «$171,650.50» se leía «$171,650.5». Ahora la letra se encoge hasta que cabe la cifra entera, y el patrimonio neto ya no se parte en dos renglones.
+- **Las fechas se leen como fechas.** Movimientos agrupaba por «2026-10-18»; ahora dice «Hoy», «Ayer» o «Sábado 17 de octubre», y cada renglón ya no repite la fecha de su encabezado. El próximo pago de un compromiso, el aviso de saldo inicial repetido y los meses sin registros de *Salud de los datos* también dejaron el formato de intercambio, y las gráficas y la tasa de ahorro rotulan los meses por su nombre («Sep») y no por su número.
+
 ## [1.3.0] - 2026-10-14
 
 ### Seguridad

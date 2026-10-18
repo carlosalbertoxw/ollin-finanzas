@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
@@ -43,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -55,6 +57,7 @@ import com.carlosalbertoxw.ollin.finanzas.data.notify.Recordatorios
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
 import com.carlosalbertoxw.ollin.finanzas.data.repo.FinanzasRepositorio
 import com.carlosalbertoxw.ollin.finanzas.domain.model.Dinero
+import com.carlosalbertoxw.ollin.finanzas.domain.model.Fechas
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.GravedadHallazgo
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.Hallazgo
 import com.carlosalbertoxw.ollin.finanzas.domain.usecase.RevisaCalidad
@@ -147,15 +150,23 @@ fun TableroPantalla(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    // Con peso, para que la cifra se encoja antes que empujar los botones.
+                    Column(Modifier.weight(1f)) {
                         Text(
                             "Patrimonio neto",
                             style = MaterialTheme.typography.labelLarge,
                             color = colores.textoTenue
                         )
+                        // En una linea y encogiendose si hace falta: partida en
+                        // dos, una cifra de ocho digitos se leia como dos.
                         Text(
                             Dinero.formatea(estado.patrimonio),
-                            style = MaterialTheme.typography.displaySmall
+                            style = MaterialTheme.typography.displaySmall,
+                            maxLines = 1,
+                            autoSize = TextAutoSize.StepBased(
+                                minFontSize = 20.sp,
+                                maxFontSize = MaterialTheme.typography.displaySmall.fontSize
+                            )
                         )
                     }
                     Row {
@@ -328,7 +339,7 @@ fun TableroPantalla(
                             BarrasFlujo(
                                 ingresos = ultimos.map { it.ingresosCentavos },
                                 gastos = ultimos.map { it.gastoConsumoCentavos },
-                                etiquetas = ultimos.map { it.periodo.takeLast(2) }
+                                etiquetas = ultimos.map { Fechas.rotuloDeMes(it.periodo) }
                             )
                         }
                     }
@@ -478,7 +489,12 @@ private fun AvisoRespaldo(texto: String, alExportar: () -> Unit, alQuitar: () ->
 
 /** Renglon compartido por el tablero y la lista de movimientos. */
 @Composable
-fun RenglonMovimiento(detalle: MovimientoDetallado, alTocar: () -> Unit) {
+fun RenglonMovimiento(
+    detalle: MovimientoDetallado,
+    // Bajo el encabezado de su dia, como en Movimientos, la fecha sobra.
+    conFecha: Boolean = true,
+    alTocar: () -> Unit
+) {
     val colores = LocalColoresOllin.current
     val m = detalle.movimiento
     Row(
@@ -507,8 +523,7 @@ fun RenglonMovimiento(detalle: MovimientoDetallado, alTocar: () -> Unit) {
             )
             Text(
                 buildString {
-                    append(m.fecha.toString())
-                    append("  ·  ")
+                    if (conFecha) append(Fechas.corta(m.fecha) + "  ·  ")
                     append(detalle.nombreCuenta)
                     detalle.nombreCategoria?.let { append("  ·  $it") }
                 },

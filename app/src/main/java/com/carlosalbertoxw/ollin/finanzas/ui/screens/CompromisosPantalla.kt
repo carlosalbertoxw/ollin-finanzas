@@ -161,7 +161,7 @@ private fun TarjetaCompromiso(
                     // Un pago atrasado no se cae de la lista: se queda
                     // marcado hasta que se cumpla o se descarte.
                     Text(
-                        (if (vencido) "Venció el $fecha" else "Próximo: $fecha") +
+                        (if (vencido) "Venció el " else "Próximo: ") + Fechas.corta(fecha) +
                             if (pendiente(c) > 0) {
                                 "  ·  faltan ${Dinero.formateaCorto(pendiente(c))}"
                             } else {

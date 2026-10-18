@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -62,7 +63,14 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-/** Importe con color segun el signo y ancho tabular para que las columnas alineen. */
+/**
+ * Importe con color segun el signo y ancho tabular para que las columnas alineen.
+ *
+ * Si no cabe, la letra se encoge hasta que cabe entera: una cifra recortada
+ * ("$171,650.5" por "$171,650.50") se lee como otra cantidad, y en las
+ * tarjetas de dos en fondo de un telefono angosto pasaba con cualquier importe
+ * de seis cifras.
+ */
 @Composable
 fun TextoDinero(
     centavos: Long,
@@ -78,17 +86,22 @@ fun TextoDinero(
         centavos < 0 -> colores.salida
         else -> colores.textoTenue
     }
+    val tamano = if (enfasis) 20.sp else 15.sp
     Text(
         text = if (compacto) Dinero.formateaCompacto(centavos) else Dinero.formatea(centavos),
         modifier = modifier,
         style = EstiloCifra.copy(
             fontWeight = if (enfasis) FontWeight.Bold else FontWeight.Medium,
-            fontSize = if (enfasis) 20.sp else 15.sp
+            fontSize = tamano
         ),
         color = color,
-        maxLines = 1
+        maxLines = 1,
+        autoSize = TextAutoSize.StepBased(minFontSize = TAMANO_MINIMO_CIFRA, maxFontSize = tamano)
     )
 }
+
+/** Por debajo de esto una cifra ya no se lee de un vistazo. */
+val TAMANO_MINIMO_CIFRA = 11.sp
 
 /** Tarjeta de indicador: una cifra grande con su etiqueta y una nota opcional. */
 @Composable
@@ -165,7 +178,16 @@ fun TarjetaValor(
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(6.dp))
-            Text(valor, style = MaterialTheme.typography.headlineSmall, color = color)
+            Text(
+                valor,
+                style = MaterialTheme.typography.headlineSmall,
+                color = color,
+                maxLines = 1,
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = TAMANO_MINIMO_CIFRA,
+                    maxFontSize = MaterialTheme.typography.headlineSmall.fontSize
+                )
+            )
             if (nota != null) {
                 Spacer(Modifier.height(4.dp))
                 Text(
