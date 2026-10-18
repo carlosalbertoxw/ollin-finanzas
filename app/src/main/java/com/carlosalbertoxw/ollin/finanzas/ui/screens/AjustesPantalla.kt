@@ -44,6 +44,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.carlosalbertoxw.ollin.finanzas.BuildConfig
 import com.carlosalbertoxw.ollin.finanzas.data.notify.Recordatorios
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.Ajustes
 import com.carlosalbertoxw.ollin.finanzas.data.prefs.AjustesRepositorio
@@ -273,27 +274,35 @@ fun AjustesPantalla(
 
             HorizontalDivider()
 
-            Text("Actualizaciones", style = MaterialTheme.typography.titleMedium)
+            // En la compilacion para Play no hay aviso de versiones: ahi avisa la
+            // tienda. Ver `ollin.canal` en build.gradle.kts.
+            if (BuildConfig.AVISA_VERSIONES) {
+                Text("Actualizaciones", style = MaterialTheme.typography.titleMedium)
 
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Avisarme de versiones nuevas", style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        "Ollin Finanzas no se instala desde Play, así que nadie más avisa de " +
-                            "una versión nueva. Una vez al día le pregunta al sitio del " +
-                            "proyecto si salió alguna, y lo enseña en Acerca de. Es una " +
-                            "petición a un archivo fijo que no manda ningún dato tuyo: la " +
-                            "comparación pasa en el teléfono, y GitHub Pages, que sirve el " +
-                            "sitio, solo ve tu IP. Apagado, la app no toca internet " +
-                            "en ningún momento.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colores.textoTenue
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "Avisarme de versiones nuevas",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            "Esta copia de Ollin Finanzas se instaló desde el sitio y no desde " +
+                                "Play, así que nadie más avisa de una versión nueva. Una vez al " +
+                                "día le pregunta al sitio del proyecto si salió alguna, y lo " +
+                                "enseña en Acerca de. Es una " +
+                                "petición a un archivo fijo que no manda ningún dato tuyo: la " +
+                                "comparación pasa en el teléfono, y GitHub Pages, que sirve el " +
+                                "sitio, solo ve tu IP. Apagado, la app no toca internet " +
+                                "en ningún momento.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colores.textoTenue
+                        )
+                    }
+                    Switch(
+                        checked = ajustes.buscarActualizaciones,
+                        onCheckedChange = vm::cambiaBuscarActualizaciones
                     )
                 }
-                Switch(
-                    checked = ajustes.buscarActualizaciones,
-                    onCheckedChange = vm::cambiaBuscarActualizaciones
-                )
             }
             TextButton(onClick = alAbrirAcercaDe, modifier = Modifier.fillMaxWidth()) {
                 Text("Acerca de Ollin Finanzas")

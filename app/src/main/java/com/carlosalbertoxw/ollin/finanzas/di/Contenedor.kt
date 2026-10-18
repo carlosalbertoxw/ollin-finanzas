@@ -44,7 +44,9 @@ class Contenedor(contexto: Context) {
         ComprobadorActualizaciones(
             ajustes = ajustes,
             instalada = version,
-            url = BuildConfig.URL_ACTUALIZACIONES
+            url = BuildConfig.URL_ACTUALIZACIONES,
+            // Apagado en la compilacion para Play. Ver `ollin.canal`.
+            activo = BuildConfig.AVISA_VERSIONES
         )
     }
 

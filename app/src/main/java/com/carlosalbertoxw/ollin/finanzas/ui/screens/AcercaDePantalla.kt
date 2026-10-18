@@ -142,21 +142,24 @@ fun AcercaDePantalla(
 
             HorizontalDivider()
 
-            SeccionVersion(
-                estado = estado,
-                comprobando = comprobando,
-                alComprobar = vm::compruebaAhora,
-                alAbrir = { url ->
-                    runCatching {
-                        contexto.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        )
+            // En Play las versiones las avisa la tienda. Ver `ollin.canal`.
+            if (BuildConfig.AVISA_VERSIONES) {
+                SeccionVersion(
+                    estado = estado,
+                    comprobando = comprobando,
+                    alComprobar = vm::compruebaAhora,
+                    alAbrir = { url ->
+                        runCatching {
+                            contexto.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }
                     }
-                }
-            )
+                )
 
-            HorizontalDivider()
+                HorizontalDivider()
+            }
 
             Text("De dónde viene el nombre", style = MaterialTheme.typography.titleMedium)
             Text(
@@ -201,11 +204,17 @@ fun AcercaDePantalla(
                 color = colores.textoTenue
             )
             Text(
-                "La app hace una sola llamada a internet: preguntarle al sitio del proyecto " +
-                    "si hay una versión más nueva, una vez al día. Es una petición a un " +
-                    "archivo fijo que no manda ningún dato tuyo -- ni que versión traes, ni " +
-                    "que teléfono tienes -- y se apaga en Ajustes. El sitio lo sirve GitHub " +
-                    "Pages, que ve tu IP como con cualquier página web.",
+                if (BuildConfig.AVISA_VERSIONES) {
+                    "La app hace una sola llamada a internet: preguntarle al sitio del proyecto " +
+                        "si hay una versión más nueva, una vez al día. Es una petición a un " +
+                        "archivo fijo que no manda ningún dato tuyo -- ni que versión traes, ni " +
+                        "que teléfono tienes -- y se apaga en Ajustes. El sitio lo sirve GitHub " +
+                        "Pages, que ve tu IP como con cualquier página web."
+                } else {
+                    // La de Play ni siquiera tiene el permiso de internet.
+                    "La app no usa internet: no tiene ni el permiso para hacerlo. Las " +
+                        "versiones nuevas te llegan por Google Play."
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = colores.textoTenue
             )

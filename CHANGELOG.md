@@ -16,6 +16,10 @@ Los enlaces van con dirección completa: el mismo texto se lee en GitHub, en el 
 
 ## [Sin publicar]
 
+### Añadido
+
+- **Ollin Finanzas se puede compilar para Google Play.** La copia de Play no busca versiones nuevas —ahí avisa y actualiza la tienda— y ni siquiera tiene permiso de internet. La del sitio no cambia. Ver [Google Play](https://github.com/carlosalbertoxw/ollin-finanzas/blob/main/docs/publicacion.md#google-play).
+
 ## [1.3.0] - 2026-10-14
 
 ### Seguridad
