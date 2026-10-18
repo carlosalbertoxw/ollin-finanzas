@@ -58,6 +58,12 @@ class ComprobadorActualizaciones(
     private val instalada: Version?,
     private val url: String,
     /**
+     * Falso en la compilacion para Play: ahi avisa y actualiza la tienda, y sus
+     * reglas no dejan que una app mande a bajar su APK de otro lado. Apagado,
+     * no sale ninguna peticion, ni a mano. Ver `ollin.canal` en build.gradle.kts.
+     */
+    private val activo: Boolean = true,
+    /**
      * La descarga, aislada para poder probar el resto sin red. La de verdad es
      * [descargaTexto]; las pruebas pasan una que devuelve un JSON escrito a mano.
      */
@@ -74,6 +80,7 @@ class ComprobadorActualizaciones(
      * veinte veces al dia serian veinte peticiones para saber lo mismo.
      */
     suspend fun compruebaSiToca(ahora: Long = System.currentTimeMillis()): Resultado {
+        if (!activo) return Resultado.NoTocaba
         val preferencias = ajustes.ajustes.first()
         if (!preferencias.buscarActualizaciones) return Resultado.NoTocaba
 
@@ -88,6 +95,7 @@ class ComprobadorActualizaciones(
 
     /** La comprobacion a mano, desde el boton de Acerca de. No mira el reloj. */
     suspend fun compruebaAhora(ahora: Long = System.currentTimeMillis()): Resultado {
+        if (!activo) return Resultado.NoTocaba
         val cuerpo = runCatching { descarga(url) }
             .getOrElse { return Resultado.Fallo("No se pudo consultar el sitio.") }
 

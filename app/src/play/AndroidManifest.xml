@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Solo entra al compilar con -Pollin.canal=play (ver app/build.gradle.kts).
+
+    En Play la tienda avisa y actualiza, asi que el aviso de versiones va
+    apagado, y el permiso de internet solo existia para el. Quitarlo aqui y no
+    solo dejar de usarlo es lo que garantiza que esa app no toca la red: si
+    algun dia una biblioteca lo trajera de vuelta, este nodo lo vuelve a quitar.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission
+        android:name="android.permission.INTERNET"
+        tools:node="remove" />
+
+</manifest>

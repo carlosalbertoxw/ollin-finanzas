@@ -82,7 +82,7 @@ Las atestaciones las firma Sigstore con la identidad del flujo, mediante [`actio
 gh attestation verify ollin-finanzas-x.y.z.apk --repo carlosalbertoxw/ollin-finanzas
 ```
 
-El `.aab` se compila —un fallo de bundling es un fallo igual y conviene verlo— pero no se adjunta: no se instala en ningún teléfono, solo sirve para subirlo a Play, y una descarga que no hace lo que promete confunde a quien llega de fuera. Si algún día hace falta, `./gradlew bundleRelease`.
+El `.aab` se compila —un fallo de bundling es un fallo igual y conviene verlo— pero no se adjunta: no se instala en ningún teléfono, solo sirve para subirlo a Play, y una descarga que no hace lo que promete confunde a quien llega de fuera. El que se sube a Play es otro y se compila a mano: ver [Google Play](#google-play).
 
 La huella se publica junto al archivo para que cualquiera pueda comprobar que lo que bajó es lo que salió de esa compilación. El [sitio](sitio.md) la repite, pero calculada sobre el archivo ya publicado.
 
@@ -194,6 +194,21 @@ Y para comprobar la firma de un APK ya construido:
 ```bash
 "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk
 ```
+
+## Google Play
+
+La copia de Play no es la del sitio: sale **sin el aviso de versiones y sin el permiso de internet**. Play no deja que una app instalada desde ahí mande a bajar su APK de otro lado, y allí la tienda ya avisa y actualiza sola. Se elige con la propiedad `ollin.canal` de [`app/build.gradle.kts`](../app/build.gradle.kts); sin ella todo se compila como siempre, así que los flujos de CI no cambian.
+
+```bash
+./gradlew :app:aabParaPlay -Pollin.canal=play
+```
+
+Queda en `app/build/outputs/play/ollin-finanzas-x.y.z-play.aab`, firmado con la misma llave que el APK. **No se sube el de `outputs/bundle/release/`**: ese lleva el aviso de versiones. Sin `-Pollin.canal=play` o sin el almacén de claves, la tarea falla antes de compilar nada.
+
+- **La llave.** Al dar de alta la app en Play Console, en *Play App Signing* hay que subir la llave propia (*Use a different key* → *Export and upload a key from Java keystore*) en vez de dejar que Google genere una. Con la misma llave en los dos lados, quien instaló el APK del sitio puede pasar a la versión de Play, y al revés, sin desinstalar ni perder la base. Si Google firmara con la suya, Android rechazaría esa actualización por firma distinta. Ya se hizo el 2026-10-18; si hubiera que repetirlo, `pepk.jar` falla con `NoSuchAlgorithmException: RSA/NONE/OAEPWithSHA1AndMGF1Padding` porque trae BouncyCastle sin registrarlo. Se arregla con un archivo de una línea, `security.provider.14=org.bouncycastle.jce.provider.BouncyCastleProvider`, pasado como `-Djava.security.properties=<archivo>` a un OpenJDK como el JBR: el JDK de Oracle rechaza proveedores sin firmar.
+- **El `versionCode`** es el mismo en los dos canales, porque sale del CHANGELOG. Play no acepta el mismo dos veces, así que cada subida necesita una versión publicada nueva.
+- **Seguridad de los datos.** Sin permiso de internet no hay nada que pueda salir del teléfono: en el formulario de la tienda la respuesta es que la app no recopila ni comparte datos.
+- Se compila a mano y no en `publicacion.yml`: subirla sola pediría una cuenta de servicio de Play Console como un secreto más, y por ahora se sube desde el navegador.
 
 ## Qué lleva la compilación de release
 

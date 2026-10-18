@@ -4,8 +4,10 @@
     <!--
         La unica salida a la red: preguntarle al sitio del proyecto, una vez al
         dia, si hay una version mas nueva. Es un GET a un archivo estatico que
-        no manda nada, y se apaga desde Ajustes. La app no se instala desde
-        Play, asi que sin esto nadie se entera de una actualizacion.
+        no manda nada, y se apaga desde Ajustes. El APK del sitio no se instala
+        desde Play, asi que sin esto nadie se entera de una actualizacion. La
+        compilacion para Play lo quita: ahi avisa la tienda (ver
+        src/play/AndroidManifest.xml).
     -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
