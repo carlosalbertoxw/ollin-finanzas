@@ -32,7 +32,7 @@ licensee = "1.14.1"
 # Cobertura de las pruebas unitarias (ver app/build.gradle.kts, bloque kover).
 # Desde la 0.9.5 entiende las variantes de AGP 9.
 kover = "0.9.11"
-spotless = "8.10.3"
+spotless = "8.10.4"
 # La version de ktlint va aparte de la de Spotless: es la que decide las
 # reglas, y subirla puede marcar codigo que ayer pasaba.
 ktlint = "1.8.0"
