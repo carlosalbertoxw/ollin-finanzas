@@ -38,7 +38,7 @@ spotless = "8.10.3"
 ktlint = "1.8.0"
 # Solo para el classpath del build: versiones corregidas de lo que arrastran
 # los plugins. Ver build.gradle.kts, bloque buildscript.
-jacksonBuild = "2.22.3"
+jacksonBuild = "2.22.4"
 freemarkerBuild = "2.3.35"
 
 [libraries]
