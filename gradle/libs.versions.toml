@@ -19,7 +19,7 @@ datastore = "1.1.4"
 # compilado contra la 1.8.1, y con una anterior cada prueba de migracion
 # revienta con AbstractMethodError al leer los esquemas. Se fija aqui para que
 # la app y las pruebas usen la misma.
-kotlinxSerialization = "1.11.0"
+kotlinxSerialization = "1.12.0"
 coroutines = "1.11.0"
 junit = "4.13.2"
 androidxJunit = "1.3.0"
