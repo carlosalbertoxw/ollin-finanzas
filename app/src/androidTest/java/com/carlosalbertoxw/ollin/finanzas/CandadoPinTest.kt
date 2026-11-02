@@ -114,7 +114,7 @@ class CandadoPinTest {
     }
 
     private fun aparece(texto: String) {
-        compose.waitUntil(timeoutMillis = 10_000) {
+        compose.waitUntil(timeoutMillis = ESPERA_COMPROBACION_MILLIS) {
             compose.onAllNodesWithText(texto, substring = true)
                 .fetchSemanticsNodes().isNotEmpty()
         }
@@ -126,9 +126,9 @@ class CandadoPinTest {
         muestra { BloqueoPantalla(compose.activity, ajustes, control) }
 
         teclea(PIN)
-        compose.onNodeWithText("Entrar").performClick()
+        compose.onNodeWithText("Entrar").assertIsEnabled().performClick()
 
-        compose.waitUntil(timeoutMillis = 10_000) { !control.bloqueado.value }
+        compose.waitUntil(timeoutMillis = ESPERA_COMPROBACION_MILLIS) { !control.bloqueado.value }
     }
 
     @Test
@@ -137,7 +137,7 @@ class CandadoPinTest {
         muestra { BloqueoPantalla(compose.activity, ajustes, control) }
 
         teclea("0000")
-        compose.onNodeWithText("Entrar").performClick()
+        compose.onNodeWithText("Entrar").assertIsEnabled().performClick()
 
         aparece("PIN incorrecto")
         assertEquals(1, fallosGuardados)
@@ -165,7 +165,7 @@ class CandadoPinTest {
         teclea(PIN)
         compose.onNodeWithText("Entrar").assertIsEnabled().performClick()
 
-        compose.waitUntil(timeoutMillis = 10_000) { !control.bloqueado.value }
+        compose.waitUntil(timeoutMillis = ESPERA_COMPROBACION_MILLIS) { !control.bloqueado.value }
     }
 
     /**
@@ -196,7 +196,7 @@ class CandadoPinTest {
         teclea(PIN)
         compose.onNode(hasText("Confirmar")).assertIsEnabled().performClick()
 
-        compose.waitUntil(timeoutMillis = 10_000) { confirmado }
+        compose.waitUntil(timeoutMillis = ESPERA_COMPROBACION_MILLIS) { confirmado }
     }
 
     @Test
@@ -211,7 +211,7 @@ class CandadoPinTest {
         }
 
         teclea("0000")
-        compose.onNode(hasText("Confirmar")).performClick()
+        compose.onNode(hasText("Confirmar")).assertIsEnabled().performClick()
 
         aparece("PIN incorrecto")
         assertEquals(1, fallosGuardados)
@@ -219,5 +219,15 @@ class CandadoPinTest {
 
     private companion object {
         const val PIN = "2468"
+
+        /**
+         * Lo que se le da a la comprobacion del PIN, que pasa por PBKDF2 y el
+         * Keystore de verdad. Un clic sobre un boton apagado no hace nada y no
+         * avisa, por eso cada prueba comprueba antes que este encendido: asi, si
+         * esta espera se agota, el boton si se pulso. El 2 de noviembre de 2026
+         * `elDialogoDeAjustesCuentaLosFallos` agoto 10 s en API 34 y paso al
+         * reejecutarla sin cambios.
+         */
+        const val ESPERA_COMPROBACION_MILLIS = 30_000L
     }
 }
